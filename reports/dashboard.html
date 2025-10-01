@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iSwitch Roofs - Market Analysis Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/countup.js@2.0.8/dist/countUp.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+            overflow-x: auto;
+        }
+
+        .nav-tab {
+            padding: 15px 25px;
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            font-size: 1rem;
+            color: #555;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .nav-tab.active {
+            background: white;
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+            font-weight: 600;
+        }
+
+        .nav-tab:hover {
+            background: white;
+            color: #764ba2;
+        }
+
+        .content-area {
+            padding: 40px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 25px;
+            border-radius: 15px;
+            color: white;
+            transform: translateY(0);
+            transition: transform 0.3s ease;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .metric-change {
+            font-size: 0.85rem;
+            margin-top: 10px;
+            padding: 5px 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .chart-title {
+            font-size: 1.3rem;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .progress-bar-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .progress-item {
+            margin-bottom: 25px;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .progress-bar {
+            height: 25px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: width 1.5s ease-out;
+        }
+
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+        }
+
+        .timeline-item {
+            display: flex;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .timeline-date {
+            min-width: 120px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .timeline-content {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            margin-left: 30px;
+            flex: 1;
+            position: relative;
+        }
+
+        .timeline-content::before {
+            content: '';
+            position: absolute;
+            left: -10px;
+            top: 20px;
+            width: 20px;
+            height: 20px;
+            background: #667eea;
+            border-radius: 50%;
+        }
+
+        .alert-box {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            animation: pulse 2s infinite;
+        }
+
+        .alert-icon {
+            font-size: 2rem;
+            margin-right: 15px;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.02);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .content-area {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1>iSwitch Roofs Market Analysis Dashboard</h1>
+            <p>Southeast Michigan Roofing Market Intelligence & Growth Opportunities</p>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('overview')">Executive Overview</button>
+            <button class="nav-tab" onclick="showTab('market')">Market Opportunity</button>
+            <button class="nav-tab" onclick="showTab('performance')">Website Performance</button>
+            <button class="nav-tab" onclick="showTab('conversion')">Sales Conversion</button>
+            <button class="nav-tab" onclick="showTab('stealth')">Stealth Marketing</button>
+            <button class="nav-tab" onclick="showTab('competition')">Competitive Analysis</button>
+            <button class="nav-tab" onclick="showTab('implementation')">Implementation Plan</button>
+            <button class="nav-tab" onclick="showTab('projections')">Financial Projections</button>
+        </div>
+
+        <div class="content-area">
+            <!-- Executive Overview Tab -->
+            <div id="overview" class="tab-content active">
+                <div class="alert-box">
+                    <div class="alert-icon">⚠️</div>
+                    <div>
+                        <strong>CRITICAL ISSUE:</strong> Robots meta tag conflict blocking Google indexing - Fix immediately for 500-1,000+ monthly visitors
+                    </div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Total Market Opportunity</div>
+                        <div class="metric-value" data-target="2800000000">$0</div>
+                        <div class="metric-change">287,000 homes need replacement</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Premium Market Value</div>
+                        <div class="metric-value" data-target="1200000000">$0</div>
+                        <div class="metric-change">42,000 premium properties</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Revenue Gap (Stealth)</div>
+                        <div class="metric-value" data-target="2300000">$0</div>
+                        <div class="metric-change">Missing annually</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Conversion Potential</div>
+                        <div class="metric-value" data-target="35">0%</div>
+                        <div class="metric-change">From current 8-15%</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3 class="chart-title">Quick Win Opportunities</h3>
+                    <canvas id="quickWinsChart"></canvas>
+                </div>
+
+                <div class="grid-2">
+                    <div class="chart-container">
+                        <h3 class="chart-title">Website Performance Score</h3>
+                        <canvas id="performanceRadar"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3 class="chart-title">Market Share Potential</h3>
+                        <canvas id="marketShareChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Market Opportunity Tab -->
+            <div id="market" class="tab-content">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">SE Michigan Homes</div>
+                        <div class="metric-value" data-target="1200000">0</div>
+                        <div class="metric-change">Single-family properties</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Average Home Age</div>
+                        <div class="metric-value" data-target="45">0</div>
+                        <div class="metric-change">Years (prime for replacement)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Immediate Need</div>
+                        <div class="metric-value" data-target="287000">0</div>
+                        <div class="metric-change">Homes 40+ years old</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Average Project</div>
+                        <div class="metric-value" data-target="18000">$0</div>
+                        <div class="metric-change">Per roof replacement</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3 class="chart-title">Target Market Demographics by City</h3>
+                    <canvas id="demographicsChart"></canvas>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>City</th>
+                                <th>Median Home Value</th>
+                                <th>Median Income</th>
+                                <th>Opportunity Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Bloomfield Hills</td>
+                                <td>$1,200,000 - $5,900,000</td>
+                                <td>$188,828</td>
+                                <td>⭐⭐⭐⭐⭐</td>
+                            </tr>
+                            <tr>
+                                <td>Birmingham</td>
+                                <td>$360,000 - $1,200,000</td>
+                                <td>$137,907</td>
+                                <td>⭐⭐⭐⭐⭐</td>
+                            </tr>
+                            <tr>
+                                <td>Troy</td>
+                                <td>$469,947</td>
+                                <td>$116,252</td>
+                                <td>⭐⭐⭐⭐</td>
+                            </tr>
+                            <tr>
+                                <td>Rochester Hills</td>
+                                <td>$435,000</td>
+                                <td>$115,007</td>
+                                <td>⭐⭐⭐⭐</td>
+                            </tr>
+                            <tr>
+                                <td>West Bloomfield</td>
+                                <td>$426,616</td>
+                                <td>$123,474</td>
+                                <td>⭐⭐⭐⭐</td>
+                            </tr>
+                            <tr>
+                                <td>Ann Arbor</td>
+                                <td>$512,500</td>
+                                <td>$95,000</td>
+                                <td>⭐⭐⭐</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Website Performance Tab -->
+            <div id="performance" class="tab-content">
+                <div class="alert-box">
+                    <div class="alert-icon">🚨</div>
+                    <div>
+                        <strong>SEO EMERGENCY:</strong> Conflicting robots meta tags preventing Google indexing. Site is invisible to search engines!
+                    </div>
+                </div>
+
+                <div class="progress-bar-container">
+                    <h3 class="chart-title">Website Optimization Scores</h3>
+                    <div class="progress-item">
+                        <div class="progress-label">
+                            <span>Content & Messaging</span>
+                            <span>95%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 95%;">Excellent</div>
+                        </div>
+                    </div>
+                    <div class="progress-item">
+                        <div class="progress-label">
+                            <span>SEO Technical</span>
+                            <span>20%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 20%; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">Critical Issues</div>
+                        </div>
+                    </div>
+                    <div class="progress-item">
+                        <div class="progress-label">
+                            <span>Social Proof</span>
+                            <span>10%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 10%; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">Missing</div>
+                        </div>
+                    </div>
+                    <div class="progress-item">
+                        <div class="progress-label">
+                            <span>Mobile Optimization</span>
+                            <span>85%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 85%;">Good</div>
+                        </div>
+                    </div>
+                    <div class="progress-item">
+                        <div class="progress-label">
+                            <span>Page Speed</span>
+                            <span>70%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 70%;">Needs CDN</div>
+                        </div>
+                    </div>
+                    <div class="progress-item">
+                        <div class="progress-label">
+                            <span>Security</span>
+                            <span>40%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 40%; background: linear-gradient(135deg, #ffa726 0%, #fb8c00 100%);">Headers Missing</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3 class="chart-title">Conversion Optimization Impact</h3>
+                    <canvas id="conversionImpactChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Sales Conversion Tab -->
+            <div id="conversion" class="tab-content">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Current Conversion</div>
+                        <div class="metric-value">8-15%</div>
+                        <div class="metric-change">Industry average</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Optimized Target</div>
+                        <div class="metric-value">30-35%</div>
+                        <div class="metric-change">With improvements</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Speed to Lead</div>
+                        <div class="metric-value">2 min</div>
+                        <div class="metric-change">78% better conversion</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Financing Impact</div>
+                        <div class="metric-value">+60%</div>
+                        <div class="metric-change">Conversion increase</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3 class="chart-title">Sales Funnel Optimization</h3>
+                    <canvas id="salesFunnelChart"></canvas>
+                </div>
+
+                <div class="grid-2">
+                    <div class="chart-container">
+                        <h3 class="chart-title">Lead Source Performance</h3>
+                        <canvas id="leadSourceChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3 class="chart-title">Objection Handling Success Rate</h3>
+                        <canvas id="objectionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stealth Marketing Tab -->
+            <div id="stealth" class="tab-content">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Revenue Gap</div>
+                        <div class="metric-value" data-target="2300000">$0</div>
+                        <div class="metric-change">Annual opportunity</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Investment Needed</div>
+                        <div class="metric-value" data-target="305000">$0</div>
+                        <div class="metric-change">Annual budget</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Expected ROI</div>
+                        <div class="metric-value" data-target="7.5">0x</div>
+                        <div class="metric-change">Return on investment</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Payback Period</div>
+                        <div class="metric-value" data-target="1.6">0</div>
+                        <div class="metric-change">Months</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3 class="chart-title">Stealth Marketing Gap Analysis</h3>
+                    <canvas id="stealthGapChart"></canvas>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Strategy</th>
+                                <th>Investment</th>
+                                <th>Revenue Potential</th>
+                                <th>ROI</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Strategic Partnerships</td>
+                                <td>$45,000</td>
+                                <td>$523,000</td>
+                                <td>11.6x</td>
+                            </tr>
+                            <tr>
+                                <td>Ambassador Network</td>
+                                <td>$65,000</td>
+                                <td>$412,000</td>
+                                <td>6.3x</td>
+                            </tr>
+                            <tr>
+                                <td>Community Infiltration</td>
+                                <td>$25,000</td>
+                                <td>$347,000</td>
+                                <td>13.9x</td>
+                            </tr>
+                            <tr>
+                                <td>Word-of-Mouth System</td>
+                                <td>$35,000</td>
+                                <td>$389,000</td>
+                                <td>11.1x</td>
+                            </tr>
+                            <tr>
+                                <td>Content Authority</td>
+                                <td>$40,000</td>
+                                <td>$301,000</td>
+                                <td>7.5x</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Competitive Analysis Tab -->
+            <div id="competition" class="tab-content">
+                <div class="chart-container">
+                    <h3 class="chart-title">Competitive Positioning Matrix</h3>
+                    <canvas id="competitiveMatrix"></canvas>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Competitor</th>
+                                <th>Years in Business</th>
+                                <th>Unique Strengths</th>
+                                <th>Weaknesses</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Rapid Roofing</td>
+                                <td>25+ years</td>
+                                <td>GAF Master Elite, 6 locations, strong financing</td>
+                                <td>Generic messaging, no personality</td>
+                            </tr>
+                            <tr>
+                                <td>Bloomfield Construction</td>
+                                <td>30+ years</td>
+                                <td>24/7 emergency, insurance specialists</td>
+                                <td>Limited digital presence</td>
+                            </tr>
+                            <tr>
+                                <td>iSwitch Roofs</td>
+                                <td>New</td>
+                                <td>Best messaging, solar integration, anti-sales approach</td>
+                                <td>No reviews, SEO issues, no partnerships</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="chart-container">
+                    <h3 class="chart-title">Market Share Opportunity</h3>
+                    <canvas id="marketOpportunityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Implementation Plan Tab -->
+            <div id="implementation" class="tab-content">
+                <div class="timeline">
+                    <h3 class="chart-title">90-Day Implementation Roadmap</h3>
+
+                    <div class="timeline-item">
+                        <div class="timeline-date">Week 1</div>
+                        <div class="timeline-content">
+                            <strong>Critical Fixes</strong>
+                            <ul style="margin-top: 10px; margin-left: 20px;">
+                                <li>Fix robots meta tag (2 hours)</li>
+                                <li>Add testimonials section</li>
+                                <li>Install live chat</li>
+                                <li>Set up Google My Business</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-date">Week 2-4</div>
+                        <div class="timeline-content">
+                            <strong>Foundation Building</strong>
+                            <ul style="margin-top: 10px; margin-left: 20px;">
+                                <li>Join 10 Facebook groups</li>
+                                <li>Launch ambassador program</li>
+                                <li>Implement CDN</li>
+                                <li>Create referral system</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-date">Month 2</div>
+                        <div class="timeline-content">
+                            <strong>Growth Acceleration</strong>
+                            <ul style="margin-top: 10px; margin-left: 20px;">
+                                <li>Activate 20 partnerships</li>
+                                <li>Launch Google Ads</li>
+                                <li>Scale content creation</li>
+                                <li>Implement automation</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="timeline-date">Month 3</div>
+                        <div class="timeline-content">
+                            <strong>Market Domination</strong>
+                            <ul style="margin-top: 10px; margin-left: 20px;">
+                                <li>50+ ambassadors active</li>
+                                <li>Community leader status</li>
+                                <li>100+ reviews collected</li>
+                                <li>Full stealth implementation</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3 class="chart-title">Implementation Priority Matrix</h3>
+                    <canvas id="priorityMatrix"></canvas>
+                </div>
+            </div>
+
+            <!-- Financial Projections Tab -->
+            <div id="projections" class="tab-content">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Year 1 Revenue</div>
+                        <div class="metric-value" data-target="6550000">$0</div>
+                        <div class="metric-change">Conservative estimate</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Year 2 Revenue</div>
+                        <div class="metric-value" data-target="13175000">$0</div>
+                        <div class="metric-change">With full implementation</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Year 3 Goal</div>
+                        <div class="metric-value" data-target="22250000">$0</div>
+                        <div class="metric-change">Market leader position</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">3-Year Total</div>
+                        <div class="metric-value" data-target="41975000">$0</div>
+                        <div class="metric-change">Cumulative revenue</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h3 class="chart-title">Revenue Growth Projection</h3>
+                    <canvas id="revenueProjectionChart"></canvas>
+                </div>
+
+                <div class="grid-2">
+                    <div class="chart-container">
+                        <h3 class="chart-title">ROI by Strategy</h3>
+                        <canvas id="roiChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3 class="chart-title">Customer Acquisition Cost Trend</h3>
+                        <canvas id="cacChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching functionality
+        function showTab(tabName) {
+            const tabs = document.querySelectorAll('.tab-content');
+            const navTabs = document.querySelectorAll('.nav-tab');
+
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            navTabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Animate numbers on page load
+        function animateNumbers() {
+            const elements = document.querySelectorAll('.metric-value[data-target]');
+
+            elements.forEach(element => {
+                const target = parseFloat(element.getAttribute('data-target'));
+                const isCurrency = element.textContent.includes('$');
+                const isPercentage = element.textContent.includes('%');
+                const isMultiplier = element.textContent.includes('x');
+
+                let current = 0;
+                const increment = target / 100;
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= target) {
+                        current = target;
+                        clearInterval(timer);
+                    }
+
+                    if (isCurrency) {
+                        if (target >= 1000000000) {
+                            element.textContent = '$' + (current / 1000000000).toFixed(1) + 'B';
+                        } else if (target >= 1000000) {
+                            element.textContent = '$' + (current / 1000000).toFixed(1) + 'M';
+                        } else if (target >= 1000) {
+                            element.textContent = '$' + (current / 1000).toFixed(0) + 'K';
+                        } else {
+                            element.textContent = '$' + current.toFixed(0);
+                        }
+                    } else if (isPercentage) {
+                        element.textContent = current.toFixed(0) + '%';
+                    } else if (isMultiplier) {
+                        element.textContent = current.toFixed(1) + 'x';
+                    } else {
+                        if (target >= 1000000) {
+                            element.textContent = (current / 1000000).toFixed(1) + 'M';
+                        } else if (target >= 1000) {
+                            element.textContent = (current / 1000).toFixed(0) + 'K';
+                        } else {
+                            element.textContent = current.toFixed(1);
+                        }
+                    }
+                }, 20);
+            });
+        }
+
+        // Initialize charts
+        window.addEventListener('load', function() {
+            animateNumbers();
+
+            // Quick Wins Chart
+            const quickWinsCtx = document.getElementById('quickWinsChart').getContext('2d');
+            new Chart(quickWinsCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Fix SEO', 'Add Reviews', 'Live Chat', 'Exit Popup', 'Financing', 'Partnerships'],
+                    datasets: [{
+                        label: 'Expected Impact (%)',
+                        data: [30, 25, 15, 20, 40, 35],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.8)',
+                            'rgba(54, 162, 235, 0.8)',
+                            'rgba(255, 206, 86, 0.8)',
+                            'rgba(75, 192, 192, 0.8)',
+                            'rgba(153, 102, 255, 0.8)',
+                            'rgba(255, 159, 64, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Performance Radar Chart
+            const performanceRadarCtx = document.getElementById('performanceRadar').getContext('2d');
+            new Chart(performanceRadarCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['Content', 'SEO', 'Social Proof', 'Mobile', 'Speed', 'Security'],
+                    datasets: [{
+                        label: 'Current',
+                        data: [95, 20, 10, 85, 70, 40],
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 2
+                    }, {
+                        label: 'Target',
+                        data: [95, 95, 90, 95, 90, 90],
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+
+            // Market Share Donut Chart
+            const marketShareCtx = document.getElementById('marketShareChart').getContext('2d');
+            new Chart(marketShareCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Available Market', 'Rapid Roofing', 'Bloomfield', 'Other Competitors', 'iSwitch Current', 'iSwitch Potential'],
+                    datasets: [{
+                        data: [65, 12, 8, 10, 2, 8],
+                        backgroundColor: [
+                            'rgba(200, 200, 200, 0.8)',
+                            'rgba(255, 99, 132, 0.8)',
+                            'rgba(54, 162, 235, 0.8)',
+                            'rgba(255, 206, 86, 0.8)',
+                            'rgba(75, 192, 192, 0.8)',
+                            'rgba(153, 102, 255, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+
+            // Demographics Chart
+            const demographicsCtx = document.getElementById('demographicsChart').getContext('2d');
+            new Chart(demographicsCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Bloomfield Hills', 'Birmingham', 'Troy', 'Rochester Hills', 'West Bloomfield', 'Ann Arbor'],
+                    datasets: [{
+                        label: 'Median Income ($K)',
+                        data: [189, 138, 116, 115, 123, 95],
+                        backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                        yAxisID: 'y'
+                    }, {
+                        label: 'Homes Needing Replacement',
+                        data: [2.8, 4.2, 7.2, 6.8, 8.9, 5.5],
+                        backgroundColor: 'rgba(118, 75, 162, 0.8)',
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Income ($K)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Homes (Thousands)'
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Sales Funnel Chart
+            const salesFunnelCtx = document.getElementById('salesFunnelChart').getContext('2d');
+            new Chart(salesFunnelCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Website Visitors', 'Leads Generated', 'Appointments Set', 'Proposals Sent', 'Deals Closed'],
+                    datasets: [{
+                        label: 'Current Process',
+                        data: [1000, 30, 18, 12, 1.5],
+                        backgroundColor: 'rgba(255, 99, 132, 0.6)'
+                    }, {
+                        label: 'Optimized Process',
+                        data: [1000, 80, 48, 36, 12],
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Prospects'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Lead Source Performance
+            const leadSourceCtx = document.getElementById('leadSourceChart').getContext('2d');
+            new Chart(leadSourceCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Digital Door Knocking', 'Google LSA', 'SEO/Organic', 'Referrals', 'Social Media', 'Partnerships'],
+                    datasets: [{
+                        data: [30, 25, 20, 15, 5, 5],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.8)',
+                            'rgba(54, 162, 235, 0.8)',
+                            'rgba(255, 206, 86, 0.8)',
+                            'rgba(75, 192, 192, 0.8)',
+                            'rgba(153, 102, 255, 0.8)',
+                            'rgba(255, 159, 64, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+
+            // Stealth Gap Analysis
+            const stealthGapCtx = document.getElementById('stealthGapChart').getContext('2d');
+            new Chart(stealthGapCtx, {
+                type: 'horizontalBar',
+                data: {
+                    labels: [
+                        'Strategic Partnerships',
+                        'Ambassador Network',
+                        'Word-of-Mouth',
+                        'Community Infiltration',
+                        'Content Authority',
+                        'Native Advertising',
+                        'Social Media',
+                        'User-Generated Content',
+                        'Competitive Intelligence',
+                        'Micro-Influencers'
+                    ],
+                    datasets: [{
+                        label: 'Annual Revenue Loss ($K)',
+                        data: [523, 412, 389, 347, 301, 289, 234, 178, 156, 145],
+                        backgroundColor: 'rgba(255, 99, 132, 0.8)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value + 'K';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Revenue Projection Chart
+            const revenueProjectionCtx = document.getElementById('revenueProjectionChart').getContext('2d');
+            new Chart(revenueProjectionCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Current', 'Month 3', 'Month 6', 'Year 1', 'Year 2', 'Year 3'],
+                    datasets: [{
+                        label: 'Conservative',
+                        data: [6, 7.5, 9, 6.5, 13.2, 22.3],
+                        borderColor: 'rgba(255, 206, 86, 1)',
+                        backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                        tension: 0.4
+                    }, {
+                        label: 'Target',
+                        data: [6, 8.5, 11, 10, 18, 30],
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.4
+                    }, {
+                        label: 'Aggressive',
+                        data: [6, 10, 14, 15, 25, 40],
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Revenue ($M)'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // ROI by Strategy
+            const roiCtx = document.getElementById('roiChart').getContext('2d');
+            new Chart(roiCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Community', 'Intelligence', 'Partnerships', 'Word-of-Mouth', 'Social Media'],
+                    datasets: [{
+                        label: 'ROI Multiplier',
+                        data: [13.9, 15.6, 11.6, 11.1, 11.7],
+                        backgroundColor: 'rgba(75, 192, 192, 0.8)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + 'x';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Customer Acquisition Cost
+            const cacCtx = document.getElementById('cacChart').getContext('2d');
+            new Chart(cacCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Current', 'Month 1', 'Month 2', 'Month 3', 'Month 6', 'Year 1'],
+                    datasets: [{
+                        label: 'Cost per Acquisition',
+                        data: [150, 135, 120, 100, 75, 50],
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
