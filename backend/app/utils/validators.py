@@ -9,9 +9,27 @@ from email_validator import validate_email, EmailNotValidError
 import phonenumbers
 from typing import Optional, Any, Dict
 from datetime import datetime
+from uuid import UUID
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def validate_uuid(uuid_string: str) -> bool:
+    """
+    Validate if a string is a valid UUID.
+
+    Args:
+        uuid_string: String to validate
+
+    Returns:
+        True if valid UUID, False otherwise
+    """
+    try:
+        UUID(uuid_string)
+        return True
+    except (ValueError, AttributeError, TypeError):
+        return False
 
 
 def validate_email_address(email: str) -> tuple[bool, Optional[str]]:

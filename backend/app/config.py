@@ -179,3 +179,22 @@ def get_config(config_name="development"):
         Config: Configuration object
     """
     return config_by_name.get(config_name, DevelopmentConfig)
+
+
+def get_supabase_client():
+    """
+    Get Supabase client instance.
+
+    Returns:
+        Supabase: Configured Supabase client
+    """
+    from supabase import create_client, Client
+
+    config = get_config()
+    url = config.SUPABASE_URL
+    key = config.SUPABASE_KEY
+
+    if not url or not key:
+        raise ValueError("SUPABASE_URL and SUPABASE_KEY must be configured")
+
+    return create_client(url, key)
