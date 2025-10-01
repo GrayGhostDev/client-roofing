@@ -1,0 +1,209 @@
+"""
+iSwitch Roofs CRM - Flask Application Factory
+Version: 1.0.0
+Date: 2025-10-01
+"""
+
+from flask import Flask
+from flask_cors import CORS
+from backend.app.config import get_config
+import sentry_sdk
+from sentry_sdk.integrations.flask import FlaskIntegration
+import logging
+from logging.handlers import RotatingFileHandler
+import os
+
+
+def create_app(config_name="development"):
+    """
+    Flask application factory pattern.
+
+    Args:
+        config_name (str): Configuration name (development, production, testing)
+
+    Returns:
+        Flask: Configured Flask application instance
+    """
+    app = Flask(__name__, instance_relative_config=True)
+
+    # Load configuration
+    config = get_config(config_name)
+    app.config.from_object(config)
+
+    # Initialize Sentry for error tracking (production only)
+    if config_name == "production" and app.config.get("SENTRY_DSN"):
+        sentry_sdk.init(
+            dsn=app.config["SENTRY_DSN"],
+            integrations=[FlaskIntegration()],
+            traces_sample_rate=1.0,
+            environment=app.config.get("SENTRY_ENVIRONMENT", "production"),
+        )
+
+    # Setup CORS
+    CORS(
+        app,
+        resources={r"/api/*": {"origins": app.config.get("CORS_ORIGINS", "*")}},
+        supports_credentials=True,
+    )
+
+    # Setup logging
+    setup_logging(app)
+
+    # Register blueprints
+    register_blueprints(app)
+
+    # Register error handlers
+    register_error_handlers(app)
+
+    # Register CLI commands
+    register_commands(app)
+
+    # Health check endpoint
+    @app.route("/health")
+    def health_check():
+        """Health check endpoint for monitoring."""
+        return {"status": "healthy", "service": "iswitch-roofs-crm-api"}, 200
+
+    @app.route("/")
+    def index():
+        """Root endpoint with API information."""
+        return {
+            "service": "iSwitch Roofs CRM API",
+            "version": "1.0.0",
+            "status": "running",
+            "docs": "/api/docs",
+        }, 200
+
+    return app
+
+
+def setup_logging(app):
+    """
+    Configure application logging.
+
+    Args:
+        app (Flask): Flask application instance
+    """
+    if not app.debug and not app.testing:
+        # Create logs directory if it doesn't exist
+        if not os.path.exists("logs"):
+            os.mkdir("logs")
+
+        # Setup file handler
+        file_handler = RotatingFileHandler(
+            "logs/iswitch_roofs_crm.log", maxBytes=10240000, backupCount=10
+        )
+        file_handler.setFormatter(
+            logging.Formatter(
+                "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"
+            )
+        )
+        file_handler.setLevel(logging.INFO)
+        app.logger.addHandler(file_handler)
+
+        app.logger.setLevel(logging.INFO)
+        app.logger.info("iSwitch Roofs CRM startup")
+
+
+def register_blueprints(app):
+    """
+    Register Flask blueprints for API routes.
+
+    Args:
+        app (Flask): Flask application instance
+    """
+    from backend.app.routes import leads, customers, projects, interactions
+    from backend.app.routes import partnerships, reviews, appointments
+    from backend.app.routes import analytics, team, realtime
+
+    # Register API blueprints
+    app.register_blueprint(leads.bp, url_prefix="/api/leads")
+    app.register_blueprint(customers.bp, url_prefix="/api/customers")
+    app.register_blueprint(projects.bp, url_prefix="/api/projects")
+    app.register_blueprint(interactions.bp, url_prefix="/api/interactions")
+    app.register_blueprint(partnerships.bp, url_prefix="/api/partnerships")
+    app.register_blueprint(reviews.bp, url_prefix="/api/reviews")
+    app.register_blueprint(appointments.bp, url_prefix="/api/appointments")
+    app.register_blueprint(analytics.bp, url_prefix="/api/analytics")
+    app.register_blueprint(team.bp, url_prefix="/api/team")
+    app.register_blueprint(realtime.bp, url_prefix="/api/realtime")
+
+
+def register_error_handlers(app):
+    """
+    Register custom error handlers.
+
+    Args:
+        app (Flask): Flask application instance
+    """
+    from werkzeug.exceptions import HTTPException
+
+    @app.errorhandler(HTTPException)
+    def handle_http_exception(error):
+        """Handle HTTP exceptions."""
+        app.logger.error(f"HTTP Error: {error.code} - {error.description}")
+        return {
+            "error": error.name,
+            "message": error.description,
+            "code": error.code,
+        }, error.code
+
+    @app.errorhandler(Exception)
+    def handle_exception(error):
+        """Handle unexpected exceptions."""
+        app.logger.error(f"Unhandled exception: {str(error)}", exc_info=True)
+        return {
+            "error": "Internal Server Error",
+            "message": "An unexpected error occurred",
+        }, 500
+
+    @app.errorhandler(404)
+    def not_found(error):
+        """Handle 404 errors."""
+        return {"error": "Not Found", "message": "The requested resource was not found"}, 404
+
+    @app.errorhandler(405)
+    def method_not_allowed(error):
+        """Handle 405 errors."""
+        return {
+            "error": "Method Not Allowed",
+            "message": "The method is not allowed for the requested URL",
+        }, 405
+
+
+def register_commands(app):
+    """
+    Register Flask CLI commands.
+
+    Args:
+        app (Flask): Flask application instance
+    """
+    import click
+
+    @app.cli.command()
+    def init_db():
+        """Initialize the database."""
+        click.echo("Initializing database...")
+        # Add database initialization logic here
+        click.echo("Database initialized successfully!")
+
+    @app.cli.command()
+    def seed_db():
+        """Seed the database with test data."""
+        click.echo("Seeding database with test data...")
+        # Add seeding logic here
+        click.echo("Database seeded successfully!")
+
+    @app.cli.command()
+    def routes():
+        """Display all registered routes."""
+        import urllib
+        from flask import url_for
+
+        output = []
+        for rule in app.url_map.iter_rules():
+            methods = ",".join(sorted(rule.methods))
+            output.append(f"{rule.endpoint:50s} {methods:20s} {rule.rule}")
+
+        for line in sorted(output):
+            click.echo(line)
