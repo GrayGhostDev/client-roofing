@@ -21,8 +21,10 @@ from app.utils.validators import validate_request
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Create blueprint
+# Create blueprint (module exports alias `bp` for app factory consistency)
 partnerships_bp = Blueprint("partnerships", __name__, url_prefix="/api/partnerships")
+# Alias expected by app.register_blueprint(...)
+bp = partnerships_bp
 
 
 @partnerships_bp.route("/", methods=["GET"])
@@ -296,6 +298,92 @@ def list_referrals():
 
     except Exception as e:
         logger.error(f"List referrals error: {e}")
+        return jsonify({"success": False, "error": "Internal server error"}), 500
+
+
+@partnerships_bp.route("/<partner_id>/referrals", methods=["GET"])
+@require_auth
+@require_roles(["admin", "manager", "sales"])
+def get_partner_referrals(partner_id: str):
+    """
+    Get referral history for a specific partner (convenience endpoint).
+
+    Query Parameters (optional):
+        - status, date_from, date_to, limit, offset
+    """
+    try:
+        status = request.args.get("status")
+        date_from = request.args.get("date_from")
+        date_to = request.args.get("date_to")
+        limit = int(request.args.get("limit", 50))
+        offset = int(request.args.get("offset", 0))
+
+        query = partnerships_service.supabase.client.table("referrals").select("*")
+        query = query.eq("partner_id", partner_id)
+        if status:
+            query = query.eq("status", status)
+        if date_from:
+            query = query.gte("created_at", date_from)
+        if date_to:
+            query = query.lte("created_at", date_to)
+
+        query = query.order("created_at", desc=True).range(offset, offset + limit - 1)
+        result = query.execute()
+        return jsonify({"success": True, "referrals": result.data, "total": len(result.data)}), 200
+    except Exception as e:
+        logger.error(f"Get partner referrals error: {e}")
+        return jsonify({"success": False, "error": "Internal server error"}), 500
+
+
+@partnerships_bp.route("/<partner_id>/referral", methods=["POST"])
+@require_auth
+@require_roles(["admin", "manager", "sales"])
+def create_partner_referral(partner_id: str):
+    """
+    Log a referral for a specific partner (convenience endpoint).
+    """
+    try:
+        data = request.get_json() or {}
+        data["partner_id"] = partner_id
+
+        # Validate and create
+        required_fields = ["partner_id", "customer_name", "customer_email", "customer_phone"]
+        errors = validate_request(data, required_fields)
+        if errors:
+            return jsonify({"success": False, "errors": errors}), 400
+
+        success, result, error = partnerships_service.create_referral(data)
+        if success:
+            return jsonify({"success": True, "referral": result}), 201
+        else:
+            return jsonify({"success": False, "error": error or "Failed to create referral"}), 400
+    except Exception as e:
+        logger.error(f"Create partner referral error: {e}")
+        return jsonify({"success": False, "error": "Internal server error"}), 500
+
+
+@partnerships_bp.route("/<partner_id>/commission", methods=["GET"])
+@require_auth
+@require_roles(["admin", "manager", "finance"])
+def get_partner_commission(partner_id: str):
+    """
+    Calculate and return commission metrics for a specific partner.
+    """
+    try:
+        # Leverage existing metrics calculator
+        metrics = partnerships_service._calculate_partner_metrics(partner_id)
+        if not metrics:
+            return jsonify({"success": False, "error": "Partner not found or no data"}), 404
+
+        return jsonify({"success": True, "commission": {
+            "total_commission": metrics.get("total_commission", 0),
+            "pending_commission": metrics.get("pending_commission", 0),
+            "total_revenue": metrics.get("total_revenue", 0),
+            "completed_referrals": metrics.get("completed_referrals", 0),
+            "won_referrals": metrics.get("won_referrals", 0),
+        }}), 200
+    except Exception as e:
+        logger.error(f"Get partner commission error: {e}")
         return jsonify({"success": False, "error": "Internal server error"}), 500
 
 
