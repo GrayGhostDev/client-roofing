@@ -124,7 +124,17 @@ jobs:
           JWT_SECRET_KEY: test-secret-key
         run: |
           cd backend
-          pytest tests/ -m "unit" -v --maxfail=1 --disable-warnings || true
+          pytest tests/ -m "unit" -v --maxfail=1 --disable-warnings --junitxml=../junit-unit.xml 2>&1 | tee ../pytest-unit-output.txt || true
+
+      - name: Upload unit test logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-test-logs
+          path: |
+            junit-unit.xml
+            pytest-unit-output.txt
+          if-no-files-found: ignore
 
   test:
     name: Run Tests
