@@ -35,13 +35,13 @@ jobs:
       - name: Install linting tools
         run: |
           pip install --upgrade pip
-          pip install black ruff mypy bandit safety
+          pip install black==25.9.0 ruff==0.13.3 mypy==1.18.2 bandit==1.8.6 safety==3.6.2
 
       - name: Run Black formatter check
         run: black --check backend/
 
       - name: Run Ruff linter
-        run: ruff check backend/
+        run: ruff check --config pyproject.toml backend/
 
       - name: Run MyPy type checker
         run: mypy backend/app --ignore-missing-imports || true
