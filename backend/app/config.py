@@ -6,17 +6,25 @@ Date: 2025-10-01
 
 import os
 from datetime import timedelta
+from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parents[2]
+ENV_PATH = BASE_DIR / ".env"
+load_dotenv(ENV_PATH)
 
 
 class Config:
     """Base configuration class."""
 
     # Flask configuration
-    SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
+    SECRET_KEY = os.getenv("SECRET_KEY")
+    if not SECRET_KEY:
+        raise RuntimeError(
+            "Missing SECRET_KEY environment variable. Set it in the project's .env file."
+        )
     DEBUG = False
     TESTING = False
 
@@ -30,13 +38,11 @@ class Config:
 
     # JWT configuration
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", SECRET_KEY)
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(
-        seconds=int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES", 3600))
-    )
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES", 3600)))
 
     # API configuration
     API_HOST = os.getenv("API_HOST", "0.0.0.0")
-    API_PORT = int(os.getenv("API_PORT", 5000))
+    API_PORT = int(os.getenv("API_PORT", 8000))
 
     # CORS configuration
     CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8501").split(
@@ -188,7 +194,7 @@ def get_supabase_client():
     Returns:
         Supabase: Configured Supabase client
     """
-    from supabase import create_client, Client
+    from supabase import create_client
 
     config = get_config()
     url = config.SUPABASE_URL
@@ -198,3 +204,88 @@ def get_supabase_client():
         raise ValueError("SUPABASE_URL and SUPABASE_KEY must be configured")
 
     return create_client(url, key)
+
+
+def get_pusher_client():
+    """
+    Get Pusher client instance.
+
+    Returns:
+        Pusher: Configured Pusher client
+    """
+    import pusher
+
+    config = get_config()
+
+    if not all([config.PUSHER_APP_ID, config.PUSHER_KEY, config.PUSHER_SECRET]):
+        raise ValueError("PUSHER_APP_ID, PUSHER_KEY, and PUSHER_SECRET must be configured")
+
+    return pusher.Pusher(
+        app_id=config.PUSHER_APP_ID,
+        key=config.PUSHER_KEY,
+        secret=config.PUSHER_SECRET,
+        cluster=config.PUSHER_CLUSTER,
+        ssl=True,
+    )
+
+
+def get_sendgrid_client():
+    """
+    Get SendGrid client instance.
+
+    Returns:
+        SendGridAPIClient: Configured SendGrid client
+    """
+    from sendgrid import SendGridAPIClient
+
+    config = get_config()
+
+    if not config.SENDGRID_API_KEY:
+        raise ValueError("SENDGRID_API_KEY must be configured")
+
+    return SendGridAPIClient(config.SENDGRID_API_KEY)
+
+
+def get_twilio_client():
+    """
+    Get Twilio client instance.
+
+    Returns:
+        Client: Configured Twilio client
+    """
+    from twilio.rest import Client
+
+    config = get_config()
+
+    if not all([config.TWILIO_ACCOUNT_SID, config.TWILIO_AUTH_TOKEN]):
+        raise ValueError("TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN must be configured")
+
+    return Client(config.TWILIO_ACCOUNT_SID, config.TWILIO_AUTH_TOKEN)
+
+
+def get_redis_client():
+    """
+    Get Redis client instance.
+
+    Returns:
+        Redis: Configured Redis client
+    """
+    from urllib.parse import urlparse
+
+    import redis
+
+    config = get_config()
+
+    if not config.REDIS_URL:
+        raise ValueError("REDIS_URL must be configured")
+
+    # Parse Redis URL
+    url = urlparse(config.REDIS_URL)
+
+    return redis.Redis(
+        host=url.hostname or "localhost",
+        port=url.port or 6379,
+        db=int(url.path.lstrip("/")) if url.path else 0,
+        password=url.password,
+        decode_responses=True,
+    )

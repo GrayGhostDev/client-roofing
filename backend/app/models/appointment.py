@@ -5,17 +5,18 @@ Version: 1.0.0
 Appointment data model for scheduling inspections, consultations, and follow-ups.
 """
 
-from pydantic import BaseModel, Field, field_validator
-from typing import Optional
-from uuid import UUID
 from datetime import datetime, timedelta
 from enum import Enum
+from uuid import UUID
 
-from backend.app.models.base import BaseDBModel
+from pydantic import BaseModel, Field, field_validator
+
+from app.models.base import BaseDBModel
 
 
 class AppointmentType(str, Enum):
     """Appointment type enumeration"""
+
     INITIAL_CONSULTATION = "initial_consultation"
     ROOF_INSPECTION = "roof_inspection"
     QUOTE_PRESENTATION = "quote_presentation"
@@ -30,6 +31,7 @@ class AppointmentType(str, Enum):
 
 class AppointmentStatus(str, Enum):
     """Appointment status"""
+
     SCHEDULED = "scheduled"
     CONFIRMED = "confirmed"
     IN_PROGRESS = "in_progress"
@@ -41,6 +43,7 @@ class AppointmentStatus(str, Enum):
 
 class ReminderStatus(str, Enum):
     """Reminder status"""
+
     PENDING = "pending"
     SENT = "sent"
     FAILED = "failed"
@@ -59,75 +62,91 @@ class Appointment(BaseDBModel):
 
     # Appointment Details (Required)
     appointment_type: AppointmentType = Field(..., description="Type of appointment")
-    status: AppointmentStatus = Field(default=AppointmentStatus.SCHEDULED, description="Current status")
+    status: AppointmentStatus = Field(
+        default=AppointmentStatus.SCHEDULED, description="Current status"
+    )
     title: str = Field(..., min_length=1, max_length=200, description="Appointment title")
 
     # Scheduling
     scheduled_date: datetime = Field(..., description="Scheduled date and time")
     duration_minutes: int = Field(..., ge=15, le=480, description="Duration in minutes")
-    end_time: Optional[datetime] = Field(None, description="Calculated end time")
+    end_time: datetime | None = Field(None, description="Calculated end time")
 
     # Location
-    location: Optional[str] = Field(None, max_length=500, description="Meeting location or address")
+    location: str | None = Field(None, max_length=500, description="Meeting location or address")
     is_virtual: bool = Field(default=False, description="Is this a virtual meeting?")
-    meeting_url: Optional[str] = Field(None, description="Virtual meeting URL (Zoom, Teams, etc.)")
+    meeting_url: str | None = Field(None, description="Virtual meeting URL (Zoom, Teams, etc.)")
 
     # Participants
     assigned_to: UUID = Field(..., description="Assigned team member")
-    customer_id: Optional[UUID] = Field(None, description="Customer/lead attending")
-    additional_attendees: Optional[str] = Field(None, description="Additional attendees (comma-separated names)")
+    customer_id: UUID | None = Field(None, description="Customer/lead attending")
+    additional_attendees: str | None = Field(
+        None, description="Additional attendees (comma-separated names)"
+    )
 
     # Description & Notes
-    description: Optional[str] = Field(None, max_length=2000, description="Appointment description")
-    preparation_notes: Optional[str] = Field(None, max_length=1000, description="Preparation requirements")
-    outcome_notes: Optional[str] = Field(None, max_length=2000, description="Notes after completion")
+    description: str | None = Field(None, max_length=2000, description="Appointment description")
+    preparation_notes: str | None = Field(
+        None, max_length=1000, description="Preparation requirements"
+    )
+    outcome_notes: str | None = Field(None, max_length=2000, description="Notes after completion")
 
     # Reminders
     send_reminder: bool = Field(default=True, description="Send reminder notifications")
-    reminder_hours_before: int = Field(default=24, ge=1, le=168, description="Hours before to send reminder")
+    reminder_hours_before: int = Field(
+        default=24, ge=1, le=168, description="Hours before to send reminder"
+    )
     reminder_sent: bool = Field(default=False, description="Has reminder been sent?")
-    reminder_sent_at: Optional[datetime] = Field(None, description="When reminder was sent")
-    reminder_status: ReminderStatus = Field(default=ReminderStatus.PENDING, description="Reminder status")
+    reminder_sent_at: datetime | None = Field(None, description="When reminder was sent")
+    reminder_status: ReminderStatus = Field(
+        default=ReminderStatus.PENDING, description="Reminder status"
+    )
 
     # Confirmation
-    confirmation_requested: bool = Field(default=False, description="Confirmation requested from customer")
+    confirmation_requested: bool = Field(
+        default=False, description="Confirmation requested from customer"
+    )
     confirmed_by_customer: bool = Field(default=False, description="Has customer confirmed?")
-    confirmed_at: Optional[datetime] = Field(None, description="When customer confirmed")
+    confirmed_at: datetime | None = Field(None, description="When customer confirmed")
 
     # Completion
-    actual_start_time: Optional[datetime] = Field(None, description="Actual start time")
-    actual_end_time: Optional[datetime] = Field(None, description="Actual end time")
-    completed_at: Optional[datetime] = Field(None, description="Completion timestamp")
+    actual_start_time: datetime | None = Field(None, description="Actual start time")
+    actual_end_time: datetime | None = Field(None, description="Actual end time")
+    completed_at: datetime | None = Field(None, description="Completion timestamp")
 
     # Cancellation/Rescheduling
-    cancelled_at: Optional[datetime] = Field(None, description="Cancellation timestamp")
-    cancellation_reason: Optional[str] = Field(None, max_length=500, description="Reason for cancellation")
-    rescheduled_from: Optional[UUID] = Field(None, description="Original appointment ID if rescheduled")
-    rescheduled_to: Optional[UUID] = Field(None, description="New appointment ID if rescheduled")
+    cancelled_at: datetime | None = Field(None, description="Cancellation timestamp")
+    cancellation_reason: str | None = Field(
+        None, max_length=500, description="Reason for cancellation"
+    )
+    rescheduled_from: UUID | None = Field(
+        None, description="Original appointment ID if rescheduled"
+    )
+    rescheduled_to: UUID | None = Field(None, description="New appointment ID if rescheduled")
 
     # Calendar Integration
-    google_calendar_event_id: Optional[str] = Field(None, description="Google Calendar event ID")
-    outlook_calendar_event_id: Optional[str] = Field(None, description="Outlook Calendar event ID")
+    google_calendar_event_id: str | None = Field(None, description="Google Calendar event ID")
+    outlook_calendar_event_id: str | None = Field(None, description="Outlook Calendar event ID")
 
     # Follow-up
     follow_up_required: bool = Field(default=False, description="Requires follow-up appointment")
-    follow_up_appointment_id: Optional[UUID] = Field(None, description="Follow-up appointment ID")
+    follow_up_appointment_id: UUID | None = Field(None, description="Follow-up appointment ID")
 
-    @field_validator('entity_type')
+    @field_validator("entity_type")
     @classmethod
     def validate_entity_type(cls, v: str) -> str:
         """Validate entity type"""
-        allowed = ['lead', 'customer', 'project']
+        allowed = ["lead", "customer", "project"]
         if v.lower() not in allowed:
             raise ValueError(f"Entity type must be one of: {', '.join(allowed)}")
         return v.lower()
 
-    @field_validator('scheduled_date')
+    @field_validator("scheduled_date")
     @classmethod
     def validate_scheduled_date(cls, v: datetime) -> datetime:
         """Ensure scheduled date is not in the past"""
         if v < datetime.utcnow():
-            raise ValueError('Scheduled date cannot be in the past')
+            raise ValueError("Scheduled date cannot be in the past")
         return v
 
     def calculate_end_time(self) -> datetime:
@@ -137,10 +156,10 @@ class Appointment(BaseDBModel):
     @property
     def is_upcoming(self) -> bool:
         """Check if appointment is upcoming (future and not cancelled)"""
-        return (
-            self.scheduled_date > datetime.utcnow() and
-            self.status not in [AppointmentStatus.CANCELLED, AppointmentStatus.COMPLETED]
-        )
+        return self.scheduled_date > datetime.utcnow() and self.status not in [
+            AppointmentStatus.CANCELLED,
+            AppointmentStatus.COMPLETED,
+        ]
 
     @property
     def is_today(self) -> bool:
@@ -151,13 +170,14 @@ class Appointment(BaseDBModel):
     @property
     def is_overdue(self) -> bool:
         """Check if appointment time has passed but not completed"""
-        return (
-            self.scheduled_date < datetime.utcnow() and
-            self.status not in [AppointmentStatus.COMPLETED, AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW]
-        )
+        return self.scheduled_date < datetime.utcnow() and self.status not in [
+            AppointmentStatus.COMPLETED,
+            AppointmentStatus.CANCELLED,
+            AppointmentStatus.NO_SHOW,
+        ]
 
     @property
-    def minutes_until_appointment(self) -> Optional[int]:
+    def minutes_until_appointment(self) -> int | None:
         """Calculate minutes until appointment"""
         if self.is_upcoming:
             delta = self.scheduled_date - datetime.utcnow()
@@ -176,6 +196,7 @@ class Appointment(BaseDBModel):
 
 class AppointmentCreate(BaseModel):
     """Schema for creating a new appointment"""
+
     entity_type: str
     entity_id: UUID
     appointment_type: AppointmentType
@@ -185,61 +206,65 @@ class AppointmentCreate(BaseModel):
     assigned_to: UUID
 
     # Optional fields
-    location: Optional[str] = None
-    is_virtual: Optional[bool] = False
-    meeting_url: Optional[str] = None
-    customer_id: Optional[UUID] = None
-    additional_attendees: Optional[str] = None
-    description: Optional[str] = None
-    preparation_notes: Optional[str] = None
-    send_reminder: Optional[bool] = True
-    reminder_hours_before: Optional[int] = 24
-    confirmation_requested: Optional[bool] = False
+    location: str | None = None
+    is_virtual: bool | None = False
+    meeting_url: str | None = None
+    customer_id: UUID | None = None
+    additional_attendees: str | None = None
+    description: str | None = None
+    preparation_notes: str | None = None
+    send_reminder: bool | None = True
+    reminder_hours_before: int | None = 24
+    confirmation_requested: bool | None = False
 
 
 class AppointmentUpdate(BaseModel):
     """Schema for updating an appointment"""
-    status: Optional[AppointmentStatus] = None
-    title: Optional[str] = Field(None, min_length=1, max_length=200)
-    scheduled_date: Optional[datetime] = None
-    duration_minutes: Optional[int] = Field(None, ge=15, le=480)
-    location: Optional[str] = None
-    meeting_url: Optional[str] = None
-    assigned_to: Optional[UUID] = None
-    description: Optional[str] = None
-    preparation_notes: Optional[str] = None
-    outcome_notes: Optional[str] = None
-    confirmed_by_customer: Optional[bool] = None
-    actual_start_time: Optional[datetime] = None
-    actual_end_time: Optional[datetime] = None
-    cancellation_reason: Optional[str] = None
-    follow_up_required: Optional[bool] = None
+
+    status: AppointmentStatus | None = None
+    title: str | None = Field(None, min_length=1, max_length=200)
+    scheduled_date: datetime | None = None
+    duration_minutes: int | None = Field(None, ge=15, le=480)
+    location: str | None = None
+    meeting_url: str | None = None
+    assigned_to: UUID | None = None
+    description: str | None = None
+    preparation_notes: str | None = None
+    outcome_notes: str | None = None
+    confirmed_by_customer: bool | None = None
+    actual_start_time: datetime | None = None
+    actual_end_time: datetime | None = None
+    cancellation_reason: str | None = None
+    follow_up_required: bool | None = None
 
 
 class AppointmentReschedule(BaseModel):
     """Schema for rescheduling an appointment"""
+
     new_scheduled_date: datetime
-    reason: Optional[str] = Field(None, max_length=500)
+    reason: str | None = Field(None, max_length=500)
     send_notification: bool = Field(default=True)
 
 
 class AppointmentResponse(BaseModel):
     """Schema for appointment API response"""
+
     data: Appointment
-    entity_data: Optional[dict] = None  # Lead/Customer/Project data
-    assigned_to_data: Optional[dict] = None  # Team member data
+    entity_data: dict | None = None  # Lead/Customer/Project data
+    assigned_to_data: dict | None = None  # Team member data
 
 
 class AppointmentListFilters(BaseModel):
     """Filter parameters for appointment list endpoint"""
-    entity_type: Optional[str] = Field(None, description="Filter by entity type")
-    entity_id: Optional[UUID] = Field(None, description="Filter by specific entity")
-    appointment_type: Optional[str] = Field(None, description="Comma-separated types")
-    status: Optional[str] = Field(None, description="Comma-separated statuses")
-    assigned_to: Optional[UUID] = Field(None, description="Filter by team member")
-    date_from: Optional[datetime] = Field(None, description="Filter from date")
-    date_to: Optional[datetime] = Field(None, description="Filter to date")
-    is_virtual: Optional[bool] = Field(None, description="Filter virtual meetings")
-    needs_confirmation: Optional[bool] = Field(None, description="Filter unconfirmed appointments")
-    is_today: Optional[bool] = Field(None, description="Filter today's appointments")
-    is_upcoming: Optional[bool] = Field(None, description="Filter upcoming appointments")
+
+    entity_type: str | None = Field(None, description="Filter by entity type")
+    entity_id: UUID | None = Field(None, description="Filter by specific entity")
+    appointment_type: str | None = Field(None, description="Comma-separated types")
+    status: str | None = Field(None, description="Comma-separated statuses")
+    assigned_to: UUID | None = Field(None, description="Filter by team member")
+    date_from: datetime | None = Field(None, description="Filter from date")
+    date_to: datetime | None = Field(None, description="Filter to date")
+    is_virtual: bool | None = Field(None, description="Filter virtual meetings")
+    needs_confirmation: bool | None = Field(None, description="Filter unconfirmed appointments")
+    is_today: bool | None = Field(None, description="Filter today's appointments")
+    is_upcoming: bool | None = Field(None, description="Filter upcoming appointments")

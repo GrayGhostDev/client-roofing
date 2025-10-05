@@ -4,11 +4,11 @@ Version: 1.0.0
 Date: 2025-10-01
 """
 
-import pusher
-from flask import current_app, g
-from typing import Dict, Any, Optional
 import logging
-import json
+from typing import Any
+
+import pusher
+from flask import current_app
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 _pusher_client = None
 
 
-def get_pusher_client() -> Optional[pusher.Pusher]:
+def get_pusher_client() -> pusher.Pusher | None:
     """
     Get Pusher client instance (singleton).
 
@@ -106,8 +106,8 @@ class PusherService:
         self,
         channel: str,
         event: str,
-        data: Dict[str, Any],
-        socket_id: Optional[str] = None,
+        data: dict[str, Any],
+        socket_id: str | None = None,
     ) -> bool:
         """
         Trigger an event on a channel.
@@ -133,9 +133,7 @@ class PusherService:
             logger.error(f"Error triggering Pusher event: {str(e)}")
             return False
 
-    def trigger_batch(
-        self, batch: list[Dict[str, Any]], socket_id: Optional[str] = None
-    ) -> bool:
+    def trigger_batch(self, batch: list[dict[str, Any]], socket_id: str | None = None) -> bool:
         """
         Trigger multiple events in a single API call.
 
@@ -159,7 +157,7 @@ class PusherService:
             return False
 
     # Lead Events
-    def broadcast_lead_created(self, lead_data: Dict[str, Any]) -> bool:
+    def broadcast_lead_created(self, lead_data: dict[str, Any]) -> bool:
         """Broadcast that a new lead was created."""
         return self.trigger(
             self.CHANNEL_LEADS,
@@ -175,7 +173,7 @@ class PusherService:
             },
         )
 
-    def broadcast_lead_updated(self, lead_id: str, updates: Dict[str, Any]) -> bool:
+    def broadcast_lead_updated(self, lead_id: str, updates: dict[str, Any]) -> bool:
         """Broadcast that a lead was updated."""
         return self.trigger(
             self.CHANNEL_LEADS,
@@ -183,9 +181,7 @@ class PusherService:
             {"lead_id": lead_id, "updates": updates, "timestamp": updates.get("updated_at")},
         )
 
-    def broadcast_lead_assigned(
-        self, lead_id: str, assigned_to: str, assigned_by: str
-    ) -> bool:
+    def broadcast_lead_assigned(self, lead_id: str, assigned_to: str, assigned_by: str) -> bool:
         """Broadcast that a lead was assigned to a team member."""
         return self.trigger(
             self.CHANNEL_LEADS,
@@ -214,7 +210,7 @@ class PusherService:
         return self.trigger_batch(batch)
 
     # Project Events
-    def broadcast_project_created(self, project_data: Dict[str, Any]) -> bool:
+    def broadcast_project_created(self, project_data: dict[str, Any]) -> bool:
         """Broadcast that a new project was created."""
         return self.trigger(
             self.CHANNEL_PROJECTS,
@@ -283,14 +279,12 @@ class PusherService:
         )
 
     # Analytics Events
-    def broadcast_metrics_update(self, metrics: Dict[str, Any]) -> bool:
+    def broadcast_metrics_update(self, metrics: dict[str, Any]) -> bool:
         """Broadcast updated metrics to dashboard."""
         return self.trigger(self.CHANNEL_ANALYTICS, self.EVENT_METRICS_UPDATED, metrics)
 
     # Interaction Events
-    def broadcast_interaction_created(
-        self, interaction_data: Dict[str, Any]
-    ) -> bool:
+    def broadcast_interaction_created(self, interaction_data: dict[str, Any]) -> bool:
         """Broadcast that a new interaction was logged."""
         return self.trigger(
             self.CHANNEL_GLOBAL,
@@ -305,9 +299,7 @@ class PusherService:
         )
 
     # Appointment Events
-    def broadcast_appointment_created(
-        self, appointment_data: Dict[str, Any]
-    ) -> bool:
+    def broadcast_appointment_created(self, appointment_data: dict[str, Any]) -> bool:
         """Broadcast that a new appointment was created."""
         return self.trigger(
             self.CHANNEL_TEAM,
@@ -320,9 +312,7 @@ class PusherService:
             },
         )
 
-    def send_appointment_reminder(
-        self, user_id: str, appointment_data: Dict[str, Any]
-    ) -> bool:
+    def send_appointment_reminder(self, user_id: str, appointment_data: dict[str, Any]) -> bool:
         """Send appointment reminder to a specific user."""
         channel = f"private-user-{user_id}"
         return self.trigger(
@@ -336,7 +326,7 @@ class PusherService:
             },
         )
 
-    def authenticate_channel(self, socket_id: str, channel_name: str, user_id: str) -> Dict:
+    def authenticate_channel(self, socket_id: str, channel_name: str, user_id: str) -> dict:
         """
         Authenticate a user for a private or presence channel.
 

@@ -4,13 +4,14 @@ Version: 1.0.0
 Date: 2025-10-01
 """
 
-import re
-from email_validator import validate_email, EmailNotValidError
-import phonenumbers
-from typing import Optional, Any, Dict
-from datetime import datetime
-from uuid import UUID
 import logging
+import re
+from datetime import datetime
+from typing import Any
+from uuid import UUID
+
+import phonenumbers
+from email_validator import EmailNotValidError, validate_email
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ def validate_uuid(uuid_string: str) -> bool:
         return False
 
 
-def validate_email_address(email: str) -> tuple[bool, Optional[str]]:
+def validate_email_address(email: str) -> tuple[bool, str | None]:
     """
     Validate email address format.
 
@@ -50,7 +51,7 @@ def validate_email_address(email: str) -> tuple[bool, Optional[str]]:
         return False, str(e)
 
 
-def validate_phone_number(phone: str, region: str = "US") -> tuple[bool, Optional[str]]:
+def validate_phone_number(phone: str, region: str = "US") -> tuple[bool, str | None]:
     """
     Validate and format phone number.
 
@@ -76,7 +77,7 @@ def validate_phone_number(phone: str, region: str = "US") -> tuple[bool, Optiona
         return False, str(e)
 
 
-def validate_zip_code(zip_code: str) -> tuple[bool, Optional[str]]:
+def validate_zip_code(zip_code: str) -> tuple[bool, str | None]:
     """
     Validate US ZIP code format (5 digits or 5+4 digits).
 
@@ -99,7 +100,7 @@ def validate_zip_code(zip_code: str) -> tuple[bool, Optional[str]]:
         return False, "ZIP code must be 5 or 9 digits"
 
 
-def validate_state_code(state: str) -> tuple[bool, Optional[str]]:
+def validate_state_code(state: str) -> tuple[bool, str | None]:
     """
     Validate US state code.
 
@@ -170,7 +171,7 @@ def validate_state_code(state: str) -> tuple[bool, Optional[str]]:
         return False, "Invalid state code"
 
 
-def validate_lead_score(score: int) -> tuple[bool, Optional[str]]:
+def validate_lead_score(score: int) -> tuple[bool, str | None]:
     """
     Validate lead score (0-100).
 
@@ -189,7 +190,7 @@ def validate_lead_score(score: int) -> tuple[bool, Optional[str]]:
     return True, None
 
 
-def validate_date_format(date_str: str, format: str = "%Y-%m-%d") -> tuple[bool, Optional[datetime]]:
+def validate_date_format(date_str: str, format: str = "%Y-%m-%d") -> tuple[bool, datetime | None]:
     """
     Validate date string format.
 
@@ -207,7 +208,7 @@ def validate_date_format(date_str: str, format: str = "%Y-%m-%d") -> tuple[bool,
         return False, str(e)
 
 
-def validate_budget_range(budget: str) -> tuple[bool, Optional[str]]:
+def validate_budget_range(budget: str) -> tuple[bool, str | None]:
     """
     Validate budget range string.
 
@@ -231,7 +232,7 @@ def validate_budget_range(budget: str) -> tuple[bool, Optional[str]]:
         return False, f"Invalid budget range. Must be one of: {', '.join(valid_ranges)}"
 
 
-def validate_urgency_level(urgency: str) -> tuple[bool, Optional[str]]:
+def validate_urgency_level(urgency: str) -> tuple[bool, str | None]:
     """
     Validate urgency level string.
 
@@ -256,7 +257,9 @@ def validate_urgency_level(urgency: str) -> tuple[bool, Optional[str]]:
         return False, f"Invalid urgency level. Must be one of: {', '.join(valid_urgencies)}"
 
 
-def validate_required_fields(data: Dict[str, Any], required_fields: list) -> tuple[bool, Optional[str]]:
+def validate_required_fields(
+    data: dict[str, Any], required_fields: list
+) -> tuple[bool, str | None]:
     """
     Validate that all required fields are present and not empty.
 
@@ -270,7 +273,11 @@ def validate_required_fields(data: Dict[str, Any], required_fields: list) -> tup
     missing_fields = []
 
     for field in required_fields:
-        if field not in data or data[field] is None or (isinstance(data[field], str) and not data[field].strip()):
+        if (
+            field not in data
+            or data[field] is None
+            or (isinstance(data[field], str) and not data[field].strip())
+        ):
             missing_fields.append(field)
 
     if missing_fields:
@@ -279,7 +286,7 @@ def validate_required_fields(data: Dict[str, Any], required_fields: list) -> tup
     return True, None
 
 
-def sanitize_string(text: str, max_length: Optional[int] = None) -> str:
+def sanitize_string(text: str, max_length: int | None = None) -> str:
     """
     Sanitize string input (trim, remove extra whitespace).
 
@@ -306,7 +313,7 @@ def sanitize_string(text: str, max_length: Optional[int] = None) -> str:
     return sanitized
 
 
-def validate_url(url: str) -> tuple[bool, Optional[str]]:
+def validate_url(url: str) -> tuple[bool, str | None]:
     """
     Validate URL format.
 
@@ -332,7 +339,7 @@ def validate_url(url: str) -> tuple[bool, Optional[str]]:
         return False, "Invalid URL format"
 
 
-def validate_currency_amount(amount: float) -> tuple[bool, Optional[str]]:
+def validate_currency_amount(amount: float) -> tuple[bool, str | None]:
     """
     Validate currency amount (must be positive).
 

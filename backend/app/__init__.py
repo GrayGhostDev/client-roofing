@@ -4,17 +4,40 @@ Version: 1.0.0
 Date: 2025-10-01
 """
 
+import logging
+import os
+from logging.handlers import RotatingFileHandler
+
 from flask import Flask
 from flask_cors import CORS
-from backend.app.config import get_config
-import sentry_sdk
-from sentry_sdk.integrations.flask import FlaskIntegration
-import logging
-from logging.handlers import RotatingFileHandler
-import os
+
+# Optional Sentry integration
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.flask import FlaskIntegration
+
+    SENTRY_AVAILABLE = True
+except ImportError:
+    SENTRY_AVAILABLE = False
+
+from app.config import get_config
 
 
-def create_app(config_name="development"):
+def _resolve_config_name(explicit_name: str | None = None) -> str:
+    """Determine which configuration profile to load."""
+
+    if explicit_name:
+        return explicit_name
+
+    for env_var in ("FLASK_CONFIG", "APP_ENV", "FLASK_ENV"):
+        value = os.getenv(env_var)
+        if value:
+            return value.lower()
+
+    return "development"
+
+
+def create_app(config_name: str | None = None):
     """
     Flask application factory pattern.
 
@@ -27,11 +50,13 @@ def create_app(config_name="development"):
     app = Flask(__name__, instance_relative_config=True)
 
     # Load configuration
-    config = get_config(config_name)
+    resolved_config_name = _resolve_config_name(config_name)
+    config = get_config(resolved_config_name)
     app.config.from_object(config)
+    app.config["ACTIVE_CONFIG"] = resolved_config_name
 
     # Initialize Sentry for error tracking (production only)
-    if config_name == "production" and app.config.get("SENTRY_DSN"):
+    if resolved_config_name == "production" and app.config.get("SENTRY_DSN") and SENTRY_AVAILABLE:
         sentry_sdk.init(
             dsn=app.config["SENTRY_DSN"],
             integrations=[FlaskIntegration()],
@@ -39,10 +64,14 @@ def create_app(config_name="development"):
             environment=app.config.get("SENTRY_ENVIRONMENT", "production"),
         )
 
-    # Setup CORS
+    # Setup CORS - Allow all routes including health endpoints
     CORS(
         app,
-        resources={r"/api/*": {"origins": app.config.get("CORS_ORIGINS", "*")}},
+        resources={
+            r"/api/*": {"origins": app.config.get("CORS_ORIGINS", "*")},
+            r"/health": {"origins": app.config.get("CORS_ORIGINS", "*")},
+            r"/": {"origins": app.config.get("CORS_ORIGINS", "*")},
+        },
         supports_credentials=True,
     )
 
@@ -94,9 +123,7 @@ def setup_logging(app):
             "logs/iswitch_roofs_crm.log", maxBytes=10240000, backupCount=10
         )
         file_handler.setFormatter(
-            logging.Formatter(
-                "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"
-            )
+            logging.Formatter("%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]")
         )
         file_handler.setLevel(logging.INFO)
         app.logger.addHandler(file_handler)
@@ -112,21 +139,110 @@ def register_blueprints(app):
     Args:
         app (Flask): Flask application instance
     """
-    from backend.app.routes import leads, customers, projects, interactions
-    from backend.app.routes import partnerships, reviews, appointments
-    from backend.app.routes import analytics, team, realtime
+    # Import and register realtime routes for Pusher functionality
+    from app.routes import realtime
 
-    # Register API blueprints
-    app.register_blueprint(leads.bp, url_prefix="/api/leads")
-    app.register_blueprint(customers.bp, url_prefix="/api/customers")
-    app.register_blueprint(projects.bp, url_prefix="/api/projects")
-    app.register_blueprint(interactions.bp, url_prefix="/api/interactions")
-    app.register_blueprint(partnerships.bp, url_prefix="/api/partnerships")
-    app.register_blueprint(reviews.bp, url_prefix="/api/reviews")
-    app.register_blueprint(appointments.bp, url_prefix="/api/appointments")
-    app.register_blueprint(analytics.bp, url_prefix="/api/analytics")
-    app.register_blueprint(team.bp, url_prefix="/api/team")
+    # Register realtime blueprint for Pusher integration
     app.register_blueprint(realtime.bp, url_prefix="/api/realtime")
+
+    app.logger.info("Realtime routes enabled for Pusher integration")
+
+    # Import and register all API route blueprints
+    try:
+        from app.routes import auth
+
+        app.register_blueprint(auth.bp, url_prefix="/api/auth")
+        app.logger.info("Auth routes registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Failed to register auth routes: {e}")
+
+    try:
+        from app.routes import leads
+
+        app.register_blueprint(leads.bp, url_prefix="/api/leads")
+        app.logger.info("Leads routes registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Failed to register leads routes: {e}")
+
+    try:
+        from app.routes import customers
+
+        app.register_blueprint(customers.bp, url_prefix="/api/customers")
+        app.logger.info("Customer routes registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Failed to register customer routes: {e}")
+
+    try:
+        from app.routes import projects
+
+        app.register_blueprint(projects.bp, url_prefix="/api/projects")
+        app.logger.info("Project routes registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Failed to register project routes: {e}")
+
+    try:
+        from app.routes import interactions
+
+        app.register_blueprint(interactions.bp, url_prefix="/api/interactions")
+        app.logger.info("Interaction routes registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Failed to register interaction routes: {e}")
+
+    try:
+        from app.routes import partnerships
+
+        app.register_blueprint(partnerships.bp, url_prefix="/api/partnerships")
+        app.logger.info("Partnership routes registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Failed to register partnership routes: {e}")
+
+    try:
+        from app.routes import reviews
+
+        app.register_blueprint(reviews.bp, url_prefix="/api/reviews")
+        app.logger.info("Review routes registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Failed to register review routes: {e}")
+
+    try:
+        from app.routes import appointments
+
+        app.register_blueprint(appointments.bp, url_prefix="/api/appointments")
+        app.logger.info("Appointment routes registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Failed to register appointment routes: {e}")
+
+    try:
+        from app.routes import analytics
+
+        app.register_blueprint(analytics.bp, url_prefix="/api/analytics")
+        app.logger.info("Analytics routes registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Failed to register analytics routes: {e}")
+
+    try:
+        from app.routes import enhanced_analytics
+
+        app.register_blueprint(enhanced_analytics.bp, url_prefix="/api/enhanced-analytics")
+        app.logger.info("Enhanced analytics routes registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Failed to register enhanced analytics routes: {e}")
+
+    try:
+        from app.routes import team
+
+        app.register_blueprint(team.bp, url_prefix="/api/team")
+        app.logger.info("Team routes registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Failed to register team routes: {e}")
+
+    try:
+        from app.routes import alerts
+
+        app.register_blueprint(alerts.bp, url_prefix="/api/alerts")
+        app.logger.info("Alert routes registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Failed to register alert routes: {e}")
 
 
 def register_error_handlers(app):
@@ -198,6 +314,7 @@ def register_commands(app):
     def routes():
         """Display all registered routes."""
         import urllib
+
         from flask import url_for
 
         output = []

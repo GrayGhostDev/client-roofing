@@ -4,10 +4,10 @@ Version: 1.0.0
 Date: 2025-10-01
 """
 
-from supabase import create_client, Client
-from flask import current_app, g
-from typing import Optional
 import logging
+
+from flask import current_app, g
+from supabase import Client, create_client
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +112,9 @@ class SupabaseService:
             dict: Record data or None if not found
         """
         try:
-            response = self.client.table(table).select(columns).eq(id_column, id_value).single().execute()
+            response = (
+                self.client.table(table).select(columns).eq(id_column, id_value).single().execute()
+            )
             return response.data
         except Exception as e:
             logger.error(f"Error selecting {id_value} from {table}: {str(e)}")
@@ -231,17 +233,14 @@ class SupabaseService:
         """
         try:
             response = (
-                self.client.table(table)
-                .select(columns)
-                .ilike(column, f"%{search_term}%")
-                .execute()
+                self.client.table(table).select(columns).ilike(column, f"%{search_term}%").execute()
             )
             return response.data
         except Exception as e:
             logger.error(f"Error searching {table}: {str(e)}")
             raise
 
-    def execute_rpc(self, function_name: str, params: Optional[dict] = None):
+    def execute_rpc(self, function_name: str, params: dict | None = None):
         """
         Execute a Supabase RPC (stored procedure/function).
 

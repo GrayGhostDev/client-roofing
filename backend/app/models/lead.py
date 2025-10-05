@@ -5,17 +5,18 @@ Version: 1.0.0
 Comprehensive lead data model with validation, scoring, and temperature classification.
 """
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
-from typing import Optional, Literal
-from uuid import UUID
 from datetime import datetime
 from enum import Enum
+from uuid import UUID
 
-from backend.app.models.base import BaseDBModel
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+from app.models.base import BaseDBModel
 
 
 class LeadStatus(str, Enum):
     """Lead status enumeration"""
+
     NEW = "new"
     CONTACTED = "contacted"
     QUALIFIED = "qualified"
@@ -30,14 +31,16 @@ class LeadStatus(str, Enum):
 
 class LeadTemperature(str, Enum):
     """Lead temperature classification based on score"""
-    HOT = "hot"      # 80-100 points
-    WARM = "warm"    # 60-79 points
-    COOL = "cool"    # 40-59 points
-    COLD = "cold"    # 0-39 points
+
+    HOT = "hot"  # 80-100 points
+    WARM = "warm"  # 60-79 points
+    COOL = "cool"  # 40-59 points
+    COLD = "cold"  # 0-39 points
 
 
 class LeadSource(str, Enum):
     """Lead source enumeration"""
+
     WEBSITE_FORM = "website_form"
     GOOGLE_LSA = "google_lsa"
     GOOGLE_ADS = "google_ads"
@@ -54,6 +57,7 @@ class LeadSource(str, Enum):
 
 class UrgencyLevel(str, Enum):
     """Project urgency level"""
+
     IMMEDIATE = "immediate"
     ONE_TO_THREE_MONTHS = "1-3_months"
     THREE_TO_SIX_MONTHS = "3-6_months"
@@ -72,49 +76,57 @@ class Lead(BaseDBModel):
     first_name: str = Field(..., min_length=1, max_length=100, description="Lead first name")
     last_name: str = Field(..., min_length=1, max_length=100, description="Lead last name")
     phone: str = Field(..., description="Primary phone number (10-15 digits)")
-    email: Optional[EmailStr] = Field(None, description="Email address")
+    email: EmailStr | None = Field(None, description="Email address")
 
     # Lead Metadata
     source: LeadSource = Field(..., description="How the lead was acquired")
     status: LeadStatus = Field(default=LeadStatus.NEW, description="Current lead status")
-    temperature: Optional[LeadTemperature] = Field(None, description="Lead temperature (hot/warm/cool/cold)")
+    temperature: LeadTemperature | None = Field(
+        None, description="Lead temperature (hot/warm/cool/cold)"
+    )
     lead_score: int = Field(default=0, ge=0, le=100, description="Lead score (0-100)")
 
     # Address Information
-    street_address: Optional[str] = Field(None, max_length=255, description="Street address")
-    city: Optional[str] = Field(None, max_length=100, description="City")
-    state: Optional[str] = Field(None, max_length=2, description="State code (e.g., MI)")
-    zip_code: Optional[str] = Field(None, description="ZIP code (5 or 9 digits)")
+    street_address: str | None = Field(None, max_length=255, description="Street address")
+    city: str | None = Field(None, max_length=100, description="City")
+    state: str | None = Field(None, max_length=2, description="State code (e.g., MI)")
+    zip_code: str | None = Field(None, description="ZIP code (5 or 9 digits)")
 
     # Property Details
-    property_value: Optional[int] = Field(None, ge=0, description="Estimated property value in USD")
-    roof_age: Optional[int] = Field(None, ge=0, le=100, description="Age of roof in years")
-    roof_type: Optional[str] = Field(None, max_length=50, description="Type of roof (asphalt, metal, etc.)")
-    roof_size_sqft: Optional[int] = Field(None, ge=0, description="Roof size in square feet")
-    urgency: Optional[UrgencyLevel] = Field(None, description="Project urgency level")
+    property_value: int | None = Field(None, ge=0, description="Estimated property value in USD")
+    roof_age: int | None = Field(None, ge=0, le=100, description="Age of roof in years")
+    roof_type: str | None = Field(
+        None, max_length=50, description="Type of roof (asphalt, metal, etc.)"
+    )
+    roof_size_sqft: int | None = Field(None, ge=0, description="Roof size in square feet")
+    urgency: UrgencyLevel | None = Field(None, description="Project urgency level")
 
     # Project Details
-    project_description: Optional[str] = Field(None, max_length=2000, description="Project description")
-    budget_range_min: Optional[int] = Field(None, ge=0, description="Minimum budget")
-    budget_range_max: Optional[int] = Field(None, ge=0, description="Maximum budget")
-    insurance_claim: Optional[bool] = Field(False, description="Is this an insurance claim?")
+    project_description: str | None = Field(
+        None, max_length=2000, description="Project description"
+    )
+    budget_range_min: int | None = Field(None, ge=0, description="Minimum budget")
+    budget_range_max: int | None = Field(None, ge=0, description="Maximum budget")
+    insurance_claim: bool | None = Field(False, description="Is this an insurance claim?")
 
     # Assignment & Conversion
-    assigned_to: Optional[UUID] = Field(None, description="ID of assigned team member")
+    assigned_to: UUID | None = Field(None, description="ID of assigned team member")
     converted_to_customer: bool = Field(default=False, description="Has lead been converted?")
-    customer_id: Optional[UUID] = Field(None, description="ID of customer if converted")
+    customer_id: UUID | None = Field(None, description="ID of customer if converted")
 
     # Tracking
-    last_contact_date: Optional[datetime] = Field(None, description="Last contact timestamp")
-    next_follow_up_date: Optional[datetime] = Field(None, description="Next scheduled follow-up")
-    response_time_minutes: Optional[int] = Field(None, ge=0, description="Initial response time in minutes")
+    last_contact_date: datetime | None = Field(None, description="Last contact timestamp")
+    next_follow_up_date: datetime | None = Field(None, description="Next scheduled follow-up")
+    response_time_minutes: int | None = Field(
+        None, ge=0, description="Initial response time in minutes"
+    )
     interaction_count: int = Field(default=0, ge=0, description="Number of interactions")
 
     # Notes
-    notes: Optional[str] = Field(None, description="Internal notes about lead")
-    lost_reason: Optional[str] = Field(None, max_length=500, description="Reason if lead was lost")
+    notes: str | None = Field(None, description="Internal notes about lead")
+    lost_reason: str | None = Field(None, max_length=500, description="Reason if lead was lost")
 
-    @field_validator('phone')
+    @field_validator("phone")
     @classmethod
     def validate_phone_format(cls, v: str) -> str:
         """
@@ -127,54 +139,54 @@ class Lead(BaseDBModel):
         - +12485551234
         """
         if not v:
-            raise ValueError('Phone number is required')
+            raise ValueError("Phone number is required")
 
         # Remove all non-digit characters except leading +
-        cleaned = ''.join(filter(str.isdigit, v.lstrip('+')))
+        cleaned = "".join(filter(str.isdigit, v.lstrip("+")))
 
         if len(cleaned) < 10:
-            raise ValueError('Phone must have at least 10 digits')
+            raise ValueError("Phone must have at least 10 digits")
 
         if len(cleaned) > 15:
-            raise ValueError('Phone cannot exceed 15 digits')
+            raise ValueError("Phone cannot exceed 15 digits")
 
         return v
 
-    @field_validator('zip_code')
+    @field_validator("zip_code")
     @classmethod
-    def validate_zip_code(cls, v: Optional[str]) -> Optional[str]:
+    def validate_zip_code(cls, v: str | None) -> str | None:
         """Validate ZIP code format (5 or 9 digits)"""
         if v is None:
             return v
 
         # Remove any non-digit characters
-        cleaned = ''.join(filter(str.isdigit, v))
+        cleaned = "".join(filter(str.isdigit, v))
 
         if len(cleaned) not in [5, 9]:
-            raise ValueError('ZIP code must be 5 or 9 digits')
+            raise ValueError("ZIP code must be 5 or 9 digits")
 
         return v
 
-    @field_validator('state')
+    @field_validator("state")
     @classmethod
-    def validate_state(cls, v: Optional[str]) -> Optional[str]:
+    def validate_state(cls, v: str | None) -> str | None:
         """Validate state code is uppercase 2 letters"""
         if v is None:
             return v
 
         if len(v) != 2:
-            raise ValueError('State must be 2-letter code')
+            raise ValueError("State must be 2-letter code")
 
         return v.upper()
 
-    @field_validator('budget_range_max')
+    @field_validator("budget_range_max")
     @classmethod
-    def validate_budget_range(cls, v: Optional[int], info) -> Optional[int]:
+    def validate_budget_range(cls, v: int | None, info) -> int | None:
         """Validate max budget is greater than min budget"""
-        if v is not None and 'budget_range_min' in info.data:
-            min_budget = info.data.get('budget_range_min')
+        if v is not None and "budget_range_min" in info.data:
+            min_budget = info.data.get("budget_range_min")
             if min_budget and v < min_budget:
-                raise ValueError('Maximum budget must be greater than minimum budget')
+                raise ValueError("Maximum budget must be greater than minimum budget")
         return v
 
     @property
@@ -183,7 +195,7 @@ class Lead(BaseDBModel):
         return f"{self.first_name} {self.last_name}"
 
     @property
-    def full_address(self) -> Optional[str]:
+    def full_address(self) -> str | None:
         """Get formatted full address"""
         if not self.street_address:
             return None
@@ -211,7 +223,7 @@ class Lead(BaseDBModel):
             LeadStatus.APPOINTMENT_SCHEDULED,
             LeadStatus.INSPECTION_COMPLETED,
             LeadStatus.QUOTE_SENT,
-            LeadStatus.NEGOTIATION
+            LeadStatus.NEGOTIATION,
         ]
         return self.status in qualified_statuses
 
@@ -222,6 +234,7 @@ class LeadScoreBreakdown(BaseModel):
 
     Total Score = Demographics (55) + Behavioral (35) + BANT (10)
     """
+
     model_config = {"from_attributes": True}
 
     # Total
@@ -250,26 +263,27 @@ class LeadScoreBreakdown(BaseModel):
 
 class LeadCreate(BaseModel):
     """Schema for creating a new lead"""
+
     first_name: str = Field(..., min_length=1, max_length=100)
     last_name: str = Field(..., min_length=1, max_length=100)
     phone: str
-    email: Optional[EmailStr] = None
+    email: EmailStr | None = None
     source: LeadSource
 
     # Optional fields
-    street_address: Optional[str] = None
-    city: Optional[str] = None
-    state: Optional[str] = None
-    zip_code: Optional[str] = None
-    property_value: Optional[int] = None
-    roof_age: Optional[int] = None
-    roof_type: Optional[str] = None
-    urgency: Optional[UrgencyLevel] = None
-    project_description: Optional[str] = None
-    budget_range_min: Optional[int] = None
-    budget_range_max: Optional[int] = None
-    insurance_claim: Optional[bool] = False
-    notes: Optional[str] = None
+    street_address: str | None = None
+    city: str | None = None
+    state: str | None = None
+    zip_code: str | None = None
+    property_value: int | None = None
+    roof_age: int | None = None
+    roof_type: str | None = None
+    urgency: UrgencyLevel | None = None
+    project_description: str | None = None
+    budget_range_min: int | None = None
+    budget_range_max: int | None = None
+    insurance_claim: bool | None = False
+    notes: str | None = None
 
     # Scoring context (not stored, used for calculation)
     budget_confirmed: bool = False
@@ -278,44 +292,47 @@ class LeadCreate(BaseModel):
 
 class LeadUpdate(BaseModel):
     """Schema for updating a lead"""
-    first_name: Optional[str] = Field(None, min_length=1, max_length=100)
-    last_name: Optional[str] = Field(None, min_length=1, max_length=100)
-    phone: Optional[str] = None
-    email: Optional[EmailStr] = None
-    status: Optional[LeadStatus] = None
 
-    street_address: Optional[str] = None
-    city: Optional[str] = None
-    state: Optional[str] = None
-    zip_code: Optional[str] = None
-    property_value: Optional[int] = None
-    roof_age: Optional[int] = None
-    roof_type: Optional[str] = None
-    urgency: Optional[UrgencyLevel] = None
-    project_description: Optional[str] = None
-    budget_range_min: Optional[int] = None
-    budget_range_max: Optional[int] = None
-    insurance_claim: Optional[bool] = None
-    assigned_to: Optional[UUID] = None
-    next_follow_up_date: Optional[datetime] = None
-    notes: Optional[str] = None
-    lost_reason: Optional[str] = None
+    first_name: str | None = Field(None, min_length=1, max_length=100)
+    last_name: str | None = Field(None, min_length=1, max_length=100)
+    phone: str | None = None
+    email: EmailStr | None = None
+    status: LeadStatus | None = None
+
+    street_address: str | None = None
+    city: str | None = None
+    state: str | None = None
+    zip_code: str | None = None
+    property_value: int | None = None
+    roof_age: int | None = None
+    roof_type: str | None = None
+    urgency: UrgencyLevel | None = None
+    project_description: str | None = None
+    budget_range_min: int | None = None
+    budget_range_max: int | None = None
+    insurance_claim: bool | None = None
+    assigned_to: UUID | None = None
+    next_follow_up_date: datetime | None = None
+    notes: str | None = None
+    lost_reason: str | None = None
 
 
 class LeadResponse(BaseModel):
     """Schema for lead API response"""
+
     data: Lead
-    score_breakdown: Optional[LeadScoreBreakdown] = None
+    score_breakdown: LeadScoreBreakdown | None = None
 
 
 class LeadListFilters(BaseModel):
     """Filter parameters for lead list endpoint"""
-    status: Optional[str] = Field(None, description="Comma-separated status values")
-    temperature: Optional[str] = Field(None, description="Comma-separated temperature values")
-    source: Optional[str] = Field(None, description="Comma-separated source values")
-    assigned_to: Optional[UUID] = Field(None, description="Filter by assigned team member")
-    created_after: Optional[datetime] = Field(None, description="Filter by creation date")
-    min_score: Optional[int] = Field(None, ge=0, le=100, description="Minimum lead score")
-    max_score: Optional[int] = Field(None, ge=0, le=100, description="Maximum lead score")
-    zip_code: Optional[str] = Field(None, description="Filter by ZIP code")
-    converted: Optional[bool] = Field(None, description="Filter by conversion status")
+
+    status: str | None = Field(None, description="Comma-separated status values")
+    temperature: str | None = Field(None, description="Comma-separated temperature values")
+    source: str | None = Field(None, description="Comma-separated source values")
+    assigned_to: UUID | None = Field(None, description="Filter by assigned team member")
+    created_after: datetime | None = Field(None, description="Filter by creation date")
+    min_score: int | None = Field(None, ge=0, le=100, description="Minimum lead score")
+    max_score: int | None = Field(None, ge=0, le=100, description="Maximum lead score")
+    zip_code: str | None = Field(None, description="Filter by ZIP code")
+    converted: bool | None = Field(None, description="Filter by conversion status")
