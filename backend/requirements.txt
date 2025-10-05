@@ -17,11 +17,15 @@ supabase==2.10.0
 # postgrest-py will be installed as dependency of supabase
 psycopg2-binary==2.9.10
 SQLAlchemy==2.0.36  # For advanced queries if needed
+alembic==1.16.0
+Flask-Migrate==4.0.7
 
 # ==============================================================================
 # Authentication & Security
 # ==============================================================================
 PyJWT==2.10.1
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
 bcrypt==4.2.1
 cryptography==44.0.0
 
@@ -76,6 +80,15 @@ twilio==9.4.0
 # ==============================================================================
 pandas==2.2.3
 numpy==2.2.1
+openpyxl==3.1.2
+python-multipart==0.0.6
+
+# ==============================================================================
+# Reporting & PDF Generation
+# ==============================================================================
+reportlab==4.0.4
+weasyprint==59.0
+stripe==5.5.0
 
 # ==============================================================================
 # Testing
@@ -85,9 +98,12 @@ pytest-flask==1.3.0
 pytest-cov==6.0.0
 pytest-mock==3.14.0
 pytest-asyncio==1.0.0
+pytest-watch==4.2.0
 factory-boy==3.3.1
 faker==33.1.0
 responses==0.25.3
+httpx==0.27.0
+locust==2.15.1
 
 # ==============================================================================
 # Code Quality

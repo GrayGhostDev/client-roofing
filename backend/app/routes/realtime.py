@@ -4,7 +4,7 @@ Version: 1.0.0
 """
 
 from flask import Blueprint, request, jsonify, current_app
-from backend.app.utils.pusher_client import get_pusher_service
+from app.services.realtime_service import realtime_service
 import logging
 
 bp = Blueprint('realtime', __name__)
@@ -20,9 +20,7 @@ def pusher_auth():
     attempts to subscribe to a private or presence channel.
     """
     try:
-        pusher_service = get_pusher_service()
-
-        if not pusher_service.is_available():
+        if not realtime_service.client:
             return jsonify({"error": "Real-time features not configured"}), 503
 
         # Get data from request
@@ -36,8 +34,15 @@ def pusher_auth():
         # For now, using a placeholder
         user_id = request.headers.get('X-User-ID', 'anonymous')
 
+        # Build user data for presence channels
+        user_data = {
+            'id': user_id,
+            'name': request.headers.get('X-User-Name', 'Anonymous'),
+            'email': request.headers.get('X-User-Email', '')
+        }
+
         # Authenticate the channel subscription
-        auth = pusher_service.authenticate_channel(socket_id, channel_name, user_id)
+        auth = realtime_service.authenticate_channel(socket_id, channel_name, user_data)
 
         if "error" in auth:
             return jsonify(auth), 403
@@ -58,9 +63,7 @@ def trigger_event():
     Should be protected with authentication in production.
     """
     try:
-        pusher_service = get_pusher_service()
-
-        if not pusher_service.is_available():
+        if not realtime_service.client:
             return jsonify({"error": "Real-time features not configured"}), 503
 
         data = request.get_json()
@@ -69,7 +72,7 @@ def trigger_event():
             return jsonify({"error": "Missing required fields: channel, event, data"}), 400
 
         # Trigger the event
-        success = pusher_service.trigger(
+        success = realtime_service.trigger_event(
             channel=data['channel'],
             event=data['event'],
             data=data['data'],
@@ -89,12 +92,10 @@ def trigger_event():
 @bp.route('/status', methods=['GET'])
 def realtime_status():
     """Check if real-time features are available."""
-    pusher_service = get_pusher_service()
-
     return jsonify({
-        "available": pusher_service.is_available(),
+        "available": realtime_service.client is not None,
         "service": "Pusher",
-        "configured": pusher_service.client is not None
+        "configured": realtime_service.client is not None
     }), 200
 
 
@@ -105,13 +106,11 @@ def pusher_config():
 
     Returns public configuration needed by frontend clients.
     """
-    pusher_service = get_pusher_service()
-
-    if not pusher_service.is_available():
+    if not realtime_service.client:
         return jsonify({"error": "Real-time features not configured"}), 503
 
     return jsonify({
-        "key": current_app.config.get('PUSHER_KEY'),
-        "cluster": current_app.config.get('PUSHER_CLUSTER'),
+        "key": realtime_service.key,
+        "cluster": realtime_service.cluster,
         "authEndpoint": "/api/realtime/auth"
     }), 200

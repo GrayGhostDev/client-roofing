@@ -12,7 +12,7 @@ from uuid import UUID
 from datetime import datetime
 from enum import Enum
 
-from backend.app.models.base import BaseDBModel
+from app.models.base import BaseDBModel
 
 
 class InteractionType(str, Enum):

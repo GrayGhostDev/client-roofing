@@ -1,0 +1,152 @@
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: ./backend
+      target: ${BUILD_TARGET:-development}
+      dockerfile: Dockerfile
+    container_name: iswitch-backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-5000}:5000"
+    environment:
+      - FLASK_ENV=${FLASK_ENV:-development}
+      - FLASK_APP=app.py
+      - DATABASE_URL=${SUPABASE_DB_URL}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - REDIS_URL=redis://redis:6379/0
+      - PUSHER_APP_ID=${PUSHER_APP_ID}
+      - PUSHER_KEY=${PUSHER_KEY}
+      - PUSHER_SECRET=${PUSHER_SECRET}
+      - PUSHER_CLUSTER=${PUSHER_CLUSTER}
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - BIRDEYE_API_KEY=${BIRDEYE_API_KEY}
+      - BIRDEYE_BUSINESS_ID=${BIRDEYE_BUSINESS_ID}
+      - YELP_API_KEY=${YELP_API_KEY}
+      - FACEBOOK_ACCESS_TOKEN=${FACEBOOK_ACCESS_TOKEN}
+      - FACEBOOK_PAGE_ID=${FACEBOOK_PAGE_ID}
+    volumes:
+      - ./backend:/app:cached
+      - backend_venv:/venv
+    depends_on:
+      - redis
+    networks:
+      - iswitch-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis Cache Service
+  redis:
+    image: redis:7-alpine
+    container_name: iswitch-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - iswitch-network
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Nginx Reverse Proxy (Production)
+  nginx:
+    image: nginx:alpine
+    container_name: iswitch-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_cache:/var/cache/nginx
+    depends_on:
+      - backend
+    networks:
+      - iswitch-network
+    profiles:
+      - production
+
+  # PostgreSQL Database (Local Development Only)
+  # Production uses Supabase cloud database
+  postgres:
+    image: postgres:15-alpine
+    container_name: iswitch-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${DB_USER:-iswitch}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-password}
+      - POSTGRES_DB=${DB_NAME:-iswitch_roofs}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    networks:
+      - iswitch-network
+    profiles:
+      - local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-iswitch}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Adminer Database UI (Development)
+  adminer:
+    image: adminer:latest
+    container_name: iswitch-adminer
+    restart: unless-stopped
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+    networks:
+      - iswitch-network
+    profiles:
+      - local
+    depends_on:
+      - postgres
+
+  # Mailhog Email Testing (Development)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: iswitch-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP port
+      - "8025:8025"  # Web UI
+    networks:
+      - iswitch-network
+    profiles:
+      - development
+
+networks:
+  iswitch-network:
+    driver: bridge
+
+volumes:
+  backend_venv:
+    driver: local
+  redis_data:
+    driver: local
+  postgres_data:
+    driver: local
+  nginx_cache:
+    driver: local

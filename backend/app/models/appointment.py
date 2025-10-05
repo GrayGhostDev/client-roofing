@@ -11,7 +11,7 @@ from uuid import UUID
 from datetime import datetime, timedelta
 from enum import Enum
 
-from backend.app.models.base import BaseDBModel
+from app.models.base import BaseDBModel
 
 
 class AppointmentType(str, Enum):

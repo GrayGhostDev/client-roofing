@@ -29,7 +29,7 @@ Temperature Classification:
 """
 
 from typing import Dict, Any, Optional, Set
-from backend.app.models.lead import (
+from app.models.lead import (
     Lead,
     LeadScoreBreakdown,
     LeadTemperature,

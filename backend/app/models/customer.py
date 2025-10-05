@@ -11,7 +11,7 @@ from uuid import UUID
 from datetime import datetime
 from enum import Enum
 
-from backend.app.models.base import BaseDBModel
+from app.models.base import BaseDBModel
 
 
 class CustomerStatus(str, Enum):
@@ -84,6 +84,18 @@ class Customer(BaseDBModel):
     nps_score: Optional[int] = Field(None, ge=0, le=10, description="Net Promoter Score (0-10)")
     satisfaction_rating: Optional[float] = Field(None, ge=0.0, le=5.0, description="Average satisfaction (1-5 stars)")
     review_count: int = Field(default=0, ge=0, description="Number of reviews provided")
+
+    # Customer Lifecycle
+    customer_since: Optional[datetime] = Field(None, description="Date when became a customer")
+    last_interaction: Optional[datetime] = Field(None, description="Last interaction timestamp")
+    interaction_count: int = Field(default=0, ge=0, description="Total number of interactions")
+    preferred_contact_method: Optional[str] = Field(None, description="Preferred contact method (phone/email/text)")
+    best_call_time: Optional[str] = Field(None, description="Best time to call")
+
+    # Marketing & Campaign
+    campaign_tags: Optional[str] = Field(None, description="Marketing campaign tags")
+    email_opt_in: bool = Field(default=True, description="Email marketing opt-in")
+    sms_opt_in: bool = Field(default=False, description="SMS marketing opt-in")
 
     # Notes
     notes: Optional[str] = Field(None, description="Internal notes about customer")
