@@ -53,6 +53,7 @@ class TokenType:
     REFRESH = "refresh"
     RESET = "reset"
     VERIFICATION = "verification"
+    TWO_FACTOR = "two_factor"
 
 
 class AuthService:
@@ -237,8 +238,24 @@ class AuthService:
 
             # Check if 2FA is enabled
             if user.get("settings", {}).get("two_factor_enabled"):
-                # TODO: Implement 2FA verification
-                pass
+                # Begin two-factor flow: return a short-lived token; client must call /api/auth/2fa/complete
+                two_factor_token = self._generate_token(
+                    user_id=user["id"],
+                    email=user["email"],
+                    role=user["role"],
+                    token_type=TokenType.TWO_FACTOR,
+                )
+                token_data = {
+                    "requires_2fa": True,
+                    "two_factor_token": two_factor_token,
+                    "user": {
+                        "id": user["id"],
+                        "email": user["email"],
+                        "name": user.get("name"),
+                        "role": user.get("role"),
+                    },
+                }
+                return True, token_data, None
 
             # Generate tokens
             access_token = self._generate_token(
@@ -759,6 +776,8 @@ class AuthService:
             expires_delta = timedelta(seconds=self.access_token_expires)
         elif token_type == TokenType.REFRESH:
             expires_delta = timedelta(seconds=self.refresh_token_expires)
+        elif token_type == TokenType.TWO_FACTOR:
+            expires_delta = timedelta(minutes=5)
         else:
             expires_delta = timedelta(hours=1)
 
@@ -874,6 +893,195 @@ class AuthService:
             reset_url = (
                 f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/reset-password?token={token}"
             )
+
+        except Exception as e:
+            logger.error(f"Error sending password reset email: {str(e)}")
+
+    # ====================== 2FA (TOTP) METHODS ======================
+
+    def generate_two_factor_secret(self, user_id: str) -> tuple[bool, dict | None, str | None]:
+        """
+        Generate and store a TOTP secret for a user. Returns provisioning URI for authenticator apps.
+        """
+        try:
+            import pyotp
+
+            # Get user
+            result = self.supabase.table("users").select("id,email,settings").eq("id", user_id).execute()
+            if not result.data:
+                return False, None, "User not found"
+
+            user = result.data[0]
+            secret = pyotp.random_base32()
+            settings = user.get("settings") or {}
+            settings["two_factor_secret"] = secret
+            settings["two_factor_enabled"] = False
+
+            self.supabase.table("users").update({"settings": settings}).eq("id", user_id).execute()
+
+            otpauth_uri = pyotp.totp.TOTP(secret).provisioning_uri(name=user.get("email"), issuer_name="iSwitch Roofs CRM")
+            return True, {"secret": secret, "otpauth_uri": otpauth_uri}, None
+        except Exception as e:
+            logger.error(f"Error generating 2FA secret: {str(e)}")
+            return False, None, str(e)
+
+    def verify_two_factor_code(self, user_id: str, code: str) -> tuple[bool, str | None]:
+        """Verify a TOTP code for the user and enable 2FA if valid."""
+        try:
+            import pyotp
+
+            result = self.supabase.table("users").select("id,settings").eq("id", user_id).execute()
+            if not result.data:
+                return False, "User not found"
+
+            user = result.data[0]
+            settings = user.get("settings") or {}
+            secret = settings.get("two_factor_secret")
+            if not secret:
+                return False, "2FA not enrolled"
+
+            totp = pyotp.TOTP(secret)
+            if not totp.verify(code, valid_window=1):
+                return False, "Invalid 2FA code"
+
+            settings["two_factor_enabled"] = True
+            self.supabase.table("users").update({"settings": settings}).eq("id", user_id).execute()
+            return True, None
+        except Exception as e:
+            logger.error(f"Error verifying 2FA code: {str(e)}")
+            return False, str(e)
+
+    def generate_backup_codes(self, user_id: str, count: int = 10) -> list[str]:
+        """Generate one-time backup codes for 2FA and store hashed versions in settings."""
+        import hashlib
+        import secrets as _secrets
+
+        result = self.supabase.table("users").select("id,settings").eq("id", user_id).execute()
+        if not result.data:
+            return []
+        user = result.data[0]
+        settings = user.get("settings") or {}
+
+        codes = []
+        hashed_codes = []
+        for _ in range(count):
+            code = _secrets.token_hex(5)
+            codes.append(code)
+            hashed_codes.append(hashlib.sha256(code.encode()).hexdigest())
+
+        settings["two_factor_backup_codes"] = hashed_codes
+        self.supabase.table("users").update({"settings": settings}).eq("id", user_id).execute()
+        return codes
+
+    def verify_backup_code(self, user_id: str, code: str) -> bool:
+        """Verify and consume a backup code."""
+        import hashlib
+
+        result = self.supabase.table("users").select("id,settings").eq("id", user_id).execute()
+        if not result.data:
+            return False
+        user = result.data[0]
+        settings = user.get("settings") or {}
+        hashes = settings.get("two_factor_backup_codes") or []
+        code_hash = hashlib.sha256(code.encode()).hexdigest()
+        if code_hash in hashes:
+            # consume
+            hashes.remove(code_hash)
+            settings["two_factor_backup_codes"] = hashes
+            self.supabase.table("users").update({"settings": settings}).eq("id", user_id).execute()
+            return True
+        return False
+
+    def disable_two_factor(self, user_id: str) -> bool:
+        """Disable 2FA for a user and clear secrets/backup codes."""
+        result = self.supabase.table("users").select("id,settings").eq("id", user_id).execute()
+        if not result.data:
+            return False
+        user = result.data[0]
+        settings = user.get("settings") or {}
+        settings.pop("two_factor_secret", None)
+        settings.pop("two_factor_backup_codes", None)
+        settings["two_factor_enabled"] = False
+        self.supabase.table("users").update({"settings": settings}).eq("id", user_id).execute()
+        return True
+
+    def complete_two_factor_login(
+        self,
+        two_factor_token: str,
+        code: str | None = None,
+        backup_code: str | None = None,
+        device_info: dict | None = None,
+    ) -> tuple[bool, dict | None, str | None]:
+        """
+        Verify 2FA token/code and issue access/refresh tokens.
+        """
+        try:
+            # Decode 2FA token
+            payload = self._decode_token(two_factor_token, TokenType.TWO_FACTOR)
+            if not payload:
+                return False, None, "Invalid or expired 2FA token"
+
+            user_id = payload.get("user_id")
+            result = self.supabase.table("users").select("*").eq("id", user_id).execute()
+            if not result.data:
+                return False, None, "User not found"
+            user = result.data[0]
+
+            # Verify code or backup
+            ok = False
+            if code:
+                ok, err = self.verify_two_factor_code(user_id, code)
+                if not ok:
+                    return False, None, err or "Invalid 2FA code"
+            elif backup_code:
+                if not self.verify_backup_code(user_id, backup_code):
+                    return False, None, "Invalid backup code"
+            else:
+                return False, None, "2FA code or backup_code required"
+
+            # Issue tokens (same as login flow)
+            access_token = self._generate_token(
+                user_id=user["id"], email=user["email"], role=user["role"], token_type=TokenType.ACCESS
+            )
+            refresh_token = self._generate_token(
+                user_id=user["id"], email=user["email"], role=user["role"], token_type=TokenType.REFRESH
+            )
+
+            session_id = str(uuid4())
+            session_data = {
+                "user_id": user["id"],
+                "email": user["email"],
+                "role": user["role"],
+                "device_info": device_info,
+                "created_at": datetime.utcnow().isoformat(),
+                "last_activity": datetime.utcnow().isoformat(),
+            }
+            cache_set(f"session:{session_id}", session_data, ttl=self.refresh_token_expires)
+            cache_set(f"refresh_token:{user['id']}", refresh_token, ttl=self.refresh_token_expires)
+
+            # Update last login
+            self.supabase.table("users").update(
+                {"last_login": datetime.utcnow().isoformat(), "failed_login_attempts": 0, "locked_until": None}
+            ).eq("id", user["id"]).execute()
+
+            token_data = {
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "token_type": "Bearer",
+                "expires_in": self.access_token_expires,
+                "session_id": session_id,
+                "user": {
+                    "id": user["id"],
+                    "email": user["email"],
+                    "name": user.get("name"),
+                    "role": user.get("role"),
+                    "team_id": user.get("team_id"),
+                },
+            }
+            return True, token_data, None
+        except Exception as e:
+            logger.error(f"Error completing 2FA login: {str(e)}")
+            return False, None, "Failed to complete 2FA login"
 
             notification_service.send_notification(
                 type="password_reset",
