@@ -5,17 +5,14 @@ Version: 1.0.0
 Handles real-time event broadcasting through Pusher Channels.
 """
 
-import os
-import logging
 import json
-from typing import Optional, List, Dict, Any, Union
+import logging
+import os
 from datetime import datetime
+from typing import Any
 
 import pusher
 from pusher.errors import PusherError
-
-from app.config import Config
-
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +20,13 @@ logger = logging.getLogger(__name__)
 class RealtimeService:
     """Service for real-time event broadcasting via Pusher."""
 
-    def __init__(self,
-                 app_id: Optional[str] = None,
-                 key: Optional[str] = None,
-                 secret: Optional[str] = None,
-                 cluster: Optional[str] = None):
+    def __init__(
+        self,
+        app_id: str | None = None,
+        key: str | None = None,
+        secret: str | None = None,
+        cluster: str | None = None,
+    ):
         """
         Initialize Real-time Service.
 
@@ -37,13 +36,13 @@ class RealtimeService:
             secret: Pusher Secret
             cluster: Pusher Cluster
         """
-        self.app_id = app_id or os.environ.get('PUSHER_APP_ID') or 'test_app_id'
-        self.key = key or os.environ.get('PUSHER_KEY') or 'test_key'
-        self.secret = secret or os.environ.get('PUSHER_SECRET') or 'test_secret'
-        self.cluster = cluster or os.environ.get('PUSHER_CLUSTER', 'us2')
+        self.app_id = app_id or os.environ.get("PUSHER_APP_ID") or "test_app_id"
+        self.key = key or os.environ.get("PUSHER_KEY") or "test_key"
+        self.secret = secret or os.environ.get("PUSHER_SECRET") or "test_secret"
+        self.cluster = cluster or os.environ.get("PUSHER_CLUSTER", "us2")
 
         # Only create client if we have real credentials (not test defaults)
-        if (self.app_id == 'test_app_id' or self.key == 'test_key' or self.secret == 'test_secret'):
+        if self.app_id == "test_app_id" or self.key == "test_key" or self.secret == "test_secret":
             logger.warning("Pusher credentials not configured, using test mode")
             self.client = None
         else:
@@ -53,27 +52,29 @@ class RealtimeService:
                     key=self.key,
                     secret=self.secret,
                     cluster=self.cluster,
-                    ssl=True
+                    ssl=True,
                 )
             except Exception as e:
                 logger.warning(f"Failed to initialize Pusher client: {str(e)}")
                 self.client = None
 
         # Channel prefixes
-        self.public_prefix = ''
-        self.private_prefix = 'private-'
-        self.presence_prefix = 'presence-'
+        self.public_prefix = ""
+        self.private_prefix = "private-"
+        self.presence_prefix = "presence-"
 
         # Event name limits
         self.max_event_name_length = 200
         self.max_channels_per_trigger = 100
         self.max_data_size = 10240  # 10KB
 
-    def trigger_event(self,
-                     channel: Union[str, List[str]],
-                     event: str,
-                     data: Dict[str, Any],
-                     socket_id: Optional[str] = None) -> bool:
+    def trigger_event(
+        self,
+        channel: str | list[str],
+        event: str,
+        data: dict[str, Any],
+        socket_id: str | None = None,
+    ) -> bool:
         """
         Trigger an event to one or more channels.
 
@@ -105,15 +106,14 @@ class RealtimeService:
             # Validate channel count
             channels = channel if isinstance(channel, list) else [channel]
             if len(channels) > self.max_channels_per_trigger:
-                logger.error(f"Too many channels: {len(channels)} > {self.max_channels_per_trigger}")
+                logger.error(
+                    f"Too many channels: {len(channels)} > {self.max_channels_per_trigger}"
+                )
                 return False
 
             # Trigger event
             response = self.client.trigger(
-                channels=channel,
-                event_name=event,
-                data=data,
-                socket_id=socket_id
+                channels=channel, event_name=event, data=data, socket_id=socket_id
             )
 
             logger.info(f"Event '{event}' triggered to channel(s): {channel}")
@@ -127,7 +127,7 @@ class RealtimeService:
             logger.error(f"Failed to trigger event: {str(e)}")
             return False
 
-    def trigger_batch(self, events: List[Dict[str, Any]]) -> bool:
+    def trigger_batch(self, events: list[dict[str, Any]]) -> bool:
         """
         Trigger multiple events in a single request.
 
@@ -145,13 +145,13 @@ class RealtimeService:
             batch_events = []
             for event in events[:10]:  # Max 10 events per batch
                 batch_event = {
-                    'channel': event['channel'],
-                    'name': event['name'],
-                    'data': event['data']
+                    "channel": event["channel"],
+                    "name": event["name"],
+                    "data": event["data"],
                 }
 
-                if 'socket_id' in event:
-                    batch_event['socket_id'] = event['socket_id']
+                if "socket_id" in event:
+                    batch_event["socket_id"] = event["socket_id"]
 
                 batch_events.append(batch_event)
 
@@ -165,13 +165,15 @@ class RealtimeService:
             logger.error(f"Failed to trigger batch: {str(e)}")
             return False
 
-    def send_notification(self,
-                         user_id: str,
-                         notification_type: str,
-                         title: str,
-                         message: str,
-                         data: Optional[Dict[str, Any]] = None,
-                         priority: str = 'normal') -> bool:
+    def send_notification(
+        self,
+        user_id: str,
+        notification_type: str,
+        title: str,
+        message: str,
+        data: dict[str, Any] | None = None,
+        priority: str = "normal",
+    ) -> bool:
         """
         Send a real-time notification to a user.
 
@@ -190,20 +192,17 @@ class RealtimeService:
         event = "notification"
 
         notification_data = {
-            'type': notification_type,
-            'title': title,
-            'message': message,
-            'priority': priority,
-            'timestamp': datetime.utcnow().isoformat(),
-            'data': data or {}
+            "type": notification_type,
+            "title": title,
+            "message": message,
+            "priority": priority,
+            "timestamp": datetime.utcnow().isoformat(),
+            "data": data or {},
         }
 
         return self.trigger_event(channel, event, notification_data)
 
-    def broadcast_team_event(self,
-                            team_id: str,
-                            event_type: str,
-                            data: Dict[str, Any]) -> bool:
+    def broadcast_team_event(self, team_id: str, event_type: str, data: dict[str, Any]) -> bool:
         """
         Broadcast an event to all team members.
 
@@ -218,11 +217,9 @@ class RealtimeService:
         channel = f"presence-team-{team_id}"
         return self.trigger_event(channel, event_type, data)
 
-    def update_lead_status(self,
-                          lead_id: str,
-                          status: str,
-                          updated_by: str,
-                          additional_data: Optional[Dict] = None) -> bool:
+    def update_lead_status(
+        self, lead_id: str, status: str, updated_by: str, additional_data: dict | None = None
+    ) -> bool:
         """
         Broadcast lead status update.
 
@@ -236,21 +233,20 @@ class RealtimeService:
             True if successful
         """
         data = {
-            'lead_id': lead_id,
-            'status': status,
-            'updated_by': updated_by,
-            'updated_at': datetime.utcnow().isoformat()
+            "lead_id": lead_id,
+            "status": status,
+            "updated_by": updated_by,
+            "updated_at": datetime.utcnow().isoformat(),
         }
 
         if additional_data:
             data.update(additional_data)
 
-        return self.trigger_event('leads', 'lead-updated', data)
+        return self.trigger_event("leads", "lead-updated", data)
 
-    def notify_appointment_update(self,
-                                 appointment_id: str,
-                                 action: str,
-                                 appointment_data: Dict[str, Any]) -> bool:
+    def notify_appointment_update(
+        self, appointment_id: str, action: str, appointment_data: dict[str, Any]
+    ) -> bool:
         """
         Notify about appointment updates.
 
@@ -264,25 +260,24 @@ class RealtimeService:
         """
         event = f"appointment-{action}"
         data = {
-            'appointment_id': appointment_id,
-            'action': action,
-            'appointment': appointment_data,
-            'timestamp': datetime.utcnow().isoformat()
+            "appointment_id": appointment_id,
+            "action": action,
+            "appointment": appointment_data,
+            "timestamp": datetime.utcnow().isoformat(),
         }
 
         # Send to appointments channel
-        channels = ['appointments']
+        channels = ["appointments"]
 
         # Also send to assigned team member if present
-        if 'assigned_to' in appointment_data:
+        if "assigned_to" in appointment_data:
             channels.append(f"private-user-{appointment_data['assigned_to']}")
 
         return self.trigger_event(channels, event, data)
 
-    def authenticate_channel(self,
-                           socket_id: str,
-                           channel: str,
-                           user_data: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
+    def authenticate_channel(
+        self, socket_id: str, channel: str, user_data: dict[str, Any] | None = None
+    ) -> dict[str, str]:
         """
         Authenticate a user for private or presence channel.
 
@@ -307,19 +302,16 @@ class RealtimeService:
                     channel=channel,
                     socket_id=socket_id,
                     custom_data={
-                        'user_id': user_data.get('id'),
-                        'user_info': {
-                            'name': user_data.get('name'),
-                            'email': user_data.get('email')
-                        }
-                    }
+                        "user_id": user_data.get("id"),
+                        "user_info": {
+                            "name": user_data.get("name"),
+                            "email": user_data.get("email"),
+                        },
+                    },
                 )
             else:
                 # Private channel
-                auth = self.client.authenticate(
-                    channel=channel,
-                    socket_id=socket_id
-                )
+                auth = self.client.authenticate(channel=channel, socket_id=socket_id)
 
             return auth
 
@@ -327,7 +319,7 @@ class RealtimeService:
             logger.error(f"Failed to authenticate channel: {str(e)}")
             return {"error": str(e)}
 
-    def get_channel_info(self, channel: str, info: Optional[List[str]] = None) -> Optional[Dict]:
+    def get_channel_info(self, channel: str, info: list[str] | None = None) -> dict | None:
         """
         Get information about a channel.
 
@@ -344,7 +336,7 @@ class RealtimeService:
         try:
             params = {}
             if info:
-                params['info'] = ','.join(info)
+                params["info"] = ",".join(info)
 
             response = self.client.channels_info(channel, params)
             return response
@@ -353,9 +345,9 @@ class RealtimeService:
             logger.error(f"Failed to get channel info: {str(e)}")
             return None
 
-    def get_channels_list(self,
-                         prefix_filter: Optional[str] = None,
-                         info: Optional[List[str]] = None) -> Optional[Dict]:
+    def get_channels_list(
+        self, prefix_filter: str | None = None, info: list[str] | None = None
+    ) -> dict | None:
         """
         Get list of active channels.
 
@@ -372,9 +364,9 @@ class RealtimeService:
         try:
             params = {}
             if prefix_filter:
-                params['filter_by_prefix'] = prefix_filter
+                params["filter_by_prefix"] = prefix_filter
             if info:
-                params['info'] = ','.join(info)
+                params["info"] = ",".join(info)
 
             response = self.client.channels_info(params)
             return response
@@ -383,7 +375,7 @@ class RealtimeService:
             logger.error(f"Failed to get channels list: {str(e)}")
             return None
 
-    def get_users_in_channel(self, channel: str) -> Optional[List[Dict]]:
+    def get_users_in_channel(self, channel: str) -> list[dict] | None:
         """
         Get users in a presence channel.
 
@@ -397,18 +389,16 @@ class RealtimeService:
             logger.error("Can only get users for presence channels")
             return None
 
-        info = self.get_channel_info(channel, ['user_count', 'users'])
+        info = self.get_channel_info(channel, ["user_count", "users"])
 
-        if info and 'users' in info:
-            return info['users']
+        if info and "users" in info:
+            return info["users"]
 
         return None
 
-    def trigger_client_event(self,
-                           channel: str,
-                           event: str,
-                           data: Dict[str, Any],
-                           socket_id: str) -> bool:
+    def trigger_client_event(
+        self, channel: str, event: str, data: dict[str, Any], socket_id: str
+    ) -> bool:
         """
         Trigger a client event (from client to client).
 
@@ -421,21 +411,19 @@ class RealtimeService:
         Returns:
             True if successful
         """
-        if not event.startswith('client-'):
+        if not event.startswith("client-"):
             logger.error("Client events must start with 'client-'")
             return False
 
-        if not (channel.startswith(self.private_prefix) or
-                channel.startswith(self.presence_prefix)):
+        if not (
+            channel.startswith(self.private_prefix) or channel.startswith(self.presence_prefix)
+        ):
             logger.error("Client events only work on private or presence channels")
             return False
 
         return self.trigger_event(channel, event, data, socket_id)
 
-    def validate_webhook(self,
-                        key: str,
-                        signature: str,
-                        body: str) -> bool:
+    def validate_webhook(self, key: str, signature: str, body: str) -> bool:
         """
         Validate a Pusher webhook signature.
 
@@ -457,7 +445,7 @@ class RealtimeService:
             logger.error(f"Failed to validate webhook: {str(e)}")
             return False
 
-    def process_webhook(self, headers: Dict, body: str) -> Optional[Dict]:
+    def process_webhook(self, headers: dict, body: str) -> dict | None:
         """
         Process a Pusher webhook.
 
@@ -469,8 +457,8 @@ class RealtimeService:
             Webhook data or None
         """
         # Validate webhook
-        key = headers.get('X-Pusher-Key')
-        signature = headers.get('X-Pusher-Signature')
+        key = headers.get("X-Pusher-Key")
+        signature = headers.get("X-Pusher-Signature")
 
         if not self.validate_webhook(key, signature, body):
             logger.error("Invalid webhook signature")
@@ -480,24 +468,24 @@ class RealtimeService:
             data = json.loads(body)
 
             # Process events
-            events = data.get('events', [])
+            events = data.get("events", [])
             for event in events:
-                event_name = event.get('name')
-                channel = event.get('channel')
+                event_name = event.get("name")
+                channel = event.get("channel")
 
                 logger.info(f"Webhook event: {event_name} on channel {channel}")
 
                 # Handle specific webhook events
-                if event_name == 'channel_occupied':
+                if event_name == "channel_occupied":
                     # First subscriber to channel
                     pass
-                elif event_name == 'channel_vacated':
+                elif event_name == "channel_vacated":
                     # Last subscriber left channel
                     pass
-                elif event_name == 'member_added':
+                elif event_name == "member_added":
                     # User joined presence channel
                     pass
-                elif event_name == 'member_removed':
+                elif event_name == "member_removed":
                     # User left presence channel
                     pass
 

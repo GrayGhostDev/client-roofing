@@ -5,10 +5,10 @@ Version: 1.0.0
 Pre-defined notification templates for email and SMS messages.
 """
 
-from typing import Dict, Any, Optional, List
-from string import Template
 import html
 import logging
+from string import Template
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class NotificationTemplates:
         self.email_templates = self._load_email_templates()
         self.sms_templates = self._load_sms_templates()
 
-    def _load_email_templates(self) -> Dict[str, Dict[str, str]]:
+    def _load_email_templates(self) -> dict[str, dict[str, str]]:
         """Load email templates."""
         return {
             # Lead notifications
@@ -54,9 +54,8 @@ class NotificationTemplates:
                 ${project_description}
 
                 View Lead: ${lead_url}
-                """
+                """,
             },
-
             "lead_hot": {
                 "subject": "🔥 HOT Lead Alert - Immediate Action Required!",
                 "html": """
@@ -96,9 +95,8 @@ class NotificationTemplates:
                 Budget: $${budget_min} - $${budget_max}
 
                 Call immediately: ${phone}
-                """
+                """,
             },
-
             "lead_assigned": {
                 "subject": "Lead Assigned: ${first_name} ${last_name}",
                 "html": """
@@ -134,9 +132,8 @@ class NotificationTemplates:
 
                 Call within ${response_time} minutes!
                 View Lead: ${lead_url}
-                """
+                """,
             },
-
             # Customer notifications
             "customer_welcome": {
                 "subject": "Welcome to the iSwitch Roofs Family, ${first_name}!",
@@ -183,9 +180,8 @@ class NotificationTemplates:
 
                 Best regards,
                 The iSwitch Roofs Team
-                """
+                """,
             },
-
             # Appointment notifications
             "appointment_confirmation": {
                 "subject": "Appointment Confirmed: ${appointment_date} at ${appointment_time}",
@@ -231,9 +227,8 @@ class NotificationTemplates:
                 Need to reschedule? Call ${company_phone}
 
                 Add to calendar: ${calendar_url}
-                """
+                """,
             },
-
             "appointment_reminder": {
                 "subject": "Reminder: Appointment Tomorrow at ${appointment_time}",
                 "html": """
@@ -267,9 +262,8 @@ class NotificationTemplates:
                 With: ${team_member_name}
 
                 Need to reschedule? Call ${company_phone}
-                """
+                """,
             },
-
             # Project notifications
             "project_started": {
                 "subject": "Great News! Your Roofing Project Has Started",
@@ -312,9 +306,8 @@ class NotificationTemplates:
                 Project Manager: ${project_manager_name} (${project_manager_phone})
 
                 Track progress: ${project_tracking_url}
-                """
+                """,
             },
-
             "project_completed": {
                 "subject": "🎉 Your Roofing Project is Complete!",
                 "html": """
@@ -362,9 +355,8 @@ class NotificationTemplates:
                 Please leave a review: ${review_url}
 
                 Thank you for choosing iSwitch Roofs!
-                """
+                """,
             },
-
             # Review request
             "review_request": {
                 "subject": "${first_name}, How Was Your Experience with iSwitch Roofs?",
@@ -401,54 +393,43 @@ class NotificationTemplates:
                 Had an issue? Contact us at ${company_email}
 
                 Thank you!
-                """
-            }
+                """,
+            },
         }
 
-    def _load_sms_templates(self) -> Dict[str, str]:
+    def _load_sms_templates(self) -> dict[str, str]:
         """Load SMS templates."""
         return {
             # Lead notifications
             "lead_hot_alert": "HOT LEAD! ${first_name} ${last_name} - Score: ${lead_score}. Call NOW: ${phone}. Urgency: ${urgency}",
-
             "lead_assigned": "New lead assigned: ${first_name} ${last_name}, ${phone}. Call within ${response_time} mins. View: ${lead_url}",
-
             # Appointment reminders
             "appointment_reminder_1day": "Hi ${first_name}, reminder: You have an appointment tomorrow at ${appointment_time}. Location: ${appointment_location}. Need to reschedule? Call ${company_phone}",
-
             "appointment_reminder_1hour": "Hi ${first_name}, your appointment is in 1 hour at ${appointment_time}. We'll see you at ${appointment_location}!",
-
             "appointment_confirmation": "Hi ${first_name}, your appointment is confirmed for ${appointment_date} at ${appointment_time}. We look forward to seeing you!",
-
             # Customer updates
             "project_started": "Hi ${first_name}, great news! Your roofing project has started today. Your project manager ${project_manager_name} will keep you updated. Questions? Call ${project_manager_phone}",
-
             "project_completed": "Hi ${first_name}, your roofing project is complete! Thank you for choosing iSwitch Roofs. Please leave a review: ${review_url}",
-
             "project_delay": "Hi ${first_name}, due to ${delay_reason}, your project is delayed by ${delay_days} days. New completion date: ${new_date}. We apologize for the inconvenience.",
-
             # Review requests
             "review_request": "Hi ${first_name}, thank you for choosing iSwitch Roofs! We'd love your feedback. Please leave a review: ${review_url}",
-
             # Follow-ups
             "follow_up_3months": "Hi ${first_name}, it's been 3 months since your roof installation. How's everything? Any questions? Reply or call ${company_phone}",
-
             "maintenance_reminder": "Hi ${first_name}, it's time for your annual roof inspection! Schedule now: ${scheduling_url} or call ${company_phone}",
-
             # Marketing (requires opt-in)
             "promotion": "Hi ${first_name}, special offer! ${offer_description}. Valid until ${expiry_date}. Call ${company_phone} or visit ${website_url}",
-
             # System
             "opt_out_confirmation": "You've been unsubscribed from iSwitch Roofs SMS. Reply START to re-subscribe.",
-
-            "opt_in_confirmation": "Welcome! You're now subscribed to iSwitch Roofs SMS updates. Reply STOP to unsubscribe anytime."
+            "opt_in_confirmation": "Welcome! You're now subscribed to iSwitch Roofs SMS updates. Reply STOP to unsubscribe anytime.",
         }
 
-    def render_template(self,
-                       template_type: str,
-                       template_name: str,
-                       variables: Dict[str, Any],
-                       format: str = 'html') -> Optional[str]:
+    def render_template(
+        self,
+        template_type: str,
+        template_name: str,
+        variables: dict[str, Any],
+        format: str = "html",
+    ) -> str | None:
         """
         Render a notification template with variables.
 
@@ -462,13 +443,13 @@ class NotificationTemplates:
             Rendered template or None
         """
         try:
-            if template_type == 'email':
+            if template_type == "email":
                 templates = self.email_templates.get(template_name)
                 if not templates:
                     return None
 
-                template_str = templates.get(format, templates.get('html'))
-            elif template_type == 'sms':
+                template_str = templates.get(format, templates.get("html"))
+            elif template_type == "sms":
                 template_str = self.sms_templates.get(template_name)
             else:
                 return None
@@ -480,11 +461,11 @@ class NotificationTemplates:
             safe_vars = {}
             for key, value in variables.items():
                 if value is None:
-                    safe_vars[key] = ''
-                elif isinstance(value, str) and format == 'html' and template_type == 'email':
+                    safe_vars[key] = ""
+                elif isinstance(value, str) and format == "html" and template_type == "email":
                     # Only escape HTML for HTML email templates
                     # Don't escape if it looks like it contains HTML (for hot_reasons list)
-                    if not ('<' in str(value) and '>' in str(value)):
+                    if not ("<" in str(value) and ">" in str(value)):
                         safe_vars[key] = html.escape(str(value))
                     else:
                         safe_vars[key] = str(value)
@@ -499,7 +480,7 @@ class NotificationTemplates:
             logger.error(f"Failed to render template {template_name}: {str(e)}")
             return None
 
-    def get_email_subject(self, template_name: str, variables: Dict[str, Any]) -> Optional[str]:
+    def get_email_subject(self, template_name: str, variables: dict[str, Any]) -> str | None:
         """
         Get rendered email subject.
 
@@ -511,16 +492,16 @@ class NotificationTemplates:
             Rendered subject or None
         """
         template = self.email_templates.get(template_name)
-        if not template or 'subject' not in template:
+        if not template or "subject" not in template:
             return None
 
         try:
-            subject_template = Template(template['subject'])
+            subject_template = Template(template["subject"])
             return subject_template.safe_substitute(**variables)
         except Exception:
             return None
 
-    def get_template_variables(self, template_type: str, template_name: str) -> List[str]:
+    def get_template_variables(self, template_type: str, template_name: str) -> list[str]:
         """
         Get list of variables used in a template.
 
@@ -533,21 +514,23 @@ class NotificationTemplates:
         """
         import re
 
-        if template_type == 'email':
+        if template_type == "email":
             templates = self.email_templates.get(template_name, {})
             # Check all parts of email template
-            template_str = ' '.join([
-                templates.get('subject', ''),
-                templates.get('html', ''),
-                templates.get('plain', '')
-            ])
-        elif template_type == 'sms':
-            template_str = self.sms_templates.get(template_name, '')
+            template_str = " ".join(
+                [
+                    templates.get("subject", ""),
+                    templates.get("html", ""),
+                    templates.get("plain", ""),
+                ]
+            )
+        elif template_type == "sms":
+            template_str = self.sms_templates.get(template_name, "")
         else:
             return []
 
         # Find all ${variable} patterns
-        pattern = r'\$\{([^}]+)\}'
+        pattern = r"\$\{([^}]+)\}"
         matches = re.findall(pattern, template_str)
 
         return list(set(matches))

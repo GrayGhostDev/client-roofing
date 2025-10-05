@@ -5,43 +5,47 @@ Version: 1.0.0
 Review data model for managing customer reviews from BirdEye and other platforms.
 """
 
-from sqlalchemy import Column, String, Integer, Boolean, Text, DateTime, Float, Enum as SQLEnum
-from pydantic import BaseModel, Field, field_validator, ConfigDict
-from typing import Optional
-from uuid import UUID
 from datetime import datetime
 from enum import Enum
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, Text
+from sqlalchemy import Enum as SQLEnum
 
 from app.models.base import BaseModel
 
 
 class ReviewPlatform(str, Enum):
     """Review platform enumeration"""
+
     GOOGLE = "google"
     FACEBOOK = "facebook"
     YELP = "yelp"
-    BBB = "bbb"                # Better Business Bureau
+    BBB = "bbb"  # Better Business Bureau
     ANGIES_LIST = "angies_list"
     HOME_ADVISOR = "home_advisor"
     THUMBTACK = "thumbtack"
     BIRDEYE = "birdeye"
-    DIRECT = "direct"          # Direct to website
+    DIRECT = "direct"  # Direct to website
 
 
 class ReviewStatus(str, Enum):
     """Review status"""
-    PENDING = "pending"        # Awaiting review
-    PUBLISHED = "published"    # Live on platform
-    RESPONDED = "responded"    # Response posted
-    FLAGGED = "flagged"        # Flagged for review
-    REMOVED = "removed"        # Removed from platform
+
+    PENDING = "pending"  # Awaiting review
+    PUBLISHED = "published"  # Live on platform
+    RESPONDED = "responded"  # Response posted
+    FLAGGED = "flagged"  # Flagged for review
+    REMOVED = "removed"  # Removed from platform
 
 
 class ReviewSentiment(str, Enum):
     """Review sentiment"""
-    POSITIVE = "positive"      # 4-5 stars
-    NEUTRAL = "neutral"        # 3 stars
-    NEGATIVE = "negative"      # 1-2 stars
+
+    POSITIVE = "positive"  # 4-5 stars
+    NEUTRAL = "neutral"  # 3 stars
+    NEGATIVE = "negative"  # 1-2 stars
 
 
 class Review(BaseModel):
@@ -51,7 +55,8 @@ class Review(BaseModel):
     Tracks reviews from multiple platforms with sentiment analysis,
     response management, and integration with BirdEye.
     """
-    __tablename__ = 'reviews'
+
+    __tablename__ = "reviews"
 
     # Association (Required)
     customer_id = Column(String(36), nullable=False, index=True)
@@ -157,6 +162,7 @@ class Review(BaseModel):
 # Pydantic schemas for API validation
 class ReviewCreateSchema(BaseModel):
     """Schema for creating a new review"""
+
     model_config = ConfigDict(from_attributes=True)
 
     customer_id: UUID
@@ -164,91 +170,95 @@ class ReviewCreateSchema(BaseModel):
     rating: float = Field(..., ge=0.0, le=5.0)
 
     # Optional fields
-    project_id: Optional[UUID] = None
-    title: Optional[str] = None
-    review_text: Optional[str] = None
-    reviewer_name: Optional[str] = None
-    reviewer_email: Optional[str] = None
-    review_date: Optional[datetime] = None
-    is_verified: Optional[bool] = False
-    platform_review_id: Optional[str] = None
-    platform_url: Optional[str] = None
-    birdeye_review_id: Optional[str] = None
-    has_photos: Optional[bool] = False
-    photo_urls: Optional[str] = None
-    request_sent: Optional[bool] = False
-    request_method: Optional[str] = None
-    notes: Optional[str] = None
+    project_id: UUID | None = None
+    title: str | None = None
+    review_text: str | None = None
+    reviewer_name: str | None = None
+    reviewer_email: str | None = None
+    review_date: datetime | None = None
+    is_verified: bool | None = False
+    platform_review_id: str | None = None
+    platform_url: str | None = None
+    birdeye_review_id: str | None = None
+    has_photos: bool | None = False
+    photo_urls: str | None = None
+    request_sent: bool | None = False
+    request_method: str | None = None
+    notes: str | None = None
 
-    @field_validator('rating')
+    @field_validator("rating")
     @classmethod
     def validate_rating(cls, v: float) -> float:
         """Ensure rating is in 0.5 increments"""
         if v % 0.5 != 0:
-            raise ValueError('Rating must be in 0.5 increments (0, 0.5, 1.0, etc.)')
+            raise ValueError("Rating must be in 0.5 increments (0, 0.5, 1.0, etc.)")
         return v
 
 
 class ReviewUpdateSchema(BaseModel):
     """Schema for updating a review"""
+
     model_config = ConfigDict(from_attributes=True)
 
-    status: Optional[ReviewStatus] = None
-    is_featured: Optional[bool] = None
-    response_text: Optional[str] = None
-    responded_by: Optional[UUID] = None
-    is_flagged: Optional[bool] = None
-    flag_reason: Optional[str] = None
-    helpful_count: Optional[int] = None
-    view_count: Optional[int] = None
-    notes: Optional[str] = None
-    tags: Optional[str] = None
+    status: ReviewStatus | None = None
+    is_featured: bool | None = None
+    response_text: str | None = None
+    responded_by: UUID | None = None
+    is_flagged: bool | None = None
+    flag_reason: str | None = None
+    helpful_count: int | None = None
+    view_count: int | None = None
+    notes: str | None = None
+    tags: str | None = None
 
 
 class ReviewResponseSchema(BaseModel):
     """Schema for review API response"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
     customer_id: str
-    project_id: Optional[str] = None
+    project_id: str | None = None
     platform: ReviewPlatform
     rating: float
     status: ReviewStatus
-    title: Optional[str] = None
-    review_text: Optional[str] = None
-    reviewer_name: Optional[str] = None
+    title: str | None = None
+    review_text: str | None = None
+    reviewer_name: str | None = None
     review_date: datetime
     is_verified: bool = False
     is_featured: bool = False
     has_response: bool = False
-    sentiment: Optional[ReviewSentiment] = None
+    sentiment: ReviewSentiment | None = None
     created_at: datetime
     updated_at: datetime
 
 
 class ReviewRequestCreateSchema(BaseModel):
     """Schema for requesting a review from customer"""
+
     customer_id: UUID
-    project_id: Optional[UUID] = None
+    project_id: UUID | None = None
     method: str = Field(..., description="email, sms, or birdeye")
     send_immediately: bool = Field(default=False)
-    delay_days: Optional[int] = Field(None, ge=0, description="Days to wait before sending")
+    delay_days: int | None = Field(None, ge=0, description="Days to wait before sending")
 
 
 class ReviewListFiltersSchema(BaseModel):
     """Filter parameters for review list endpoint"""
-    platform: Optional[str] = Field(None, description="Comma-separated platforms")
-    status: Optional[ReviewStatus] = Field(None, description="Filter by status")
-    min_rating: Optional[float] = Field(None, ge=0, le=5, description="Minimum rating")
-    max_rating: Optional[float] = Field(None, ge=0, le=5, description="Maximum rating")
-    sentiment: Optional[ReviewSentiment] = Field(None, description="Filter by sentiment")
-    customer_id: Optional[UUID] = Field(None, description="Filter by customer")
-    project_id: Optional[UUID] = Field(None, description="Filter by project")
-    has_response: Optional[bool] = Field(None, description="Filter by response status")
-    needs_response: Optional[bool] = Field(None, description="Filter needing response")
-    is_featured: Optional[bool] = Field(None, description="Filter featured reviews")
-    is_flagged: Optional[bool] = Field(None, description="Filter flagged reviews")
-    date_from: Optional[datetime] = Field(None, description="Filter from date")
-    date_to: Optional[datetime] = Field(None, description="Filter to date")
-    is_recent: Optional[bool] = Field(None, description="Filter last 30 days")
+
+    platform: str | None = Field(None, description="Comma-separated platforms")
+    status: ReviewStatus | None = Field(None, description="Filter by status")
+    min_rating: float | None = Field(None, ge=0, le=5, description="Minimum rating")
+    max_rating: float | None = Field(None, ge=0, le=5, description="Maximum rating")
+    sentiment: ReviewSentiment | None = Field(None, description="Filter by sentiment")
+    customer_id: UUID | None = Field(None, description="Filter by customer")
+    project_id: UUID | None = Field(None, description="Filter by project")
+    has_response: bool | None = Field(None, description="Filter by response status")
+    needs_response: bool | None = Field(None, description="Filter needing response")
+    is_featured: bool | None = Field(None, description="Filter featured reviews")
+    is_flagged: bool | None = Field(None, description="Filter flagged reviews")
+    date_from: datetime | None = Field(None, description="Filter from date")
+    date_to: datetime | None = Field(None, description="Filter to date")
+    is_recent: bool | None = Field(None, description="Filter last 30 days")

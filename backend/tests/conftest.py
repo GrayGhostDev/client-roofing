@@ -7,25 +7,24 @@ Global fixtures and test configuration for all tests.
 
 import os
 import sys
-from typing import Generator, Dict, Any
 from datetime import datetime
+from typing import Any
+
 import pytest
+from faker import Faker
 from flask import Flask
 from flask.testing import FlaskClient
-import factory
-from faker import Faker
 
 # Add the parent directory to the path so we can import our app
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app import create_app
-from app.config import TestingConfig
 
 # Initialize Faker for test data generation
 fake = Faker()
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def app() -> Flask:
     """
     Create and configure a Flask app for testing.
@@ -34,11 +33,13 @@ def app() -> Flask:
         Flask: Configured Flask application for testing
     """
     app = create_app("testing")
-    app.config.update({
-        "TESTING": True,
-        "WTF_CSRF_ENABLED": False,
-        "DEBUG": False,
-    })
+    app.config.update(
+        {
+            "TESTING": True,
+            "WTF_CSRF_ENABLED": False,
+            "DEBUG": False,
+        }
+    )
 
     # Create application context
     with app.app_context():
@@ -46,7 +47,7 @@ def app() -> Flask:
         yield app
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def client(app: Flask) -> FlaskClient:
     """
     Create a test client for the Flask app.
@@ -60,7 +61,7 @@ def client(app: Flask) -> FlaskClient:
     return app.test_client()
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def runner(app: Flask):
     """
     Create a test runner for CLI commands.
@@ -74,8 +75,8 @@ def runner(app: Flask):
     return app.test_cli_runner()
 
 
-@pytest.fixture(scope='function')
-def auth_headers() -> Dict[str, str]:
+@pytest.fixture(scope="function")
+def auth_headers() -> dict[str, str]:
     """
     Create authentication headers with a valid JWT token.
 
@@ -84,13 +85,10 @@ def auth_headers() -> Dict[str, str]:
     """
     # This will be implemented when auth is ready
     # For now, return mock headers
-    return {
-        "Authorization": "Bearer mock_token_for_testing",
-        "Content-Type": "application/json"
-    }
+    return {"Authorization": "Bearer mock_token_for_testing", "Content-Type": "application/json"}
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def mock_supabase_client(mocker):
     """
     Mock Supabase client for testing without actual database.
@@ -109,11 +107,11 @@ def mock_supabase_client(mocker):
     mock_client.table.return_value.update.return_value.execute.return_value.data = [{}]
     mock_client.table.return_value.delete.return_value.execute.return_value.data = []
 
-    mocker.patch('app.utils.supabase_client.get_supabase_client', return_value=mock_client)
+    mocker.patch("app.utils.supabase_client.get_supabase_client", return_value=mock_client)
     return mock_client
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def mock_pusher_client(mocker):
     """
     Mock Pusher client for testing real-time events.
@@ -127,12 +125,12 @@ def mock_pusher_client(mocker):
     mock_client = mocker.MagicMock()
     mock_client.trigger.return_value = True
 
-    mocker.patch('app.utils.pusher_client.get_pusher_client', return_value=mock_client)
+    mocker.patch("app.utils.pusher_client.get_pusher_client", return_value=mock_client)
     return mock_client
 
 
-@pytest.fixture(scope='function')
-def sample_lead_data() -> Dict[str, Any]:
+@pytest.fixture(scope="function")
+def sample_lead_data() -> dict[str, Any]:
     """
     Generate sample lead data for testing.
 
@@ -154,12 +152,12 @@ def sample_lead_data() -> Dict[str, Any]:
         "project_description": "Need complete roof replacement due to storm damage",
         "budget_range_min": 15000,
         "budget_range_max": 25000,
-        "insurance_claim": True
+        "insurance_claim": True,
     }
 
 
-@pytest.fixture(scope='function')
-def sample_customer_data() -> Dict[str, Any]:
+@pytest.fixture(scope="function")
+def sample_customer_data() -> dict[str, Any]:
     """
     Generate sample customer data for testing.
 
@@ -178,12 +176,12 @@ def sample_customer_data() -> Dict[str, Any]:
         "customer_type": "residential",
         "lifetime_value": 0,
         "total_projects": 0,
-        "referral_source": "lead_conversion"
+        "referral_source": "lead_conversion",
     }
 
 
-@pytest.fixture(scope='function')
-def sample_project_data() -> Dict[str, Any]:
+@pytest.fixture(scope="function")
+def sample_project_data() -> dict[str, Any]:
     """
     Generate sample project data for testing.
 
@@ -202,7 +200,7 @@ def sample_project_data() -> Dict[str, Any]:
         "end_date": None,
         "materials_cost": 8000,
         "labor_cost": 12000,
-        "profit_margin": 40.0
+        "profit_margin": 40.0,
     }
 
 
@@ -228,7 +226,7 @@ def mock_datetime(mocker):
     Returns:
         Mock: Mocked datetime
     """
-    mock_dt = mocker.patch('datetime.datetime')
+    mock_dt = mocker.patch("datetime.datetime")
     mock_dt.utcnow.return_value = datetime(2025, 1, 1, 12, 0, 0)
     mock_dt.now.return_value = datetime(2025, 1, 1, 12, 0, 0)
     return mock_dt

@@ -38,9 +38,7 @@ class Config:
 
     # JWT configuration
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", SECRET_KEY)
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(
-        seconds=int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES", 3600))
-    )
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES", 3600)))
 
     # API configuration
     API_HOST = os.getenv("API_HOST", "0.0.0.0")
@@ -196,7 +194,7 @@ def get_supabase_client():
     Returns:
         Supabase: Configured Supabase client
     """
-    from supabase import create_client, Client
+    from supabase import create_client
 
     config = get_config()
     url = config.SUPABASE_URL
@@ -227,7 +225,7 @@ def get_pusher_client():
         key=config.PUSHER_KEY,
         secret=config.PUSHER_SECRET,
         cluster=config.PUSHER_CLUSTER,
-        ssl=True
+        ssl=True,
     )
 
 
@@ -272,8 +270,9 @@ def get_redis_client():
     Returns:
         Redis: Configured Redis client
     """
-    import redis
     from urllib.parse import urlparse
+
+    import redis
 
     config = get_config()
 
@@ -284,9 +283,9 @@ def get_redis_client():
     url = urlparse(config.REDIS_URL)
 
     return redis.Redis(
-        host=url.hostname or 'localhost',
+        host=url.hostname or "localhost",
         port=url.port or 6379,
-        db=int(url.path.lstrip('/')) if url.path else 0,
+        db=int(url.path.lstrip("/")) if url.path else 0,
         password=url.password,
-        decode_responses=True
+        decode_responses=True,
     )

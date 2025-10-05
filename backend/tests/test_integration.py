@@ -4,14 +4,12 @@ Integration test suite for iSwitch Roofs CRM.
 Tests the complete flow from frontend components through API to database.
 """
 
-import unittest
-import requests
-import json
-import time
-from typing import Dict, Any, List
-from datetime import datetime
 import os
 import sys
+import time
+import unittest
+
+import requests
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -20,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 FRONTEND_URL = "http://localhost:3000"
 BACKEND_URL = "http://localhost:8001"
 TEST_TIMEOUT = 10
+
 
 class IntegrationTestSuite(unittest.TestCase):
     """Complete integration tests for the CRM system."""
@@ -38,7 +37,7 @@ class IntegrationTestSuite(unittest.TestCase):
                 "source": "website_form",
                 "city": "Birmingham",
                 "state": "MI",
-                "zip_code": "48009"
+                "zip_code": "48009",
             },
             "customer": {
                 "first_name": "Test",
@@ -47,31 +46,26 @@ class IntegrationTestSuite(unittest.TestCase):
                 "email": "test.customer@example.com",
                 "city": "Troy",
                 "state": "MI",
-                "zip_code": "48084"
+                "zip_code": "48084",
             },
             "appointment": {
                 "title": "Roof Inspection",
                 "appointment_type": "inspection",
                 "scheduled_date": "2025-10-10T10:00:00",
                 "duration_minutes": 60,
-                "location": "123 Test St, Birmingham, MI"
+                "location": "123 Test St, Birmingham, MI",
             },
             "project": {
                 "title": "Roof Replacement",
                 "project_type": "full_replacement",
                 "estimated_value": 25000,
-                "status": "planning"
-            }
+                "status": "planning",
+            },
         }
 
     def setUp(self):
         """Set up each test."""
-        self.created_ids = {
-            "leads": [],
-            "customers": [],
-            "appointments": [],
-            "projects": []
-        }
+        self.created_ids = {"leads": [], "customers": [], "appointments": [], "projects": []}
 
     def tearDown(self):
         """Clean up after each test."""
@@ -80,13 +74,12 @@ class IntegrationTestSuite(unittest.TestCase):
             for entity_id in ids:
                 try:
                     self.session.delete(
-                        f"{BACKEND_URL}/api/{entity_type}/{entity_id}",
-                        headers=self._get_headers()
+                        f"{BACKEND_URL}/api/{entity_type}/{entity_id}", headers=self._get_headers()
                     )
                 except:
                     pass
 
-    def _get_headers(self) -> Dict[str, str]:
+    def _get_headers(self) -> dict[str, str]:
         """Get request headers with authentication."""
         headers = {"Content-Type": "application/json"}
         if self.auth_token:
@@ -109,15 +102,10 @@ class IntegrationTestSuite(unittest.TestCase):
     def test_03_database_connectivity(self):
         """Test database connectivity through the API."""
         # This will fail until DB tables are created
-        response = self.session.get(
-            f"{BACKEND_URL}/api/leads",
-            headers=self._get_headers()
-        )
+        response = self.session.get(f"{BACKEND_URL}/api/leads", headers=self._get_headers())
         # Even a 401/404 means the server is running
         self.assertIn(
-            response.status_code,
-            [200, 401, 404, 500],
-            "Server should respond to API calls"
+            response.status_code, [200, 401, 404, 500], "Server should respond to API calls"
         )
 
     # ========== Authentication Tests ==========
@@ -128,13 +116,13 @@ class IntegrationTestSuite(unittest.TestCase):
             "email": f"test_{int(time.time())}@example.com",
             "password": "TestPass123!",
             "first_name": "Test",
-            "last_name": "User"
+            "last_name": "User",
         }
 
         response = self.session.post(
             f"{BACKEND_URL}/api/auth/register",
             json=user_data,
-            headers={"Content-Type": "application/json"}
+            headers={"Content-Type": "application/json"},
         )
 
         if response.status_code == 200:
@@ -146,15 +134,12 @@ class IntegrationTestSuite(unittest.TestCase):
 
     def test_05_user_login(self):
         """Test user login flow."""
-        login_data = {
-            "email": "admin@iswitchroofs.com",
-            "password": "admin123"
-        }
+        login_data = {"email": "admin@iswitchroofs.com", "password": "admin123"}
 
         response = self.session.post(
             f"{BACKEND_URL}/api/auth/login",
             json=login_data,
-            headers={"Content-Type": "application/json"}
+            headers={"Content-Type": "application/json"},
         )
 
         if response.status_code == 200:
@@ -168,9 +153,7 @@ class IntegrationTestSuite(unittest.TestCase):
     def test_06_create_lead(self):
         """Test creating a new lead."""
         response = self.session.post(
-            f"{BACKEND_URL}/api/leads",
-            json=self.test_data["lead"],
-            headers=self._get_headers()
+            f"{BACKEND_URL}/api/leads", json=self.test_data["lead"], headers=self._get_headers()
         )
 
         if response.status_code == 201:
@@ -180,8 +163,7 @@ class IntegrationTestSuite(unittest.TestCase):
 
             # Verify lead was created
             verify_response = self.session.get(
-                f"{BACKEND_URL}/api/leads/{data['id']}",
-                headers=self._get_headers()
+                f"{BACKEND_URL}/api/leads/{data['id']}", headers=self._get_headers()
             )
             self.assertEqual(verify_response.status_code, 200)
         else:
@@ -190,8 +172,7 @@ class IntegrationTestSuite(unittest.TestCase):
     def test_07_list_leads(self):
         """Test listing leads with pagination."""
         response = self.session.get(
-            f"{BACKEND_URL}/api/leads?page=1&size=10",
-            headers=self._get_headers()
+            f"{BACKEND_URL}/api/leads?page=1&size=10", headers=self._get_headers()
         )
 
         if response.status_code == 200:
@@ -205,9 +186,7 @@ class IntegrationTestSuite(unittest.TestCase):
         """Test updating a lead."""
         # First create a lead
         create_response = self.session.post(
-            f"{BACKEND_URL}/api/leads",
-            json=self.test_data["lead"],
-            headers=self._get_headers()
+            f"{BACKEND_URL}/api/leads", json=self.test_data["lead"], headers=self._get_headers()
         )
 
         if create_response.status_code == 201:
@@ -217,9 +196,7 @@ class IntegrationTestSuite(unittest.TestCase):
             # Update the lead
             update_data = {"status": "contacted", "lead_score": 85}
             update_response = self.session.put(
-                f"{BACKEND_URL}/api/leads/{lead_id}",
-                json=update_data,
-                headers=self._get_headers()
+                f"{BACKEND_URL}/api/leads/{lead_id}", json=update_data, headers=self._get_headers()
             )
 
             self.assertEqual(update_response.status_code, 200)
@@ -233,13 +210,11 @@ class IntegrationTestSuite(unittest.TestCase):
             **self.test_data["lead"],
             "property_value": 750000,
             "roof_age": 20,
-            "urgency": "immediate"
+            "urgency": "immediate",
         }
 
         response = self.session.post(
-            f"{BACKEND_URL}/api/leads/score",
-            json=scoring_data,
-            headers=self._get_headers()
+            f"{BACKEND_URL}/api/leads/score", json=scoring_data, headers=self._get_headers()
         )
 
         if response.status_code == 200:
@@ -257,9 +232,7 @@ class IntegrationTestSuite(unittest.TestCase):
         """Test converting a lead to a customer."""
         # Create a lead first
         lead_response = self.session.post(
-            f"{BACKEND_URL}/api/leads",
-            json=self.test_data["lead"],
-            headers=self._get_headers()
+            f"{BACKEND_URL}/api/leads", json=self.test_data["lead"], headers=self._get_headers()
         )
 
         if lead_response.status_code == 201:
@@ -268,8 +241,7 @@ class IntegrationTestSuite(unittest.TestCase):
 
             # Convert to customer
             convert_response = self.session.post(
-                f"{BACKEND_URL}/api/leads/{lead_id}/convert",
-                headers=self._get_headers()
+                f"{BACKEND_URL}/api/leads/{lead_id}/convert", headers=self._get_headers()
             )
 
             if convert_response.status_code == 200:
@@ -283,8 +255,7 @@ class IntegrationTestSuite(unittest.TestCase):
         """Test customer analytics endpoint."""
         # Assuming we have a customer ID
         response = self.session.get(
-            f"{BACKEND_URL}/api/customers/analytics",
-            headers=self._get_headers()
+            f"{BACKEND_URL}/api/customers/analytics", headers=self._get_headers()
         )
 
         if response.status_code == 200:
@@ -302,7 +273,7 @@ class IntegrationTestSuite(unittest.TestCase):
         response = self.session.post(
             f"{BACKEND_URL}/api/appointments",
             json=self.test_data["appointment"],
-            headers=self._get_headers()
+            headers=self._get_headers(),
         )
 
         if response.status_code == 201:
@@ -314,15 +285,12 @@ class IntegrationTestSuite(unittest.TestCase):
 
     def test_13_check_availability(self):
         """Test checking appointment availability."""
-        availability_data = {
-            "date": "2025-10-10",
-            "duration_minutes": 60
-        }
+        availability_data = {"date": "2025-10-10", "duration_minutes": 60}
 
         response = self.session.post(
             f"{BACKEND_URL}/api/appointments/availability",
             json=availability_data,
-            headers=self._get_headers()
+            headers=self._get_headers(),
         )
 
         if response.status_code == 200:
@@ -339,9 +307,7 @@ class IntegrationTestSuite(unittest.TestCase):
         # Need a customer first
         customer_data = self.test_data["customer"]
         customer_response = self.session.post(
-            f"{BACKEND_URL}/api/customers",
-            json=customer_data,
-            headers=self._get_headers()
+            f"{BACKEND_URL}/api/customers", json=customer_data, headers=self._get_headers()
         )
 
         if customer_response.status_code == 201:
@@ -349,15 +315,10 @@ class IntegrationTestSuite(unittest.TestCase):
             self.created_ids["customers"].append(customer_id)
 
             # Create project
-            project_data = {
-                **self.test_data["project"],
-                "customer_id": customer_id
-            }
+            project_data = {**self.test_data["project"], "customer_id": customer_id}
 
             project_response = self.session.post(
-                f"{BACKEND_URL}/api/projects",
-                json=project_data,
-                headers=self._get_headers()
+                f"{BACKEND_URL}/api/projects", json=project_data, headers=self._get_headers()
             )
 
             if project_response.status_code == 201:
@@ -370,8 +331,7 @@ class IntegrationTestSuite(unittest.TestCase):
     def test_15_project_pipeline(self):
         """Test project pipeline stages."""
         response = self.session.get(
-            f"{BACKEND_URL}/api/projects/pipeline",
-            headers=self._get_headers()
+            f"{BACKEND_URL}/api/projects/pipeline", headers=self._get_headers()
         )
 
         if response.status_code == 200:
@@ -385,10 +345,7 @@ class IntegrationTestSuite(unittest.TestCase):
 
     def test_16_pusher_configuration(self):
         """Test Pusher real-time configuration."""
-        response = self.session.get(
-            f"{BACKEND_URL}/api/pusher/auth",
-            headers=self._get_headers()
-        )
+        response = self.session.get(f"{BACKEND_URL}/api/pusher/auth", headers=self._get_headers())
 
         if response.status_code == 200:
             data = response.json()
@@ -401,8 +358,7 @@ class IntegrationTestSuite(unittest.TestCase):
     def test_17_dashboard_metrics(self):
         """Test dashboard metrics endpoint."""
         response = self.session.get(
-            f"{BACKEND_URL}/api/analytics/dashboard",
-            headers=self._get_headers()
+            f"{BACKEND_URL}/api/analytics/dashboard", headers=self._get_headers()
         )
 
         if response.status_code == 200:
@@ -416,8 +372,7 @@ class IntegrationTestSuite(unittest.TestCase):
     def test_18_conversion_funnel(self):
         """Test conversion funnel data."""
         response = self.session.get(
-            f"{BACKEND_URL}/api/analytics/funnel",
-            headers=self._get_headers()
+            f"{BACKEND_URL}/api/analytics/funnel", headers=self._get_headers()
         )
 
         if response.status_code == 200:
@@ -433,9 +388,7 @@ class IntegrationTestSuite(unittest.TestCase):
         """Test complete flow from lead creation to project completion."""
         # Step 1: Create lead
         lead_response = self.session.post(
-            f"{BACKEND_URL}/api/leads",
-            json=self.test_data["lead"],
-            headers=self._get_headers()
+            f"{BACKEND_URL}/api/leads", json=self.test_data["lead"], headers=self._get_headers()
         )
 
         if lead_response.status_code != 201:
@@ -446,14 +399,9 @@ class IntegrationTestSuite(unittest.TestCase):
         self.created_ids["leads"].append(lead_id)
 
         # Step 2: Schedule appointment
-        appointment_data = {
-            **self.test_data["appointment"],
-            "lead_id": lead_id
-        }
+        appointment_data = {**self.test_data["appointment"], "lead_id": lead_id}
         appointment_response = self.session.post(
-            f"{BACKEND_URL}/api/appointments",
-            json=appointment_data,
-            headers=self._get_headers()
+            f"{BACKEND_URL}/api/appointments", json=appointment_data, headers=self._get_headers()
         )
 
         self.assertEqual(appointment_response.status_code, 201)
@@ -462,8 +410,7 @@ class IntegrationTestSuite(unittest.TestCase):
 
         # Step 3: Convert to customer
         convert_response = self.session.post(
-            f"{BACKEND_URL}/api/leads/{lead_id}/convert",
-            headers=self._get_headers()
+            f"{BACKEND_URL}/api/leads/{lead_id}/convert", headers=self._get_headers()
         )
 
         self.assertEqual(convert_response.status_code, 200)
@@ -471,14 +418,9 @@ class IntegrationTestSuite(unittest.TestCase):
         self.created_ids["customers"].append(customer_id)
 
         # Step 4: Create project
-        project_data = {
-            **self.test_data["project"],
-            "customer_id": customer_id
-        }
+        project_data = {**self.test_data["project"], "customer_id": customer_id}
         project_response = self.session.post(
-            f"{BACKEND_URL}/api/projects",
-            json=project_data,
-            headers=self._get_headers()
+            f"{BACKEND_URL}/api/projects", json=project_data, headers=self._get_headers()
         )
 
         self.assertEqual(project_response.status_code, 201)
@@ -489,7 +431,7 @@ class IntegrationTestSuite(unittest.TestCase):
         complete_response = self.session.put(
             f"{BACKEND_URL}/api/projects/{project_id}",
             json={"status": "completed"},
-            headers=self._get_headers()
+            headers=self._get_headers(),
         )
 
         self.assertEqual(complete_response.status_code, 200)
@@ -497,26 +439,16 @@ class IntegrationTestSuite(unittest.TestCase):
 
     def test_20_performance_metrics(self):
         """Test API performance metrics."""
-        endpoints = [
-            "/api/leads",
-            "/api/customers",
-            "/api/projects",
-            "/api/appointments"
-        ]
+        endpoints = ["/api/leads", "/api/customers", "/api/projects", "/api/appointments"]
 
         for endpoint in endpoints:
             start_time = time.time()
-            response = self.session.get(
-                f"{BACKEND_URL}{endpoint}",
-                headers=self._get_headers()
-            )
+            response = self.session.get(f"{BACKEND_URL}{endpoint}", headers=self._get_headers())
             response_time = (time.time() - start_time) * 1000
 
             # API should respond within 500ms
             self.assertLess(
-                response_time,
-                500,
-                f"{endpoint} took {response_time:.0f}ms (should be < 500ms)"
+                response_time, 500, f"{endpoint} took {response_time:.0f}ms (should be < 500ms)"
             )
 
 

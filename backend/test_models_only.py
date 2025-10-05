@@ -3,11 +3,12 @@
 Direct model test without Flask dependencies.
 """
 
-import sys
 import os
+import sys
 
 # Add the backend directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
+
 
 def test_direct_model_imports():
     """Test importing models directly."""
@@ -15,11 +16,9 @@ def test_direct_model_imports():
 
     try:
         # Import SQLAlchemy components
-        from sqlalchemy import Column, String, Integer, Boolean, DateTime, Text, Enum
-        from sqlalchemy.dialects.postgresql import UUID
-        from datetime import datetime
-        import uuid
         import enum
+
+        from sqlalchemy import Column, Enum, String
 
         print("✅ SQLAlchemy components imported successfully")
 
@@ -32,12 +31,13 @@ def test_direct_model_imports():
         print("✅ Enum definitions work")
 
         # Test importing base model directly
-        from app.models.base import BaseModel, Base
+        from app.models.base import BaseModel
+
         print("✅ Base model imported successfully")
 
         # Test creating a simple model class
         class TestLead(BaseModel):
-            __tablename__ = 'test_leads'
+            __tablename__ = "test_leads"
 
             first_name = Column(String(100), nullable=False)
             last_name = Column(String(100), nullable=False)
@@ -63,6 +63,7 @@ def test_direct_model_imports():
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -72,9 +73,9 @@ def test_pydantic_schemas():
     print("\nTesting Pydantic schemas...")
 
     try:
-        from pydantic import BaseModel, EmailStr, Field
-        from typing import Optional
         from enum import Enum
+
+        from pydantic import BaseModel, EmailStr, Field
 
         print("✅ Pydantic components imported successfully")
 
@@ -89,7 +90,7 @@ def test_pydantic_schemas():
             first_name: str = Field(..., min_length=1, max_length=100)
             last_name: str = Field(..., min_length=1, max_length=100)
             phone: str
-            email: Optional[EmailStr] = None
+            email: EmailStr | None = None
             source: LeadSource
 
         print("✅ Pydantic schema defined successfully")
@@ -100,7 +101,7 @@ def test_pydantic_schemas():
             "last_name": "Smith",
             "phone": "3135551234",
             "email": "jane@example.com",
-            "source": "website_form"
+            "source": "website_form",
         }
 
         lead_schema = TestLeadCreate(**valid_data)
@@ -115,6 +116,7 @@ def test_pydantic_schemas():
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 

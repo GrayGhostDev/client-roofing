@@ -5,18 +5,20 @@ Version: 1.0.0
 Appointment data model for scheduling inspections, consultations, and follow-ups.
 """
 
-from sqlalchemy import Column, String, Integer, Boolean, Text, DateTime, Enum as SQLEnum
-from pydantic import BaseModel, Field, field_validator, ConfigDict
-from typing import Optional
-from uuid import UUID
 from datetime import datetime, timedelta
 from enum import Enum
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
+from sqlalchemy import Enum as SQLEnum
 
 from app.models.base import BaseModel
 
 
 class AppointmentType(str, Enum):
     """Appointment type enumeration"""
+
     INITIAL_CONSULTATION = "initial_consultation"
     ROOF_INSPECTION = "roof_inspection"
     QUOTE_PRESENTATION = "quote_presentation"
@@ -31,6 +33,7 @@ class AppointmentType(str, Enum):
 
 class AppointmentStatus(str, Enum):
     """Appointment status"""
+
     SCHEDULED = "scheduled"
     CONFIRMED = "confirmed"
     IN_PROGRESS = "in_progress"
@@ -42,6 +45,7 @@ class AppointmentStatus(str, Enum):
 
 class ReminderStatus(str, Enum):
     """Reminder status"""
+
     PENDING = "pending"
     SENT = "sent"
     FAILED = "failed"
@@ -53,7 +57,8 @@ class Appointment(BaseModel):
 
     Supports scheduling, reminders, calendar integration, and completion tracking.
     """
-    __tablename__ = 'appointments'
+
+    __tablename__ = "appointments"
 
     # Association (Required)
     entity_type = Column(String(50), nullable=False)
@@ -122,10 +127,10 @@ class Appointment(BaseModel):
     @property
     def is_upcoming(self) -> bool:
         """Check if appointment is upcoming (future and not cancelled)"""
-        return (
-            self.scheduled_date > datetime.utcnow() and
-            self.status not in [AppointmentStatus.CANCELLED, AppointmentStatus.COMPLETED]
-        )
+        return self.scheduled_date > datetime.utcnow() and self.status not in [
+            AppointmentStatus.CANCELLED,
+            AppointmentStatus.COMPLETED,
+        ]
 
     @property
     def is_today(self) -> bool:
@@ -136,13 +141,14 @@ class Appointment(BaseModel):
     @property
     def is_overdue(self) -> bool:
         """Check if appointment time has passed but not completed"""
-        return (
-            self.scheduled_date < datetime.utcnow() and
-            self.status not in [AppointmentStatus.COMPLETED, AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW]
-        )
+        return self.scheduled_date < datetime.utcnow() and self.status not in [
+            AppointmentStatus.COMPLETED,
+            AppointmentStatus.CANCELLED,
+            AppointmentStatus.NO_SHOW,
+        ]
 
     @property
-    def minutes_until_appointment(self) -> Optional[int]:
+    def minutes_until_appointment(self) -> int | None:
         """Calculate minutes until appointment"""
         if self.is_upcoming:
             delta = self.scheduled_date - datetime.utcnow()
@@ -162,6 +168,7 @@ class Appointment(BaseModel):
 # Pydantic schemas for API validation
 class AppointmentCreateSchema(BaseModel):
     """Schema for creating a new appointment"""
+
     model_config = ConfigDict(from_attributes=True)
 
     entity_type: str
@@ -173,65 +180,68 @@ class AppointmentCreateSchema(BaseModel):
     assigned_to: UUID
 
     # Optional fields
-    location: Optional[str] = None
-    is_virtual: Optional[bool] = False
-    meeting_url: Optional[str] = None
-    customer_id: Optional[UUID] = None
-    additional_attendees: Optional[str] = None
-    description: Optional[str] = None
-    preparation_notes: Optional[str] = None
-    send_reminder: Optional[bool] = True
-    reminder_hours_before: Optional[int] = 24
-    confirmation_requested: Optional[bool] = False
+    location: str | None = None
+    is_virtual: bool | None = False
+    meeting_url: str | None = None
+    customer_id: UUID | None = None
+    additional_attendees: str | None = None
+    description: str | None = None
+    preparation_notes: str | None = None
+    send_reminder: bool | None = True
+    reminder_hours_before: int | None = 24
+    confirmation_requested: bool | None = False
 
-    @field_validator('entity_type')
+    @field_validator("entity_type")
     @classmethod
     def validate_entity_type(cls, v: str) -> str:
         """Validate entity type"""
-        allowed = ['lead', 'customer', 'project']
+        allowed = ["lead", "customer", "project"]
         if v.lower() not in allowed:
             raise ValueError(f"Entity type must be one of: {', '.join(allowed)}")
         return v.lower()
 
-    @field_validator('scheduled_date')
+    @field_validator("scheduled_date")
     @classmethod
     def validate_scheduled_date(cls, v: datetime) -> datetime:
         """Ensure scheduled date is not in the past"""
         if v < datetime.utcnow():
-            raise ValueError('Scheduled date cannot be in the past')
+            raise ValueError("Scheduled date cannot be in the past")
         return v
 
 
 class AppointmentUpdateSchema(BaseModel):
     """Schema for updating an appointment"""
+
     model_config = ConfigDict(from_attributes=True)
 
-    status: Optional[AppointmentStatus] = None
-    title: Optional[str] = Field(None, min_length=1, max_length=200)
-    scheduled_date: Optional[datetime] = None
-    duration_minutes: Optional[int] = Field(None, ge=15, le=480)
-    location: Optional[str] = None
-    meeting_url: Optional[str] = None
-    assigned_to: Optional[UUID] = None
-    description: Optional[str] = None
-    preparation_notes: Optional[str] = None
-    outcome_notes: Optional[str] = None
-    confirmed_by_customer: Optional[bool] = None
-    actual_start_time: Optional[datetime] = None
-    actual_end_time: Optional[datetime] = None
-    cancellation_reason: Optional[str] = None
-    follow_up_required: Optional[bool] = None
+    status: AppointmentStatus | None = None
+    title: str | None = Field(None, min_length=1, max_length=200)
+    scheduled_date: datetime | None = None
+    duration_minutes: int | None = Field(None, ge=15, le=480)
+    location: str | None = None
+    meeting_url: str | None = None
+    assigned_to: UUID | None = None
+    description: str | None = None
+    preparation_notes: str | None = None
+    outcome_notes: str | None = None
+    confirmed_by_customer: bool | None = None
+    actual_start_time: datetime | None = None
+    actual_end_time: datetime | None = None
+    cancellation_reason: str | None = None
+    follow_up_required: bool | None = None
 
 
 class AppointmentRescheduleSchema(BaseModel):
     """Schema for rescheduling an appointment"""
+
     new_scheduled_date: datetime
-    reason: Optional[str] = Field(None, max_length=500)
+    reason: str | None = Field(None, max_length=500)
     send_notification: bool = Field(default=True)
 
 
 class AppointmentResponseSchema(BaseModel):
     """Schema for appointment API response"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -243,23 +253,24 @@ class AppointmentResponseSchema(BaseModel):
     scheduled_date: datetime
     duration_minutes: int
     assigned_to: str
-    location: Optional[str] = None
+    location: str | None = None
     is_virtual: bool = False
-    description: Optional[str] = None
+    description: str | None = None
     created_at: datetime
     updated_at: datetime
 
 
 class AppointmentListFiltersSchema(BaseModel):
     """Filter parameters for appointment list endpoint"""
-    entity_type: Optional[str] = Field(None, description="Filter by entity type")
-    entity_id: Optional[UUID] = Field(None, description="Filter by specific entity")
-    appointment_type: Optional[str] = Field(None, description="Comma-separated types")
-    status: Optional[str] = Field(None, description="Comma-separated statuses")
-    assigned_to: Optional[UUID] = Field(None, description="Filter by team member")
-    date_from: Optional[datetime] = Field(None, description="Filter from date")
-    date_to: Optional[datetime] = Field(None, description="Filter to date")
-    is_virtual: Optional[bool] = Field(None, description="Filter virtual meetings")
-    needs_confirmation: Optional[bool] = Field(None, description="Filter unconfirmed appointments")
-    is_today: Optional[bool] = Field(None, description="Filter today's appointments")
-    is_upcoming: Optional[bool] = Field(None, description="Filter upcoming appointments")
+
+    entity_type: str | None = Field(None, description="Filter by entity type")
+    entity_id: UUID | None = Field(None, description="Filter by specific entity")
+    appointment_type: str | None = Field(None, description="Comma-separated types")
+    status: str | None = Field(None, description="Comma-separated statuses")
+    assigned_to: UUID | None = Field(None, description="Filter by team member")
+    date_from: datetime | None = Field(None, description="Filter from date")
+    date_to: datetime | None = Field(None, description="Filter to date")
+    is_virtual: bool | None = Field(None, description="Filter virtual meetings")
+    needs_confirmation: bool | None = Field(None, description="Filter unconfirmed appointments")
+    is_today: bool | None = Field(None, description="Filter today's appointments")
+    is_upcoming: bool | None = Field(None, description="Filter upcoming appointments")

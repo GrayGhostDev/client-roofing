@@ -6,18 +6,20 @@ Interaction data model for tracking all customer/lead touchpoints including call
 meetings, and notes.
 """
 
-from sqlalchemy import Column, String, Integer, Boolean, Text, DateTime, Enum as SQLEnum
-from pydantic import BaseModel, Field, field_validator, ConfigDict
-from typing import Optional
-from uuid import UUID
 from datetime import datetime
 from enum import Enum
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
+from sqlalchemy import Enum as SQLEnum
 
 from app.models.base import BaseModel
 
 
 class InteractionType(str, Enum):
     """Interaction type enumeration"""
+
     PHONE_CALL = "phone_call"
     EMAIL = "email"
     SMS = "sms"
@@ -32,26 +34,29 @@ class InteractionType(str, Enum):
 
 class InteractionDirection(str, Enum):
     """Interaction direction"""
-    INBOUND = "inbound"    # Customer contacted us
+
+    INBOUND = "inbound"  # Customer contacted us
     OUTBOUND = "outbound"  # We contacted customer
     INTERNAL = "internal"  # Internal note/communication
 
 
 class InteractionOutcome(str, Enum):
     """Interaction outcome/result"""
-    SUCCESSFUL = "successful"           # Connected and productive
-    NO_ANSWER = "no_answer"            # Call/message not answered
+
+    SUCCESSFUL = "successful"  # Connected and productive
+    NO_ANSWER = "no_answer"  # Call/message not answered
     LEFT_VOICEMAIL = "left_voicemail"  # Voicemail left
     SCHEDULED_CALLBACK = "scheduled_callback"  # Arranged follow-up
     SCHEDULED_APPOINTMENT = "scheduled_appointment"  # Appointment set
     QUOTE_REQUESTED = "quote_requested"  # Customer requested quote
     OBJECTION_HANDLED = "objection_handled"  # Addressed concerns
-    NOT_INTERESTED = "not_interested"    # Customer declined
+    NOT_INTERESTED = "not_interested"  # Customer declined
     FOLLOW_UP_REQUIRED = "follow_up_required"  # Needs follow-up
 
 
 class EntityType(str, Enum):
     """Entity type for interaction"""
+
     LEAD = "lead"
     CUSTOMER = "customer"
     PROJECT = "project"
@@ -64,7 +69,8 @@ class Interaction(BaseModel):
     Records every communication and touchpoint with leads/customers,
     supporting the 16-touch campaign strategy and relationship management.
     """
-    __tablename__ = 'interactions'
+
+    __tablename__ = "interactions"
 
     # Association (Required)
     entity_type = Column(SQLEnum(EntityType), nullable=False, index=True)
@@ -116,10 +122,7 @@ class Interaction(BaseModel):
     @property
     def is_call(self) -> bool:
         """Check if interaction is a phone call"""
-        return self.interaction_type in [
-            InteractionType.PHONE_CALL,
-            InteractionType.VOICEMAIL
-        ]
+        return self.interaction_type in [InteractionType.PHONE_CALL, InteractionType.VOICEMAIL]
 
     @property
     def is_email(self) -> bool:
@@ -132,7 +135,7 @@ class Interaction(BaseModel):
         return self.interaction_type in [
             InteractionType.IN_PERSON_MEETING,
             InteractionType.VIDEO_CALL,
-            InteractionType.SITE_VISIT
+            InteractionType.SITE_VISIT,
         ]
 
     @property
@@ -144,6 +147,7 @@ class Interaction(BaseModel):
 # Pydantic schemas for API validation
 class InteractionCreateSchema(BaseModel):
     """Schema for creating a new interaction"""
+
     model_config = ConfigDict(from_attributes=True)
 
     entity_type: EntityType
@@ -153,37 +157,37 @@ class InteractionCreateSchema(BaseModel):
     subject: str = Field(..., min_length=1, max_length=200)
 
     # Optional fields
-    description: Optional[str] = None
-    outcome: Optional[InteractionOutcome] = None
+    description: str | None = None
+    outcome: InteractionOutcome | None = None
     performed_by: UUID  # Required
-    interaction_date: Optional[datetime] = None
-    duration_minutes: Optional[int] = None
+    interaction_date: datetime | None = None
+    duration_minutes: int | None = None
 
-    requires_follow_up: Optional[bool] = False
-    follow_up_date: Optional[datetime] = None
+    requires_follow_up: bool | None = False
+    follow_up_date: datetime | None = None
 
     # Call tracking
-    call_recording_url: Optional[str] = None
-    call_duration_seconds: Optional[int] = None
-    call_from_number: Optional[str] = None
-    call_to_number: Optional[str] = None
-    call_sid: Optional[str] = None
+    call_recording_url: str | None = None
+    call_duration_seconds: int | None = None
+    call_from_number: str | None = None
+    call_to_number: str | None = None
+    call_sid: str | None = None
 
     # Email tracking
-    email_from: Optional[str] = None
-    email_to: Optional[str] = None
+    email_from: str | None = None
+    email_to: str | None = None
 
-    sentiment: Optional[str] = None
-    tags: Optional[str] = None
+    sentiment: str | None = None
+    tags: str | None = None
 
-    @field_validator('sentiment')
+    @field_validator("sentiment")
     @classmethod
-    def validate_sentiment(cls, v: Optional[str]) -> Optional[str]:
+    def validate_sentiment(cls, v: str | None) -> str | None:
         """Validate sentiment is one of allowed values"""
         if v is None:
             return v
 
-        allowed = ['positive', 'neutral', 'negative']
+        allowed = ["positive", "neutral", "negative"]
         if v.lower() not in allowed:
             raise ValueError(f"Sentiment must be one of: {', '.join(allowed)}")
 
@@ -192,29 +196,30 @@ class InteractionCreateSchema(BaseModel):
 
 class InteractionUpdateSchema(BaseModel):
     """Schema for updating an interaction"""
+
     model_config = ConfigDict(from_attributes=True)
 
-    subject: Optional[str] = Field(None, min_length=1, max_length=200)
-    description: Optional[str] = None
-    outcome: Optional[InteractionOutcome] = None
-    duration_minutes: Optional[int] = None
-    requires_follow_up: Optional[bool] = None
-    follow_up_date: Optional[datetime] = None
-    follow_up_completed: Optional[bool] = None
-    sentiment: Optional[str] = None
-    quality_score: Optional[int] = Field(None, ge=0, le=10)
-    tags: Optional[str] = None
-    transcription: Optional[str] = None
-    ai_summary: Optional[str] = None
+    subject: str | None = Field(None, min_length=1, max_length=200)
+    description: str | None = None
+    outcome: InteractionOutcome | None = None
+    duration_minutes: int | None = None
+    requires_follow_up: bool | None = None
+    follow_up_date: datetime | None = None
+    follow_up_completed: bool | None = None
+    sentiment: str | None = None
+    quality_score: int | None = Field(None, ge=0, le=10)
+    tags: str | None = None
+    transcription: str | None = None
+    ai_summary: str | None = None
 
-    @field_validator('sentiment')
+    @field_validator("sentiment")
     @classmethod
-    def validate_sentiment(cls, v: Optional[str]) -> Optional[str]:
+    def validate_sentiment(cls, v: str | None) -> str | None:
         """Validate sentiment is one of allowed values"""
         if v is None:
             return v
 
-        allowed = ['positive', 'neutral', 'negative']
+        allowed = ["positive", "neutral", "negative"]
         if v.lower() not in allowed:
             raise ValueError(f"Sentiment must be one of: {', '.join(allowed)}")
 
@@ -223,6 +228,7 @@ class InteractionUpdateSchema(BaseModel):
 
 class InteractionResponseSchema(BaseModel):
     """Schema for interaction API response"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -231,28 +237,29 @@ class InteractionResponseSchema(BaseModel):
     interaction_type: InteractionType
     direction: InteractionDirection
     subject: str
-    description: Optional[str] = None
-    outcome: Optional[InteractionOutcome] = None
+    description: str | None = None
+    outcome: InteractionOutcome | None = None
     performed_by: str
     interaction_date: datetime
-    duration_minutes: Optional[int] = None
+    duration_minutes: int | None = None
     requires_follow_up: bool = False
-    follow_up_date: Optional[datetime] = None
-    sentiment: Optional[str] = None
+    follow_up_date: datetime | None = None
+    sentiment: str | None = None
     created_at: datetime
     updated_at: datetime
 
 
 class InteractionListFiltersSchema(BaseModel):
     """Filter parameters for interaction list endpoint"""
-    entity_type: Optional[EntityType] = Field(None, description="Filter by entity type")
-    entity_id: Optional[UUID] = Field(None, description="Filter by specific entity")
-    interaction_type: Optional[str] = Field(None, description="Comma-separated types")
-    direction: Optional[InteractionDirection] = Field(None, description="Filter by direction")
-    outcome: Optional[str] = Field(None, description="Comma-separated outcomes")
-    performed_by: Optional[UUID] = Field(None, description="Filter by team member")
-    date_from: Optional[datetime] = Field(None, description="Filter from date")
-    date_to: Optional[datetime] = Field(None, description="Filter to date")
-    requires_follow_up: Optional[bool] = Field(None, description="Filter items needing follow-up")
-    sentiment: Optional[str] = Field(None, description="Filter by sentiment")
-    tags: Optional[str] = Field(None, description="Filter by tags")
+
+    entity_type: EntityType | None = Field(None, description="Filter by entity type")
+    entity_id: UUID | None = Field(None, description="Filter by specific entity")
+    interaction_type: str | None = Field(None, description="Comma-separated types")
+    direction: InteractionDirection | None = Field(None, description="Filter by direction")
+    outcome: str | None = Field(None, description="Comma-separated outcomes")
+    performed_by: UUID | None = Field(None, description="Filter by team member")
+    date_from: datetime | None = Field(None, description="Filter from date")
+    date_to: datetime | None = Field(None, description="Filter to date")
+    requires_follow_up: bool | None = Field(None, description="Filter items needing follow-up")
+    sentiment: str | None = Field(None, description="Filter by sentiment")
+    tags: str | None = Field(None, description="Filter by tags")

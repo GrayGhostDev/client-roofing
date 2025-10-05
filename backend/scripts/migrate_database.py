@@ -17,25 +17,23 @@ Author: Database Architect Agent
 Date: 2025-10-05
 """
 
+import logging
 import os
 import sys
-import logging
 from pathlib import Path
-from typing import Optional, Tuple, List
+
 import psycopg2
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from dotenv import load_dotenv
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler('migration.log', mode='w')
-    ]
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout), logging.FileHandler("migration.log", mode="w")],
 )
 logger = logging.getLogger(__name__)
+
 
 class DatabaseMigrator:
     """Handle database migration operations"""
@@ -43,7 +41,7 @@ class DatabaseMigrator:
     def __init__(self, database_url: str):
         """Initialize the migrator with database connection details"""
         self.database_url = database_url
-        self.connection: Optional[psycopg2.extensions.connection] = None
+        self.connection: psycopg2.extensions.connection | None = None
 
     def connect(self) -> bool:
         """Establish connection to the database"""
@@ -80,7 +78,7 @@ class DatabaseMigrator:
                 logger.error(f"SQL file not found: {sql_file_path}")
                 return False
 
-            with open(sql_file_path, 'r', encoding='utf-8') as file:
+            with open(sql_file_path, encoding="utf-8") as file:
                 sql_content = file.read()
 
             logger.info(f"Executing SQL from: {sql_file_path}")
@@ -99,24 +97,33 @@ class DatabaseMigrator:
             logger.error(f"Unexpected error during SQL execution: {e}")
             return False
 
-    def verify_tables_created(self) -> Tuple[bool, List[str]]:
+    def verify_tables_created(self) -> tuple[bool, list[str]]:
         """Verify that all expected tables were created"""
         expected_tables = [
-            'leads', 'customers', 'team_members', 'appointments',
-            'projects', 'interactions', 'reviews', 'partnerships',
-            'notifications', 'alerts'
+            "leads",
+            "customers",
+            "team_members",
+            "appointments",
+            "projects",
+            "interactions",
+            "reviews",
+            "partnerships",
+            "notifications",
+            "alerts",
         ]
 
         try:
             with self.connection.cursor() as cursor:
                 # Query to get all table names
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT table_name
                     FROM information_schema.tables
                     WHERE table_schema = 'public'
                     AND table_type = 'BASE TABLE'
                     ORDER BY table_name;
-                """)
+                """
+                )
 
                 existing_tables = [row[0] for row in cursor.fetchall()]
                 logger.info(f"Found {len(existing_tables)} tables in database")
@@ -141,7 +148,9 @@ class DatabaseMigrator:
                 if success:
                     logger.info(f"✓ All {len(expected_tables)} expected tables verified")
                 else:
-                    logger.error(f"✗ {len(missing_tables)} tables missing: {', '.join(missing_tables)}")
+                    logger.error(
+                        f"✗ {len(missing_tables)} tables missing: {', '.join(missing_tables)}"
+                    )
 
                 return success, created_tables
 
@@ -152,12 +161,13 @@ class DatabaseMigrator:
             logger.error(f"Unexpected error during table verification: {e}")
             return False, []
 
-    def get_table_info(self, table_name: str) -> Optional[dict]:
+    def get_table_info(self, table_name: str) -> dict | None:
         """Get detailed information about a specific table"""
         try:
             with self.connection.cursor() as cursor:
                 # Get column information
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT
                         column_name,
                         data_type,
@@ -167,7 +177,9 @@ class DatabaseMigrator:
                     WHERE table_schema = 'public'
                     AND table_name = %s
                     ORDER BY ordinal_position;
-                """, (table_name,))
+                """,
+                    (table_name,),
+                )
 
                 columns = cursor.fetchall()
 
@@ -175,18 +187,16 @@ class DatabaseMigrator:
                 cursor.execute(f"SELECT COUNT(*) FROM {table_name};")
                 row_count = cursor.fetchone()[0]
 
-                return {
-                    'columns': columns,
-                    'row_count': row_count
-                }
+                return {"columns": columns, "row_count": row_count}
 
         except psycopg2.Error as e:
             logger.error(f"Failed to get table info for '{table_name}': {e}")
             return None
 
+
 def load_environment() -> bool:
     """Load environment variables from .env file"""
-    env_path = Path(__file__).parent.parent.parent / '.env'
+    env_path = Path(__file__).parent.parent.parent / ".env"
 
     if env_path.exists():
         load_dotenv(env_path)
@@ -196,9 +206,10 @@ def load_environment() -> bool:
         logger.warning(f"No .env file found at: {env_path}")
         return False
 
-def get_database_url() -> Optional[str]:
+
+def get_database_url() -> str | None:
     """Get database URL from environment variables"""
-    database_url = os.getenv('DATABASE_URL')
+    database_url = os.getenv("DATABASE_URL")
 
     if not database_url:
         logger.error("DATABASE_URL not found in environment variables")
@@ -207,20 +218,21 @@ def get_database_url() -> Optional[str]:
 
     # Mask password in log
     masked_url = database_url
-    if '@' in masked_url:
-        parts = masked_url.split('@')
-        if ':' in parts[0]:
-            user_pass = parts[0].split(':')
+    if "@" in masked_url:
+        parts = masked_url.split("@")
+        if ":" in parts[0]:
+            user_pass = parts[0].split(":")
             if len(user_pass) >= 3:  # protocol:user:pass
                 masked_url = f"{user_pass[0]}:{user_pass[1]}:****@{parts[1]}"
 
     logger.info(f"Database URL configured: {masked_url}")
     return database_url
 
-def find_sql_file() -> Optional[Path]:
+
+def find_sql_file() -> Path | None:
     """Find the SQL migration file"""
     # Look for create_tables.sql in backend directory
-    sql_file = Path(__file__).parent.parent / 'create_tables.sql'
+    sql_file = Path(__file__).parent.parent / "create_tables.sql"
 
     if sql_file.exists():
         logger.info(f"Found SQL file: {sql_file}")
@@ -228,6 +240,7 @@ def find_sql_file() -> Optional[Path]:
     else:
         logger.error(f"SQL file not found: {sql_file}")
         return None
+
 
 def main() -> int:
     """Main migration function"""
@@ -276,7 +289,9 @@ def main() -> int:
                 for table in created_tables:
                     info = migrator.get_table_info(table)
                     if info:
-                        logger.info(f"Table '{table}': {len(info['columns'])} columns, {info['row_count']} rows")
+                        logger.info(
+                            f"Table '{table}': {len(info['columns'])} columns, {info['row_count']} rows"
+                        )
 
                 logger.info("\nDatabase is ready for use!")
                 return 0
@@ -295,6 +310,7 @@ def main() -> int:
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
         return 1
+
 
 if __name__ == "__main__":
     exit_code = main()

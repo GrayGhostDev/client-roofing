@@ -16,26 +16,20 @@ Author: iSwitch Roofs Development Team
 Date: 2025-01-04
 """
 
-from flask import Blueprint, request, jsonify, g
-from typing import Optional
 import logging
 from datetime import datetime, timedelta
-import json
 
-from app.services.team_service import (
-    team_service,
-    TeamRole,
-    SkillType,
-    CommissionTier
-)
+from flask import Blueprint, jsonify, request
+
+from app.services.team_service import SkillType, TeamRole, team_service
 from app.utils.auth import require_auth, require_role
 from app.utils.validators import validate_email_format, validate_phone_format
 
 logger = logging.getLogger(__name__)
-bp = Blueprint('team', __name__)
+bp = Blueprint("team", __name__)
 
 
-@bp.route('/members', methods=['GET'])
+@bp.route("/members", methods=["GET"])
 @require_auth
 def get_team_members():
     """
@@ -58,27 +52,30 @@ def get_team_members():
     """
     try:
         # Get filter parameters
-        role = request.args.get('role')
-        is_active = request.args.get('is_active')
-        territory = request.args.get('territory')
-        page = int(request.args.get('page', 1))
-        per_page = int(request.args.get('per_page', 20))
+        role = request.args.get("role")
+        is_active = request.args.get("is_active")
+        territory = request.args.get("territory")
+        page = int(request.args.get("page", 1))
+        per_page = int(request.args.get("per_page", 20))
 
         # Validate role if provided
         if role and role not in [r.value for r in TeamRole]:
-            return jsonify({
-                'error': f'Invalid role. Must be one of: {", ".join([r.value for r in TeamRole])}'
-            }), 400
+            return (
+                jsonify(
+                    {
+                        "error": f'Invalid role. Must be one of: {", ".join([r.value for r in TeamRole])}'
+                    }
+                ),
+                400,
+            )
 
         # Convert is_active to boolean
         if is_active is not None:
-            is_active = is_active.lower() == 'true'
+            is_active = is_active.lower() == "true"
 
         # Get team members
         team_members = team_service.get_team_members(
-            role=role,
-            is_active=is_active,
-            territory=territory
+            role=role, is_active=is_active, territory=territory
         )
 
         # Apply pagination
@@ -86,23 +83,28 @@ def get_team_members():
         end_index = start_index + per_page
         paginated_members = team_members[start_index:end_index]
 
-        return jsonify({
-            'success': True,
-            'team_members': paginated_members,
-            'pagination': {
-                'page': page,
-                'per_page': per_page,
-                'total': len(team_members),
-                'pages': (len(team_members) + per_page - 1) // per_page
-            }
-        }), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "team_members": paginated_members,
+                    "pagination": {
+                        "page": page,
+                        "per_page": per_page,
+                        "total": len(team_members),
+                        "pages": (len(team_members) + per_page - 1) // per_page,
+                    },
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         logger.error(f"Error fetching team members: {str(e)}")
-        return jsonify({'error': 'Failed to fetch team members'}), 500
+        return jsonify({"error": "Failed to fetch team members"}), 500
 
 
-@bp.route('/members/<member_id>', methods=['GET'])
+@bp.route("/members/<member_id>", methods=["GET"])
 @require_auth
 def get_team_member(member_id: str):
     """
@@ -122,37 +124,33 @@ def get_team_member(member_id: str):
     """
     try:
         from app.config import get_supabase_client
+
         supabase = get_supabase_client()
 
-        result = supabase.table('team_members').select('*').eq('id', member_id).execute()
+        result = supabase.table("team_members").select("*").eq("id", member_id).execute()
 
         if not result.data:
-            return jsonify({'error': 'Team member not found'}), 404
+            return jsonify({"error": "Team member not found"}), 404
 
         member = result.data[0]
 
         # Add performance metrics
         performance = team_service.calculate_performance(
-            member_id,
-            datetime.utcnow() - timedelta(days=30),
-            datetime.utcnow()
+            member_id, datetime.utcnow() - timedelta(days=30), datetime.utcnow()
         )
 
-        member['performance'] = performance
+        member["performance"] = performance
 
-        return jsonify({
-            'success': True,
-            'team_member': member
-        }), 200
+        return jsonify({"success": True, "team_member": member}), 200
 
     except Exception as e:
         logger.error(f"Error fetching team member: {str(e)}")
-        return jsonify({'error': 'Failed to fetch team member'}), 500
+        return jsonify({"error": "Failed to fetch team member"}), 500
 
 
-@bp.route('/members', methods=['POST'])
+@bp.route("/members", methods=["POST"])
 @require_auth
-@require_role('manager')  # Only managers and above can add team members
+@require_role("manager")  # Only managers and above can add team members
 def create_team_member():
     """
     Create a new team member
@@ -189,76 +187,91 @@ def create_team_member():
         data = request.get_json()
 
         if not data:
-            return jsonify({'error': 'Request body is required'}), 400
+            return jsonify({"error": "Request body is required"}), 400
 
         # Validate required fields
-        required_fields = ['name', 'email', 'role']
+        required_fields = ["name", "email", "role"]
         for field in required_fields:
             if field not in data:
-                return jsonify({'error': f'{field} is required'}), 400
+                return jsonify({"error": f"{field} is required"}), 400
 
         # Validate email
-        if not validate_email_format(data['email']):
-            return jsonify({'error': 'Invalid email format'}), 400
+        if not validate_email_format(data["email"]):
+            return jsonify({"error": "Invalid email format"}), 400
 
         # Validate phone if provided
-        if 'phone' in data and data['phone']:
-            if not validate_phone_format(data['phone']):
-                return jsonify({'error': 'Invalid phone format'}), 400
+        if "phone" in data and data["phone"]:
+            if not validate_phone_format(data["phone"]):
+                return jsonify({"error": "Invalid phone format"}), 400
 
         # Validate role
-        if data['role'] not in [r.value for r in TeamRole]:
-            return jsonify({
-                'error': f'Invalid role. Must be one of: {", ".join([r.value for r in TeamRole])}'
-            }), 400
+        if data["role"] not in [r.value for r in TeamRole]:
+            return (
+                jsonify(
+                    {
+                        "error": f'Invalid role. Must be one of: {", ".join([r.value for r in TeamRole])}'
+                    }
+                ),
+                400,
+            )
 
         # Validate skills if provided
-        if 'skills' in data:
+        if "skills" in data:
             valid_skills = [s.value for s in SkillType]
-            for skill in data['skills']:
+            for skill in data["skills"]:
                 if skill not in valid_skills:
-                    return jsonify({
-                        'error': f'Invalid skill: {skill}. Must be one of: {", ".join(valid_skills)}'
-                    }), 400
+                    return (
+                        jsonify(
+                            {
+                                "error": f'Invalid skill: {skill}. Must be one of: {", ".join(valid_skills)}'
+                            }
+                        ),
+                        400,
+                    )
 
         # Parse hire date if provided
         hire_date = None
-        if 'hire_date' in data:
+        if "hire_date" in data:
             try:
-                hire_date = datetime.fromisoformat(data['hire_date'])
+                hire_date = datetime.fromisoformat(data["hire_date"])
             except (ValueError, TypeError):
-                return jsonify({'error': 'Invalid hire_date format. Use ISO 8601'}), 400
+                return jsonify({"error": "Invalid hire_date format. Use ISO 8601"}), 400
 
         # Create team member
         success, member, error = team_service.create_team_member(
-            name=data['name'],
-            email=data['email'],
-            role=data['role'],
-            phone=data.get('phone'),
-            skills=data.get('skills'),
-            territories=data.get('territories'),
-            hire_date=hire_date
+            name=data["name"],
+            email=data["email"],
+            role=data["role"],
+            phone=data.get("phone"),
+            skills=data.get("skills"),
+            territories=data.get("territories"),
+            hire_date=hire_date,
         )
 
         if not success:
-            if 'already exists' in str(error):
-                return jsonify({'error': error}), 409
-            return jsonify({'error': error}), 400
+            if "already exists" in str(error):
+                return jsonify({"error": error}), 409
+            return jsonify({"error": error}), 400
 
-        return jsonify({
-            'success': True,
-            'message': 'Team member created successfully',
-            'team_member': member
-        }), 201
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Team member created successfully",
+                    "team_member": member,
+                }
+            ),
+            201,
+        )
 
     except Exception as e:
         logger.error(f"Error creating team member: {str(e)}")
-        return jsonify({'error': 'Failed to create team member'}), 500
+        return jsonify({"error": "Failed to create team member"}), 500
 
 
-@bp.route('/members/<member_id>', methods=['PUT'])
+@bp.route("/members/<member_id>", methods=["PUT"])
 @require_auth
-@require_role('manager')
+@require_role("manager")
 def update_team_member(member_id: str):
     """
     Update team member information
@@ -294,46 +307,61 @@ def update_team_member(member_id: str):
         data = request.get_json()
 
         if not data:
-            return jsonify({'error': 'Request body is required'}), 400
+            return jsonify({"error": "Request body is required"}), 400
 
         # Validate role if being updated
-        if 'role' in data:
-            if data['role'] not in [r.value for r in TeamRole]:
-                return jsonify({
-                    'error': f'Invalid role. Must be one of: {", ".join([r.value for r in TeamRole])}'
-                }), 400
+        if "role" in data:
+            if data["role"] not in [r.value for r in TeamRole]:
+                return (
+                    jsonify(
+                        {
+                            "error": f'Invalid role. Must be one of: {", ".join([r.value for r in TeamRole])}'
+                        }
+                    ),
+                    400,
+                )
 
         # Validate skills if being updated
-        if 'skills' in data:
+        if "skills" in data:
             valid_skills = [s.value for s in SkillType]
-            for skill in data['skills']:
+            for skill in data["skills"]:
                 if skill not in valid_skills:
-                    return jsonify({
-                        'error': f'Invalid skill: {skill}. Must be one of: {", ".join(valid_skills)}'
-                    }), 400
+                    return (
+                        jsonify(
+                            {
+                                "error": f'Invalid skill: {skill}. Must be one of: {", ".join(valid_skills)}'
+                            }
+                        ),
+                        400,
+                    )
 
         # Update team member
         success, updated_member, error = team_service.update_team_member(member_id, data)
 
         if not success:
-            if 'not found' in str(error).lower():
-                return jsonify({'error': error}), 404
-            return jsonify({'error': error}), 400
+            if "not found" in str(error).lower():
+                return jsonify({"error": error}), 404
+            return jsonify({"error": error}), 400
 
-        return jsonify({
-            'success': True,
-            'message': 'Team member updated successfully',
-            'team_member': updated_member
-        }), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Team member updated successfully",
+                    "team_member": updated_member,
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         logger.error(f"Error updating team member: {str(e)}")
-        return jsonify({'error': 'Failed to update team member'}), 500
+        return jsonify({"error": "Failed to update team member"}), 500
 
 
-@bp.route('/members/<member_id>', methods=['DELETE'])
+@bp.route("/members/<member_id>", methods=["DELETE"])
 @require_auth
-@require_role('admin')  # Only admins can delete team members
+@require_role("admin")  # Only admins can delete team members
 def deactivate_team_member(member_id: str):
     """
     Deactivate a team member (soft delete)
@@ -354,26 +382,22 @@ def deactivate_team_member(member_id: str):
     try:
         # Deactivate rather than delete
         success, _, error = team_service.update_team_member(
-            member_id,
-            {'is_active': False, 'deactivated_at': datetime.utcnow().isoformat()}
+            member_id, {"is_active": False, "deactivated_at": datetime.utcnow().isoformat()}
         )
 
         if not success:
-            if 'not found' in str(error).lower():
-                return jsonify({'error': error}), 404
-            return jsonify({'error': error}), 400
+            if "not found" in str(error).lower():
+                return jsonify({"error": error}), 404
+            return jsonify({"error": error}), 400
 
-        return jsonify({
-            'success': True,
-            'message': 'Team member deactivated successfully'
-        }), 200
+        return jsonify({"success": True, "message": "Team member deactivated successfully"}), 200
 
     except Exception as e:
         logger.error(f"Error deactivating team member: {str(e)}")
-        return jsonify({'error': 'Failed to deactivate team member'}), 500
+        return jsonify({"error": "Failed to deactivate team member"}), 500
 
 
-@bp.route('/performance/<member_id>', methods=['GET'])
+@bp.route("/performance/<member_id>", methods=["GET"])
 @require_auth
 def get_member_performance(member_id: str):
     """
@@ -396,9 +420,9 @@ def get_member_performance(member_id: str):
     """
     try:
         # Get time period
-        days = int(request.args.get('days', 30))
+        days = int(request.args.get("days", 30))
         if days < 1 or days > 365:
-            return jsonify({'error': 'Days must be between 1 and 365'}), 400
+            return jsonify({"error": "Days must be between 1 and 365"}), 400
 
         end_date = datetime.utcnow()
         start_date = end_date - timedelta(days=days)
@@ -407,19 +431,16 @@ def get_member_performance(member_id: str):
         performance = team_service.calculate_performance(member_id, start_date, end_date)
 
         if not performance:
-            return jsonify({'error': 'Team member not found or no data available'}), 404
+            return jsonify({"error": "Team member not found or no data available"}), 404
 
-        return jsonify({
-            'success': True,
-            'performance': performance
-        }), 200
+        return jsonify({"success": True, "performance": performance}), 200
 
     except Exception as e:
         logger.error(f"Error fetching performance: {str(e)}")
-        return jsonify({'error': 'Failed to fetch performance metrics'}), 500
+        return jsonify({"error": "Failed to fetch performance metrics"}), 500
 
 
-@bp.route('/assign-lead', methods=['POST'])
+@bp.route("/assign-lead", methods=["POST"])
 @require_auth
 def assign_lead():
     """
@@ -451,33 +472,35 @@ def assign_lead():
         data = request.get_json()
 
         if not data:
-            return jsonify({'error': 'Request body is required'}), 400
+            return jsonify({"error": "Request body is required"}), 400
 
         # Validate required fields
-        if 'lead_id' not in data:
-            return jsonify({'error': 'lead_id is required'}), 400
+        if "lead_id" not in data:
+            return jsonify({"error": "lead_id is required"}), 400
 
         # Assign lead
-        success, assigned_to, error = team_service.assign_lead_to_member(
-            data['lead_id'],
-            data
-        )
+        success, assigned_to, error = team_service.assign_lead_to_member(data["lead_id"], data)
 
         if not success:
-            return jsonify({'error': error}), 400
+            return jsonify({"error": error}), 400
 
-        return jsonify({
-            'success': True,
-            'message': 'Lead assigned successfully',
-            'assigned_to': assigned_to
-        }), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Lead assigned successfully",
+                    "assigned_to": assigned_to,
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         logger.error(f"Error assigning lead: {str(e)}")
-        return jsonify({'error': 'Failed to assign lead'}), 500
+        return jsonify({"error": "Failed to assign lead"}), 500
 
 
-@bp.route('/territories', methods=['GET'])
+@bp.route("/territories", methods=["GET"])
 @require_auth
 def get_territories():
     """
@@ -494,17 +517,14 @@ def get_territories():
     try:
         territories = team_service.get_team_territories()
 
-        return jsonify({
-            'success': True,
-            'territories': territories
-        }), 200
+        return jsonify({"success": True, "territories": territories}), 200
 
     except Exception as e:
         logger.error(f"Error fetching territories: {str(e)}")
-        return jsonify({'error': 'Failed to fetch territories'}), 500
+        return jsonify({"error": "Failed to fetch territories"}), 500
 
 
-@bp.route('/availability/<member_id>', methods=['PUT'])
+@bp.route("/availability/<member_id>", methods=["PUT"])
 @require_auth
 def update_availability(member_id: str):
     """
@@ -536,32 +556,27 @@ def update_availability(member_id: str):
     try:
         data = request.get_json()
 
-        if not data or 'is_available' not in data:
-            return jsonify({'error': 'is_available is required'}), 400
+        if not data or "is_available" not in data:
+            return jsonify({"error": "is_available is required"}), 400
 
         # Update availability
         success, error = team_service.update_availability(
-            member_id,
-            data['is_available'],
-            data.get('reason')
+            member_id, data["is_available"], data.get("reason")
         )
 
         if not success:
-            if 'not found' in str(error).lower():
-                return jsonify({'error': error}), 404
-            return jsonify({'error': error}), 400
+            if "not found" in str(error).lower():
+                return jsonify({"error": error}), 404
+            return jsonify({"error": error}), 400
 
-        return jsonify({
-            'success': True,
-            'message': 'Availability updated successfully'
-        }), 200
+        return jsonify({"success": True, "message": "Availability updated successfully"}), 200
 
     except Exception as e:
         logger.error(f"Error updating availability: {str(e)}")
-        return jsonify({'error': 'Failed to update availability'}), 500
+        return jsonify({"error": "Failed to update availability"}), 500
 
 
-@bp.route('/commissions/<member_id>', methods=['GET'])
+@bp.route("/commissions/<member_id>", methods=["GET"])
 @require_auth
 def calculate_commission(member_id: str):
     """
@@ -584,20 +599,24 @@ def calculate_commission(member_id: str):
     """
     try:
         # Get month parameter
-        month_str = request.args.get('month')
+        month_str = request.args.get("month")
 
         if month_str:
             try:
                 # Parse month
-                month_date = datetime.strptime(month_str, '%Y-%m')
+                month_date = datetime.strptime(month_str, "%Y-%m")
                 start_date = month_date.replace(day=1)
                 # Get last day of month
                 if month_date.month == 12:
-                    end_date = month_date.replace(year=month_date.year + 1, month=1, day=1) - timedelta(days=1)
+                    end_date = month_date.replace(
+                        year=month_date.year + 1, month=1, day=1
+                    ) - timedelta(days=1)
                 else:
-                    end_date = month_date.replace(month=month_date.month + 1, day=1) - timedelta(days=1)
+                    end_date = month_date.replace(month=month_date.month + 1, day=1) - timedelta(
+                        days=1
+                    )
             except ValueError:
-                return jsonify({'error': 'Invalid month format. Use YYYY-MM'}), 400
+                return jsonify({"error": "Invalid month format. Use YYYY-MM"}), 400
         else:
             # Current month
             now = datetime.utcnow()
@@ -607,20 +626,17 @@ def calculate_commission(member_id: str):
         # Calculate commission
         commission = team_service.calculate_commission(member_id, start_date, end_date)
 
-        if 'error' in commission:
-            return jsonify({'error': commission['error']}), 404
+        if "error" in commission:
+            return jsonify({"error": commission["error"]}), 404
 
-        return jsonify({
-            'success': True,
-            'commission': commission
-        }), 200
+        return jsonify({"success": True, "commission": commission}), 200
 
     except Exception as e:
         logger.error(f"Error calculating commission: {str(e)}")
-        return jsonify({'error': 'Failed to calculate commission'}), 500
+        return jsonify({"error": "Failed to calculate commission"}), 500
 
 
-@bp.route('/schedule', methods=['GET'])
+@bp.route("/schedule", methods=["GET"])
 @require_auth
 def get_team_schedule():
     """
@@ -639,13 +655,13 @@ def get_team_schedule():
     """
     try:
         # Get date parameter
-        date_str = request.args.get('date')
+        date_str = request.args.get("date")
 
         if date_str:
             try:
-                schedule_date = datetime.strptime(date_str, '%Y-%m-%d')
+                schedule_date = datetime.strptime(date_str, "%Y-%m-%d")
             except ValueError:
-                return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
+                return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
         else:
             schedule_date = datetime.utcnow()
 
@@ -654,6 +670,7 @@ def get_team_schedule():
 
         # Get appointments for each member
         from app.config import get_supabase_client
+
         supabase = get_supabase_client()
 
         schedule = []
@@ -662,32 +679,44 @@ def get_team_schedule():
             start_of_day = schedule_date.replace(hour=0, minute=0, second=0)
             end_of_day = schedule_date.replace(hour=23, minute=59, second=59)
 
-            appointments = supabase.table('appointments').select(
-                'id', 'scheduled_start', 'scheduled_end', 'appointment_type', 'status'
-            ).eq('team_member_id', member['id']).gte('scheduled_start', start_of_day.isoformat()).lte('scheduled_start', end_of_day.isoformat()).execute()
+            appointments = (
+                supabase.table("appointments")
+                .select("id", "scheduled_start", "scheduled_end", "appointment_type", "status")
+                .eq("team_member_id", member["id"])
+                .gte("scheduled_start", start_of_day.isoformat())
+                .lte("scheduled_start", end_of_day.isoformat())
+                .execute()
+            )
 
-            schedule.append({
-                'member_id': member['id'],
-                'member_name': member['name'],
-                'role': member['role'],
-                'is_available': member['is_available'],
-                'appointments': appointments.data if appointments.data else [],
-                'appointment_count': len(appointments.data) if appointments.data else 0
-            })
+            schedule.append(
+                {
+                    "member_id": member["id"],
+                    "member_name": member["name"],
+                    "role": member["role"],
+                    "is_available": member["is_available"],
+                    "appointments": appointments.data if appointments.data else [],
+                    "appointment_count": len(appointments.data) if appointments.data else 0,
+                }
+            )
 
-        return jsonify({
-            'success': True,
-            'date': date_str or schedule_date.strftime('%Y-%m-%d'),
-            'schedule': schedule
-        }), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "date": date_str or schedule_date.strftime("%Y-%m-%d"),
+                    "schedule": schedule,
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         logger.error(f"Error fetching team schedule: {str(e)}")
-        return jsonify({'error': 'Failed to fetch team schedule'}), 500
+        return jsonify({"error": "Failed to fetch team schedule"}), 500
 
 
 # Health check endpoint
-@bp.route('/health', methods=['GET'])
+@bp.route("/health", methods=["GET"])
 def health_check():
     """
     Check team service health
@@ -695,21 +724,26 @@ def health_check():
     Returns:
         200: Service is healthy
     """
-    return jsonify({
-        'success': True,
-        'service': 'team',
-        'status': 'healthy',
-        'timestamp': datetime.utcnow().isoformat()
-    }), 200
+    return (
+        jsonify(
+            {
+                "success": True,
+                "service": "team",
+                "status": "healthy",
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+        ),
+        200,
+    )
 
 
 # Error handlers
 @bp.errorhandler(404)
 def not_found(error):
-    return jsonify({'error': 'Team endpoint not found'}), 404
+    return jsonify({"error": "Team endpoint not found"}), 404
 
 
 @bp.errorhandler(500)
 def internal_error(error):
     logger.error(f"Internal error in team API: {error}")
-    return jsonify({'error': 'Internal server error'}), 500
+    return jsonify({"error": "Internal server error"}), 500

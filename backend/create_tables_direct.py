@@ -6,9 +6,9 @@ Version: 1.0.0
 Date: 2025-10-05
 """
 
-import sys
 import logging
 import os
+import sys
 from pathlib import Path
 
 # Add the app directory to Python path
@@ -19,20 +19,23 @@ sys.path.insert(0, str(app_dir))
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 def create_tables_with_psycopg2():
     """Create tables using psycopg2 direct connection."""
     try:
-        import psycopg2
         from urllib.parse import urlparse
+
+        import psycopg2
     except ImportError:
         print("❌ psycopg2 not installed. Try: pip install psycopg2-binary")
         return False
 
     # Load environment variables
     from dotenv import load_dotenv
+
     load_dotenv()
 
-    database_url = os.getenv('DATABASE_URL')
+    database_url = os.getenv("DATABASE_URL")
     if not database_url:
         print("❌ DATABASE_URL not found in environment")
         return False
@@ -361,11 +364,11 @@ ON CONFLICT DO NOTHING;
         # Connect to database
         conn = psycopg2.connect(
             host=parsed.hostname,
-            database=parsed.path[1:] if parsed.path else 'postgres',
+            database=parsed.path[1:] if parsed.path else "postgres",
             user=parsed.username,
             password=parsed.password,
             port=parsed.port or 5432,
-            sslmode='require'
+            sslmode="require",
         )
 
         print("✅ Connected to database")
@@ -380,20 +383,29 @@ ON CONFLICT DO NOTHING;
 
         # Verify tables exist
         print("\n🔍 Verifying table creation...")
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT table_name
             FROM information_schema.tables
             WHERE table_schema = 'public'
             ORDER BY table_name;
-        """)
+        """
+        )
 
         tables = cursor.fetchall()
         table_names = [row[0] for row in tables]
 
         expected_tables = [
-            'leads', 'customers', 'team_members', 'appointments',
-            'projects', 'interactions', 'reviews', 'partnerships',
-            'notifications', 'alerts'
+            "leads",
+            "customers",
+            "team_members",
+            "appointments",
+            "projects",
+            "interactions",
+            "reviews",
+            "partnerships",
+            "notifications",
+            "alerts",
         ]
 
         found_tables = [t for t in expected_tables if t in table_names]
@@ -419,6 +431,7 @@ ON CONFLICT DO NOTHING;
         print(f"❌ Database creation failed: {e}")
         return False
 
+
 def create_tables_with_supabase():
     """Fallback method using Supabase client."""
     try:
@@ -427,7 +440,7 @@ def create_tables_with_supabase():
 
         print("🏗️  Fallback: Creating tables with Supabase client...")
 
-        app = create_app('development')
+        app = create_app("development")
         with app.app_context():
             service = SupabaseService(use_admin=True)
             client = service.client
@@ -445,7 +458,6 @@ def create_tables_with_supabase():
                     created_at TIMESTAMPTZ DEFAULT NOW(),
                     updated_at TIMESTAMPTZ DEFAULT NOW()
                 )""",
-
                 """CREATE TABLE IF NOT EXISTS customers (
                     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                     first_name VARCHAR(100) NOT NULL,
@@ -456,7 +468,6 @@ def create_tables_with_supabase():
                     created_at TIMESTAMPTZ DEFAULT NOW(),
                     updated_at TIMESTAMPTZ DEFAULT NOW()
                 )""",
-
                 """CREATE TABLE IF NOT EXISTS team_members (
                     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                     first_name VARCHAR(100) NOT NULL,
@@ -466,7 +477,7 @@ def create_tables_with_supabase():
                     status VARCHAR(50) DEFAULT 'active',
                     created_at TIMESTAMPTZ DEFAULT NOW(),
                     updated_at TIMESTAMPTZ DEFAULT NOW()
-                )"""
+                )""",
             ]
 
             # Try to execute basic tables
@@ -474,7 +485,7 @@ def create_tables_with_supabase():
             for i, statement in enumerate(table_statements):
                 try:
                     # Try using raw SQL if available
-                    response = client.postgrest.rpc('query', {'query': statement}).execute()
+                    response = client.postgrest.rpc("query", {"query": statement}).execute()
                     created_count += 1
                     print(f"✅ Created table {i+1}")
                 except Exception as e:
@@ -485,6 +496,7 @@ def create_tables_with_supabase():
     except Exception as e:
         print(f"❌ Supabase fallback failed: {e}")
         return False
+
 
 def main():
     """Main execution function."""
@@ -510,5 +522,6 @@ def main():
         print("📋 Use the SQL from IMMEDIATE_FIX_INSTRUCTIONS.md")
         sys.exit(1)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

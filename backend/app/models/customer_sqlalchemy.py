@@ -5,18 +5,18 @@ Version: 1.0.0
 Proper SQLAlchemy model for database operations
 """
 
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, Text, Enum, Float
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import relationship
-from datetime import datetime
-import uuid
 import enum
+import uuid
+from datetime import datetime
+
+from sqlalchemy import Boolean, Column, DateTime, Enum, Float, Integer, String, Text
 
 from app.models.base import BaseModel
 
 
 class CustomerStatusEnum(enum.Enum):
     """Customer status enumeration"""
+
     ACTIVE = "active"
     INACTIVE = "inactive"
     VIP = "vip"
@@ -25,9 +25,10 @@ class CustomerStatusEnum(enum.Enum):
 
 class CustomerSegmentEnum(enum.Enum):
     """Customer segment classification"""
-    PREMIUM = "premium"          # High-value customers ($50K+ LTV)
-    STANDARD = "standard"        # Regular customers
-    REPEAT = "repeat"            # Multiple projects
+
+    PREMIUM = "premium"  # High-value customers ($50K+ LTV)
+    STANDARD = "standard"  # Regular customers
+    REPEAT = "repeat"  # Multiple projects
     REFERRAL_SOURCE = "referral_source"  # Active referrers
 
 
@@ -37,7 +38,8 @@ class Customer(BaseModel):
 
     Represents a converted lead who has completed at least one project.
     """
-    __tablename__ = 'customers'
+
+    __tablename__ = "customers"
 
     # Primary key - UUID as string for Supabase compatibility
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -49,7 +51,9 @@ class Customer(BaseModel):
     email = Column(String(255), nullable=True, index=True)
 
     # Metadata
-    status = Column(Enum(CustomerStatusEnum), default=CustomerStatusEnum.ACTIVE, nullable=False, index=True)
+    status = Column(
+        Enum(CustomerStatusEnum), default=CustomerStatusEnum.ACTIVE, nullable=False, index=True
+    )
     segment = Column(Enum(CustomerSegmentEnum), nullable=True, index=True)
 
     # Address Information

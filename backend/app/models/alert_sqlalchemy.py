@@ -5,18 +5,20 @@ Version: 1.0.0
 Alert data model for system alerts and notifications management.
 """
 
-from sqlalchemy import Column, String, Integer, Boolean, Text, DateTime, Enum as SQLEnum
-from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, Dict, Any
-from uuid import UUID
 from datetime import datetime
 from enum import Enum
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import Boolean, Column, DateTime, String, Text
+from sqlalchemy import Enum as SQLEnum
 
 from app.models.base import BaseModel
 
 
 class AlertType(str, Enum):
     """Alert type enumeration"""
+
     # Lead alerts
     NEW_LEAD = "new_lead"
     HOT_LEAD = "hot_lead"
@@ -57,19 +59,21 @@ class AlertType(str, Enum):
 
 class AlertPriority(str, Enum):
     """Alert priority levels"""
+
     CRITICAL = "critical"  # Immediate attention required
-    HIGH = "high"         # Attention needed soon
-    MEDIUM = "medium"     # Normal priority
-    LOW = "low"          # Informational
+    HIGH = "high"  # Attention needed soon
+    MEDIUM = "medium"  # Normal priority
+    LOW = "low"  # Informational
 
 
 class AlertStatus(str, Enum):
     """Alert status"""
-    ACTIVE = "active"       # Alert is active
+
+    ACTIVE = "active"  # Alert is active
     ACKNOWLEDGED = "acknowledged"  # Alert has been seen
-    RESOLVED = "resolved"   # Alert has been resolved
-    DISMISSED = "dismissed" # Alert was dismissed
-    EXPIRED = "expired"     # Alert expired automatically
+    RESOLVED = "resolved"  # Alert has been resolved
+    DISMISSED = "dismissed"  # Alert was dismissed
+    EXPIRED = "expired"  # Alert expired automatically
 
 
 class Alert(BaseModel):
@@ -79,7 +83,8 @@ class Alert(BaseModel):
     Tracks various types of alerts including lead follow-ups, project deadlines,
     system issues, and performance notifications.
     """
-    __tablename__ = 'alerts'
+
+    __tablename__ = "alerts"
 
     # Basic Information
     type = Column(SQLEnum(AlertType), nullable=False, index=True)
@@ -94,7 +99,7 @@ class Alert(BaseModel):
 
     # Recipients and Assignment
     assigned_to = Column(String(36), nullable=True, index=True)  # Team member ID
-    created_by = Column(String(36), nullable=True, index=True)   # Who/what created the alert
+    created_by = Column(String(36), nullable=True, index=True)  # Who/what created the alert
 
     # Related Entities
     related_lead_id = Column(String(36), nullable=True, index=True)
@@ -152,7 +157,7 @@ class Alert(BaseModel):
         return False
 
     @property
-    def time_until_due(self) -> Optional[int]:
+    def time_until_due(self) -> int | None:
         """Get minutes until due date"""
         if self.due_date and self.status == AlertStatus.ACTIVE:
             delta = self.due_date - datetime.utcnow()
@@ -168,15 +173,16 @@ class Alert(BaseModel):
     def needs_attention(self) -> bool:
         """Check if alert needs attention"""
         return (
-            self.status == AlertStatus.ACTIVE and
-            not self.is_expired and
-            self.priority in [AlertPriority.CRITICAL, AlertPriority.HIGH]
+            self.status == AlertStatus.ACTIVE
+            and not self.is_expired
+            and self.priority in [AlertPriority.CRITICAL, AlertPriority.HIGH]
         )
 
 
 # Pydantic schemas for API validation
 class AlertCreateSchema(BaseModel):
     """Schema for creating a new alert"""
+
     model_config = ConfigDict(from_attributes=True)
 
     type: AlertType
@@ -185,56 +191,60 @@ class AlertCreateSchema(BaseModel):
     message: str
 
     # Optional fields
-    assigned_to: Optional[UUID] = None
-    action_url: Optional[str] = None
-    action_text: Optional[str] = None
-    due_date: Optional[datetime] = None
-    expires_at: Optional[datetime] = None
+    assigned_to: UUID | None = None
+    action_url: str | None = None
+    action_text: str | None = None
+    due_date: datetime | None = None
+    expires_at: datetime | None = None
 
     # Related entities
-    related_lead_id: Optional[UUID] = None
-    related_customer_id: Optional[UUID] = None
-    related_project_id: Optional[UUID] = None
-    related_appointment_id: Optional[UUID] = None
+    related_lead_id: UUID | None = None
+    related_customer_id: UUID | None = None
+    related_project_id: UUID | None = None
+    related_appointment_id: UUID | None = None
 
     # Notification preferences
-    send_email: Optional[bool] = True
-    send_sms: Optional[bool] = False
-    send_push: Optional[bool] = True
+    send_email: bool | None = True
+    send_sms: bool | None = False
+    send_push: bool | None = True
 
     # Recurrence
-    is_recurring: Optional[bool] = False
-    recurrence_pattern: Optional[str] = None
+    is_recurring: bool | None = False
+    recurrence_pattern: str | None = None
 
     # Metadata
-    tags: Optional[str] = None
-    category: Optional[str] = None
+    tags: str | None = None
+    category: str | None = None
 
 
 class AlertUpdateSchema(BaseModel):
     """Schema for updating an alert"""
+
     model_config = ConfigDict(from_attributes=True)
 
-    status: Optional[AlertStatus] = None
-    priority: Optional[AlertPriority] = None
-    assigned_to: Optional[UUID] = None
-    due_date: Optional[datetime] = None
-    resolution_notes: Optional[str] = None
-    tags: Optional[str] = None
+    status: AlertStatus | None = None
+    priority: AlertPriority | None = None
+    assigned_to: UUID | None = None
+    due_date: datetime | None = None
+    resolution_notes: str | None = None
+    tags: str | None = None
 
 
 class AlertAcknowledgeSchema(BaseModel):
     """Schema for acknowledging an alert"""
-    notes: Optional[str] = None
+
+    notes: str | None = None
 
 
 class AlertResolveSchema(BaseModel):
     """Schema for resolving an alert"""
-    resolution_notes: Optional[str] = None
+
+    resolution_notes: str | None = None
 
 
 class AlertResponseSchema(BaseModel):
     """Schema for alert API response"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -243,18 +253,18 @@ class AlertResponseSchema(BaseModel):
     status: AlertStatus
     title: str
     message: str
-    assigned_to: Optional[str] = None
+    assigned_to: str | None = None
     alert_date: datetime
-    due_date: Optional[datetime] = None
-    expires_at: Optional[datetime] = None
-    acknowledged_at: Optional[datetime] = None
-    resolved_at: Optional[datetime] = None
+    due_date: datetime | None = None
+    expires_at: datetime | None = None
+    acknowledged_at: datetime | None = None
+    resolved_at: datetime | None = None
 
     # Related entities
-    related_lead_id: Optional[str] = None
-    related_customer_id: Optional[str] = None
-    related_project_id: Optional[str] = None
-    related_appointment_id: Optional[str] = None
+    related_lead_id: str | None = None
+    related_customer_id: str | None = None
+    related_project_id: str | None = None
+    related_appointment_id: str | None = None
 
     # Computed properties
     is_overdue: bool = False
@@ -267,29 +277,32 @@ class AlertResponseSchema(BaseModel):
 
 class AlertListFiltersSchema(BaseModel):
     """Filter parameters for alert list endpoint"""
-    type: Optional[str] = Field(None, description="Comma-separated alert types")
-    priority: Optional[str] = Field(None, description="Comma-separated priorities")
-    status: Optional[str] = Field(None, description="Comma-separated statuses")
-    assigned_to: Optional[UUID] = Field(None, description="Filter by assignee")
-    created_by: Optional[UUID] = Field(None, description="Filter by creator")
-    category: Optional[str] = Field(None, description="Filter by category")
+
+    type: str | None = Field(None, description="Comma-separated alert types")
+    priority: str | None = Field(None, description="Comma-separated priorities")
+    status: str | None = Field(None, description="Comma-separated statuses")
+    assigned_to: UUID | None = Field(None, description="Filter by assignee")
+    created_by: UUID | None = Field(None, description="Filter by creator")
+    category: str | None = Field(None, description="Filter by category")
 
     # Related entities
-    related_lead_id: Optional[UUID] = Field(None, description="Filter by related lead")
-    related_customer_id: Optional[UUID] = Field(None, description="Filter by related customer")
-    related_project_id: Optional[UUID] = Field(None, description="Filter by related project")
-    related_appointment_id: Optional[UUID] = Field(None, description="Filter by related appointment")
+    related_lead_id: UUID | None = Field(None, description="Filter by related lead")
+    related_customer_id: UUID | None = Field(None, description="Filter by related customer")
+    related_project_id: UUID | None = Field(None, description="Filter by related project")
+    related_appointment_id: UUID | None = Field(
+        None, description="Filter by related appointment"
+    )
 
     # Date filters
-    date_from: Optional[datetime] = Field(None, description="Filter from date")
-    date_to: Optional[datetime] = Field(None, description="Filter to date")
-    due_from: Optional[datetime] = Field(None, description="Filter by due date from")
-    due_to: Optional[datetime] = Field(None, description="Filter by due date to")
+    date_from: datetime | None = Field(None, description="Filter from date")
+    date_to: datetime | None = Field(None, description="Filter to date")
+    due_from: datetime | None = Field(None, description="Filter by due date from")
+    due_to: datetime | None = Field(None, description="Filter by due date to")
 
     # Status filters
-    is_overdue: Optional[bool] = Field(None, description="Filter overdue alerts")
-    is_expired: Optional[bool] = Field(None, description="Filter expired alerts")
-    needs_attention: Optional[bool] = Field(None, description="Filter alerts needing attention")
-    unacknowledged: Optional[bool] = Field(None, description="Filter unacknowledged alerts")
+    is_overdue: bool | None = Field(None, description="Filter overdue alerts")
+    is_expired: bool | None = Field(None, description="Filter expired alerts")
+    needs_attention: bool | None = Field(None, description="Filter alerts needing attention")
+    unacknowledged: bool | None = Field(None, description="Filter unacknowledged alerts")
 
-    tags: Optional[str] = Field(None, description="Filter by tags")
+    tags: str | None = Field(None, description="Filter by tags")

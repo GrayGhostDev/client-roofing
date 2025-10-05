@@ -5,12 +5,14 @@ Version: 1.0.0
 Authentication and authorization utilities for the API.
 """
 
-from functools import wraps
-from flask import request, jsonify, g
-from typing import Optional, Dict, List
 import logging
+import os
+from datetime import datetime, timedelta
+from functools import wraps
 
+import jwt
 from app.services.auth_service import auth_service
+from flask import g, jsonify, request
 
 logger = logging.getLogger(__name__)
 
@@ -21,42 +23,43 @@ def require_auth(f):
 
     Checks for Bearer token in Authorization header and validates it.
     """
+
     @wraps(f)
     def decorated_function(*args, **kwargs):
         # Get token from Authorization header
-        auth_header = request.headers.get('Authorization')
+        auth_header = request.headers.get("Authorization")
 
         if not auth_header:
-            return jsonify({'error': 'Authentication required'}), 401
+            return jsonify({"error": "Authentication required"}), 401
 
         # Extract token from "Bearer <token>"
         try:
             parts = auth_header.split()
-            if parts[0].lower() != 'bearer' or len(parts) != 2:
-                return jsonify({'error': 'Invalid authorization header format'}), 401
+            if parts[0].lower() != "bearer" or len(parts) != 2:
+                return jsonify({"error": "Invalid authorization header format"}), 401
 
             token = parts[1]
         except Exception:
-            return jsonify({'error': 'Invalid authorization header'}), 401
+            return jsonify({"error": "Invalid authorization header"}), 401
 
         # Validate token using auth service
         try:
             payload = auth_service.validate_token(token)
 
             if not payload:
-                return jsonify({'error': 'Invalid or expired token'}), 401
+                return jsonify({"error": "Invalid or expired token"}), 401
 
             # Store user info in g for use in route
             g.user = payload
-            g.user_id = payload['user_id']
-            g.user_email = payload['email']
-            g.user_role = payload['role']
+            g.user_id = payload["user_id"]
+            g.user_email = payload["email"]
+            g.user_role = payload["role"]
 
             return f(*args, **kwargs)
 
         except Exception as e:
             logger.error(f"Authentication error: {str(e)}")
-            return jsonify({'error': 'Authentication failed'}), 401
+            return jsonify({"error": "Authentication failed"}), 401
 
     return decorated_function
 
@@ -68,17 +71,18 @@ def require_role(role):
     Args:
         role: Required role (admin, manager, user)
     """
+
     def decorator(f):
         @wraps(f)
         @require_auth
         def decorated_function(*args, **kwargs):
-            user_role = g.get('user_role', 'user')
+            user_role = g.get("user_role", "user")
 
             # Role hierarchy: admin > manager > user
-            role_levels = {'user': 1, 'manager': 2, 'admin': 3}
+            role_levels = {"user": 1, "manager": 2, "admin": 3}
 
             if role_levels.get(user_role, 0) < role_levels.get(role, 0):
-                return jsonify({'error': 'Insufficient permissions'}), 403
+                return jsonify({"error": "Insufficient permissions"}), 403
 
             return f(*args, **kwargs)
 
@@ -87,8 +91,7 @@ def require_role(role):
     return decorator
 
 
-def generate_token(user_id: str, email: str, role: str = 'user',
-                  expires_in: int = 3600) -> str:
+def generate_token(user_id: str, email: str, role: str = "user", expires_in: int = 3600) -> str:
     """
     Generate JWT token for a user.
 
@@ -102,17 +105,17 @@ def generate_token(user_id: str, email: str, role: str = 'user',
         JWT token string
     """
     try:
-        secret = os.environ.get('JWT_SECRET_KEY', 'test_secret')
+        secret = os.environ.get("JWT_SECRET_KEY", "test_secret")
 
         payload = {
-            'user_id': user_id,
-            'email': email,
-            'role': role,
-            'exp': datetime.utcnow() + timedelta(seconds=expires_in),
-            'iat': datetime.utcnow()
+            "user_id": user_id,
+            "email": email,
+            "role": role,
+            "exp": datetime.utcnow() + timedelta(seconds=expires_in),
+            "iat": datetime.utcnow(),
         }
 
-        token = jwt.encode(payload, secret, algorithm='HS256')
+        token = jwt.encode(payload, secret, algorithm="HS256")
 
         return token
 
@@ -121,7 +124,7 @@ def generate_token(user_id: str, email: str, role: str = 'user',
         return None
 
 
-def verify_token(token: str) -> Optional[Dict]:
+def verify_token(token: str) -> dict | None:
     """
     Verify and decode a JWT token.
 
@@ -132,8 +135,8 @@ def verify_token(token: str) -> Optional[Dict]:
         Decoded payload or None if invalid
     """
     try:
-        secret = os.environ.get('JWT_SECRET_KEY', 'test_secret')
-        payload = jwt.decode(token, secret, algorithms=['HS256'])
+        secret = os.environ.get("JWT_SECRET_KEY", "test_secret")
+        payload = jwt.decode(token, secret, algorithms=["HS256"])
         return payload
 
     except jwt.ExpiredSignatureError:
@@ -161,12 +164,14 @@ def hash_password(password: str) -> str:
     """
     try:
         import bcrypt
+
         salt = bcrypt.gensalt()
-        hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
-        return hashed.decode('utf-8')
+        hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
+        return hashed.decode("utf-8")
     except ImportError:
         # Fallback to simple hash for testing if bcrypt not available
         import hashlib
+
         return hashlib.sha256(password.encode()).hexdigest()
 
 
@@ -183,8 +188,10 @@ def verify_password(password: str, hashed: str) -> bool:
     """
     try:
         import bcrypt
-        return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+
+        return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
     except ImportError:
         # Fallback for testing
         import hashlib
+
         return hashlib.sha256(password.encode()).hexdigest() == hashed

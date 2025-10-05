@@ -4,18 +4,17 @@ Frontend Navigation and Component Testing
 Tests all dashboard pages and component rendering
 """
 
-import pytest
-import requests
-import time
-import json
 import re
-from typing import List, Dict, Tuple
+import time
 from dataclasses import dataclass
+
+import requests
 
 
 @dataclass
 class NavigationTestResult:
     """Navigation test result container"""
+
     route: str
     status: str  # PASS, FAIL, SKIP
     status_code: int
@@ -41,7 +40,7 @@ class FrontendNavigationTester:
             "/appointments",
             "/analytics",
             "/settings",
-            "/login"
+            "/login",
         ]
 
     def test_route(self, route: str) -> NavigationTestResult:
@@ -73,10 +72,12 @@ class FrontendNavigationTester:
                 r"Appointment",
                 r"Analytics",
                 r"Settings",
-                r"Login"
+                r"Login",
             ]
 
-            title_found = any(re.search(pattern, content, re.IGNORECASE) for pattern in title_patterns)
+            title_found = any(
+                re.search(pattern, content, re.IGNORECASE) for pattern in title_patterns
+            )
 
             # Determine status
             if status_code == 200 and has_content:
@@ -106,10 +107,10 @@ class FrontendNavigationTester:
             content_size=content_size,
             has_content=has_content,
             title_found=title_found,
-            error_message=error_message
+            error_message=error_message,
         )
 
-    def test_all_routes(self) -> List[NavigationTestResult]:
+    def test_all_routes(self) -> list[NavigationTestResult]:
         """Test all routes and return results"""
         results = []
 
@@ -121,11 +122,13 @@ class FrontendNavigationTester:
             results.append(result)
 
             status_icon = "✅" if result.status == "PASS" else "❌"
-            print(f"{status_icon} {route}: {result.status} (HTTP {result.status_code}, {result.response_time:.3f}s)")
+            print(
+                f"{status_icon} {route}: {result.status} (HTTP {result.status_code}, {result.response_time:.3f}s)"
+            )
 
         return results
 
-    def test_component_functionality(self) -> List[NavigationTestResult]:
+    def test_component_functionality(self) -> list[NavigationTestResult]:
         """Test specific component functionality"""
         print("\nTesting component-specific functionality...")
 
@@ -148,50 +151,60 @@ class FrontendNavigationTester:
                 "Customer Management",
                 "Project Management",
                 "Analytics",
-                "Recent Activity"
+                "Recent Activity",
             ]
 
             elements_found = sum(1 for element in dashboard_elements if element in content)
 
             if elements_found >= 7:  # Most elements should be present
                 status = "PASS"
-                error_message = f"Found {elements_found}/{len(dashboard_elements)} dashboard elements"
+                error_message = (
+                    f"Found {elements_found}/{len(dashboard_elements)} dashboard elements"
+                )
             else:
                 status = "FAIL"
-                error_message = f"Only found {elements_found}/{len(dashboard_elements)} dashboard elements"
+                error_message = (
+                    f"Only found {elements_found}/{len(dashboard_elements)} dashboard elements"
+                )
 
-            component_tests.append(NavigationTestResult(
-                route="/dashboard-components",
-                status=status,
-                status_code=response.status_code,
-                response_time=response_time,
-                content_size=len(content),
-                has_content=True,
-                title_found=True,
-                error_message=error_message
-            ))
+            component_tests.append(
+                NavigationTestResult(
+                    route="/dashboard-components",
+                    status=status,
+                    status_code=response.status_code,
+                    response_time=response_time,
+                    content_size=len(content),
+                    has_content=True,
+                    title_found=True,
+                    error_message=error_message,
+                )
+            )
 
         except requests.exceptions.RequestException as e:
-            component_tests.append(NavigationTestResult(
-                route="/dashboard-components",
-                status="FAIL",
-                status_code=0,
-                response_time=0,
-                content_size=0,
-                has_content=False,
-                title_found=False,
-                error_message=f"Component test failed: {str(e)}"
-            ))
+            component_tests.append(
+                NavigationTestResult(
+                    route="/dashboard-components",
+                    status="FAIL",
+                    status_code=0,
+                    response_time=0,
+                    content_size=0,
+                    has_content=False,
+                    title_found=False,
+                    error_message=f"Component test failed: {str(e)}",
+                )
+            )
 
         return component_tests
 
-    def generate_report(self, results: List[NavigationTestResult]) -> str:
+    def generate_report(self, results: list[NavigationTestResult]) -> str:
         """Generate comprehensive navigation test report"""
         total_tests = len(results)
         passed_tests = len([r for r in results if r.status == "PASS"])
         failed_tests = len([r for r in results if r.status == "FAIL"])
 
-        avg_response_time = sum(r.response_time for r in results) / total_tests if total_tests > 0 else 0
+        avg_response_time = (
+            sum(r.response_time for r in results) / total_tests if total_tests > 0 else 0
+        )
         total_content_size = sum(r.content_size for r in results)
 
         report = f"""
@@ -291,9 +304,10 @@ def main():
 
     # Save report to file
     import os
+
     report_file = "/Users/grayghostdata/Projects/client-roofing/backend/reports/frontend_navigation_report.txt"
     os.makedirs(os.path.dirname(report_file), exist_ok=True)
-    with open(report_file, 'w') as f:
+    with open(report_file, "w") as f:
         f.write(report)
 
     print(f"Report saved to: {report_file}")
@@ -305,4 +319,5 @@ def main():
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(main())

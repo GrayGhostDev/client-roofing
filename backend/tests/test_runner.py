@@ -3,13 +3,13 @@ Test Runner and Configuration for iSwitch Roofs CRM
 Orchestrates comprehensive testing suite with proper configuration
 """
 
-import pytest
-import sys
-import os
 import json
+import os
+import sys
 import time
 from datetime import datetime
-from pathlib import Path
+
+import pytest
 
 
 class TestSuiteRunner:
@@ -26,23 +26,23 @@ class TestSuiteRunner:
         self.start_time = time.time()
 
         # Run unit tests with coverage
-        exit_code = pytest.main([
-            '-v',
-            '--tb=short',
-            '--cov=app',
-            '--cov-report=html:htmlcov/unit',
-            '--cov-report=xml:coverage_unit.xml',
-            '--cov-report=term-missing',
-            '--junit-xml=reports/unit_tests.xml',
-            '-m', 'unit',
-            'tests/unit/',
-            '--disable-warnings'
-        ])
+        exit_code = pytest.main(
+            [
+                "-v",
+                "--tb=short",
+                "--cov=app",
+                "--cov-report=html:htmlcov/unit",
+                "--cov-report=xml:coverage_unit.xml",
+                "--cov-report=term-missing",
+                "--junit-xml=reports/unit_tests.xml",
+                "-m",
+                "unit",
+                "tests/unit/",
+                "--disable-warnings",
+            ]
+        )
 
-        self.results['unit'] = {
-            'exit_code': exit_code,
-            'duration': time.time() - self.start_time
-        }
+        self.results["unit"] = {"exit_code": exit_code, "duration": time.time() - self.start_time}
 
         return exit_code == 0
 
@@ -51,22 +51,25 @@ class TestSuiteRunner:
         print("🔗 Running Integration Tests...")
         self.start_time = time.time()
 
-        exit_code = pytest.main([
-            '-v',
-            '--tb=short',
-            '--cov=app',
-            '--cov-report=html:htmlcov/integration',
-            '--cov-report=xml:coverage_integration.xml',
-            '--junit-xml=reports/integration_tests.xml',
-            '-m', 'integration',
-            'tests/test_api_endpoints.py',
-            'tests/test_frontend_integration.py',
-            '--disable-warnings'
-        ])
+        exit_code = pytest.main(
+            [
+                "-v",
+                "--tb=short",
+                "--cov=app",
+                "--cov-report=html:htmlcov/integration",
+                "--cov-report=xml:coverage_integration.xml",
+                "--junit-xml=reports/integration_tests.xml",
+                "-m",
+                "integration",
+                "tests/test_api_endpoints.py",
+                "tests/test_frontend_integration.py",
+                "--disable-warnings",
+            ]
+        )
 
-        self.results['integration'] = {
-            'exit_code': exit_code,
-            'duration': time.time() - self.start_time
+        self.results["integration"] = {
+            "exit_code": exit_code,
+            "duration": time.time() - self.start_time,
         }
 
         return exit_code == 0
@@ -76,18 +79,21 @@ class TestSuiteRunner:
         print("🔒 Running Security Tests...")
         self.start_time = time.time()
 
-        exit_code = pytest.main([
-            '-v',
-            '--tb=short',
-            '--junit-xml=reports/security_tests.xml',
-            '-m', 'security',
-            'tests/test_security.py',
-            '--disable-warnings'
-        ])
+        exit_code = pytest.main(
+            [
+                "-v",
+                "--tb=short",
+                "--junit-xml=reports/security_tests.xml",
+                "-m",
+                "security",
+                "tests/test_security.py",
+                "--disable-warnings",
+            ]
+        )
 
-        self.results['security'] = {
-            'exit_code': exit_code,
-            'duration': time.time() - self.start_time
+        self.results["security"] = {
+            "exit_code": exit_code,
+            "duration": time.time() - self.start_time,
         }
 
         return exit_code == 0
@@ -97,18 +103,21 @@ class TestSuiteRunner:
         print("⚡ Running Performance Tests...")
         self.start_time = time.time()
 
-        exit_code = pytest.main([
-            '-v',
-            '--tb=short',
-            '--junit-xml=reports/performance_tests.xml',
-            '-m', 'performance',
-            'tests/test_performance.py',
-            '--disable-warnings'
-        ])
+        exit_code = pytest.main(
+            [
+                "-v",
+                "--tb=short",
+                "--junit-xml=reports/performance_tests.xml",
+                "-m",
+                "performance",
+                "tests/test_performance.py",
+                "--disable-warnings",
+            ]
+        )
 
-        self.results['performance'] = {
-            'exit_code': exit_code,
-            'duration': time.time() - self.start_time
+        self.results["performance"] = {
+            "exit_code": exit_code,
+            "duration": time.time() - self.start_time,
         }
 
         return exit_code == 0
@@ -118,19 +127,19 @@ class TestSuiteRunner:
         print("🎯 Running End-to-End Tests...")
         self.start_time = time.time()
 
-        exit_code = pytest.main([
-            '-v',
-            '--tb=short',
-            '--junit-xml=reports/e2e_tests.xml',
-            '-m', 'e2e',
-            'tests/test_e2e_workflows.py',
-            '--disable-warnings'
-        ])
+        exit_code = pytest.main(
+            [
+                "-v",
+                "--tb=short",
+                "--junit-xml=reports/e2e_tests.xml",
+                "-m",
+                "e2e",
+                "tests/test_e2e_workflows.py",
+                "--disable-warnings",
+            ]
+        )
 
-        self.results['e2e'] = {
-            'exit_code': exit_code,
-            'duration': time.time() - self.start_time
-        }
+        self.results["e2e"] = {"exit_code": exit_code, "duration": time.time() - self.start_time}
 
         return exit_code == 0
 
@@ -140,15 +149,15 @@ class TestSuiteRunner:
         suite_start = time.time()
 
         # Create reports directory
-        os.makedirs('reports', exist_ok=True)
+        os.makedirs("reports", exist_ok=True)
 
         # Run test suites in order
         test_suites = [
-            ('Unit Tests', self.run_unit_tests),
-            ('Integration Tests', self.run_integration_tests),
-            ('Security Tests', self.run_security_tests),
-            ('Performance Tests', self.run_performance_tests),
-            ('E2E Tests', self.run_e2e_tests)
+            ("Unit Tests", self.run_unit_tests),
+            ("Integration Tests", self.run_integration_tests),
+            ("Security Tests", self.run_security_tests),
+            ("Performance Tests", self.run_performance_tests),
+            ("E2E Tests", self.run_e2e_tests),
         ]
 
         results_summary = {}
@@ -161,12 +170,12 @@ class TestSuiteRunner:
 
             try:
                 success = test_function()
-                results_summary[suite_name] = 'PASSED' if success else 'FAILED'
+                results_summary[suite_name] = "PASSED" if success else "FAILED"
                 if not success:
                     overall_success = False
             except Exception as e:
                 print(f"❌ Error running {suite_name}: {e}")
-                results_summary[suite_name] = 'ERROR'
+                results_summary[suite_name] = "ERROR"
                 overall_success = False
 
         # Generate summary report
@@ -185,31 +194,31 @@ class TestSuiteRunner:
         print(f"📅 Completed: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"🎯 Overall Result: {'✅ PASSED' if overall_success else '❌ FAILED'}")
 
-        print(f"\n📋 Test Suite Results:")
+        print("\n📋 Test Suite Results:")
         for suite_name, result in results_summary.items():
             emoji = "✅" if result == "PASSED" else "❌" if result == "FAILED" else "⚠️"
-            duration = self.results.get(suite_name.lower().split()[0], {}).get('duration', 0)
+            duration = self.results.get(suite_name.lower().split()[0], {}).get("duration", 0)
             print(f"  {emoji} {suite_name:<20} {result:<8} ({duration:.2f}s)")
 
         # Generate JSON report
         report_data = {
-            'timestamp': datetime.now().isoformat(),
-            'overall_success': overall_success,
-            'total_duration': total_duration,
-            'results': results_summary,
-            'detailed_results': self.results
+            "timestamp": datetime.now().isoformat(),
+            "overall_success": overall_success,
+            "total_duration": total_duration,
+            "results": results_summary,
+            "detailed_results": self.results,
         }
 
-        with open('reports/test_summary.json', 'w') as f:
+        with open("reports/test_summary.json", "w") as f:
             json.dump(report_data, f, indent=2)
 
-        print(f"\n📄 Detailed reports saved to:")
-        print(f"  - HTML Coverage: htmlcov/index.html")
-        print(f"  - XML Reports: reports/*.xml")
-        print(f"  - JSON Summary: reports/test_summary.json")
+        print("\n📄 Detailed reports saved to:")
+        print("  - HTML Coverage: htmlcov/index.html")
+        print("  - XML Reports: reports/*.xml")
+        print("  - JSON Summary: reports/test_summary.json")
 
         if not overall_success:
-            print(f"\n⚠️  Some tests failed. Check individual reports for details.")
+            print("\n⚠️  Some tests failed. Check individual reports for details.")
 
         print(f"{'=' * 80}")
 
@@ -217,15 +226,18 @@ class TestSuiteRunner:
         """Run a quick subset of tests for development."""
         print("⚡ Running Quick Test Suite...")
 
-        exit_code = pytest.main([
-            '-v',
-            '--tb=short',
-            '--maxfail=5',  # Stop after 5 failures
-            '--disable-warnings',
-            'tests/unit/',
-            'tests/test_api_endpoints.py',
-            '-m', 'not slow'  # Skip slow tests
-        ])
+        exit_code = pytest.main(
+            [
+                "-v",
+                "--tb=short",
+                "--maxfail=5",  # Stop after 5 failures
+                "--disable-warnings",
+                "tests/unit/",
+                "tests/test_api_endpoints.py",
+                "-m",
+                "not slow",  # Skip slow tests
+            ]
+        )
 
         return exit_code == 0
 
@@ -235,16 +247,12 @@ class TestSuiteRunner:
 
         # Define critical test paths for smoke testing
         smoke_tests = [
-            'tests/test_api_endpoints.py::TestLeadsAPI::test_get_leads_success',
-            'tests/test_api_endpoints.py::TestAuthAPI::test_login_success',
-            'tests/test_security.py::TestAuthentication::test_login_with_valid_credentials'
+            "tests/test_api_endpoints.py::TestLeadsAPI::test_get_leads_success",
+            "tests/test_api_endpoints.py::TestAuthAPI::test_login_success",
+            "tests/test_security.py::TestAuthentication::test_login_with_valid_credentials",
         ]
 
-        exit_code = pytest.main([
-            '-v',
-            '--tb=short',
-            '--disable-warnings'
-        ] + smoke_tests)
+        exit_code = pytest.main(["-v", "--tb=short", "--disable-warnings"] + smoke_tests)
 
         return exit_code == 0
 
@@ -253,18 +261,15 @@ def main():
     """Main entry point for test runner."""
     import argparse
 
-    parser = argparse.ArgumentParser(description='iSwitch Roofs CRM Test Runner')
+    parser = argparse.ArgumentParser(description="iSwitch Roofs CRM Test Runner")
     parser.add_argument(
-        '--suite',
-        choices=['all', 'unit', 'integration', 'security', 'performance', 'e2e', 'quick', 'smoke'],
-        default='all',
-        help='Test suite to run'
+        "--suite",
+        choices=["all", "unit", "integration", "security", "performance", "e2e", "quick", "smoke"],
+        default="all",
+        help="Test suite to run",
     )
     parser.add_argument(
-        '--coverage-fail-under',
-        type=int,
-        default=80,
-        help='Minimum coverage percentage required'
+        "--coverage-fail-under", type=int, default=80, help="Minimum coverage percentage required"
     )
 
     args = parser.parse_args()
@@ -272,30 +277,30 @@ def main():
     runner = TestSuiteRunner()
 
     # Set coverage fail-under in pytest.ini or environment
-    os.environ['COVERAGE_FAIL_UNDER'] = str(args.coverage_fail_under)
+    os.environ["COVERAGE_FAIL_UNDER"] = str(args.coverage_fail_under)
 
     success = False
 
-    if args.suite == 'all':
+    if args.suite == "all":
         success = runner.run_all_tests()
-    elif args.suite == 'unit':
+    elif args.suite == "unit":
         success = runner.run_unit_tests()
-    elif args.suite == 'integration':
+    elif args.suite == "integration":
         success = runner.run_integration_tests()
-    elif args.suite == 'security':
+    elif args.suite == "security":
         success = runner.run_security_tests()
-    elif args.suite == 'performance':
+    elif args.suite == "performance":
         success = runner.run_performance_tests()
-    elif args.suite == 'e2e':
+    elif args.suite == "e2e":
         success = runner.run_e2e_tests()
-    elif args.suite == 'quick':
+    elif args.suite == "quick":
         success = runner.run_quick_tests()
-    elif args.suite == 'smoke':
+    elif args.suite == "smoke":
         success = runner.run_smoke_tests()
 
     # Exit with appropriate code
     sys.exit(0 if success else 1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

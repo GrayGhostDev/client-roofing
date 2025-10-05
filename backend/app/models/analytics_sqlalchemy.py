@@ -6,19 +6,34 @@ Comprehensive analytics data models for business intelligence,
 KPI tracking, and dashboard visualization.
 """
 
-from sqlalchemy import Column, String, Integer, Boolean, Text, DateTime, Date, Float, Enum as SQLEnum, Numeric
-from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, List, Dict, Any, Union
-from uuid import UUID
-from datetime import datetime, date
-from enum import Enum
+from datetime import date, datetime
 from decimal import Decimal
+from enum import Enum
+from typing import Any
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Float,
+    Integer,
+    Numeric,
+    String,
+    Text,
+)
+from sqlalchemy import (
+    Enum as SQLEnum,
+)
 
 from app.models.base import BaseModel
 
 
 class AnalyticsTimeframe(str, Enum):
     """Analytics timeframe enumeration"""
+
     DAILY = "daily"
     WEEKLY = "weekly"
     MONTHLY = "monthly"
@@ -32,6 +47,7 @@ class AnalyticsTimeframe(str, Enum):
 
 class MetricCategory(str, Enum):
     """Metric category enumeration"""
+
     LEADS = "leads"
     REVENUE = "revenue"
     CONVERSION = "conversion"
@@ -45,6 +61,7 @@ class MetricCategory(str, Enum):
 
 class ChartType(str, Enum):
     """Chart type enumeration for visualizations"""
+
     LINE = "line"
     BAR = "bar"
     PIE = "pie"
@@ -59,6 +76,7 @@ class ChartType(str, Enum):
 
 class AlertLevel(str, Enum):
     """Alert severity levels"""
+
     INFO = "info"
     WARNING = "warning"
     CRITICAL = "critical"
@@ -67,11 +85,13 @@ class AlertLevel(str, Enum):
 
 # Core Analytics Models
 
+
 class KPIDefinition(BaseModel):
     """
     KPI definition model for tracking business metrics
     """
-    __tablename__ = 'kpi_definitions'
+
+    __tablename__ = "kpi_definitions"
 
     name = Column(String(100), nullable=False, unique=True)
     display_name = Column(String(150), nullable=False)
@@ -106,7 +126,8 @@ class MetricValue(BaseModel):
     """
     Historical metric values for trend analysis
     """
-    __tablename__ = 'metric_values'
+
+    __tablename__ = "metric_values"
 
     kpi_id = Column(String(36), nullable=False, index=True)
     date = Column(Date, nullable=False, index=True)
@@ -130,7 +151,8 @@ class ConversionFunnel(BaseModel):
     """
     Conversion funnel analysis model
     """
-    __tablename__ = 'conversion_funnels'
+
+    __tablename__ = "conversion_funnels"
 
     name = Column(String(100), nullable=False)
     timeframe = Column(SQLEnum(AnalyticsTimeframe), nullable=False)
@@ -167,7 +189,8 @@ class RevenueAnalytics(BaseModel):
     """
     Revenue analytics and forecasting model
     """
-    __tablename__ = 'revenue_analytics'
+
+    __tablename__ = "revenue_analytics"
 
     period_name = Column(String(50), nullable=False)
     timeframe = Column(SQLEnum(AnalyticsTimeframe), nullable=False)
@@ -202,7 +225,8 @@ class CustomerAnalytics(BaseModel):
     """
     Customer lifecycle and value analytics
     """
-    __tablename__ = 'customer_analytics'
+
+    __tablename__ = "customer_analytics"
 
     period_name = Column(String(50), nullable=False)
     timeframe = Column(SQLEnum(AnalyticsTimeframe), nullable=False)
@@ -240,7 +264,8 @@ class TeamPerformance(BaseModel):
     """
     Team member performance analytics
     """
-    __tablename__ = 'team_performance'
+
+    __tablename__ = "team_performance"
 
     team_member_id = Column(String(36), nullable=False, index=True)
     period_name = Column(String(50), nullable=False)
@@ -287,7 +312,8 @@ class MarketingAnalytics(BaseModel):
     """
     Marketing channel performance and ROI analytics
     """
-    __tablename__ = 'marketing_analytics'
+
+    __tablename__ = "marketing_analytics"
 
     channel_name = Column(String(100), nullable=False)
     period_name = Column(String(50), nullable=False)
@@ -330,7 +356,8 @@ class BusinessAlert(BaseModel):
     """
     Business intelligence alerts and notifications
     """
-    __tablename__ = 'business_alerts'
+
+    __tablename__ = "business_alerts"
 
     alert_type = Column(String(50), nullable=False)
     level = Column(SQLEnum(AlertLevel), nullable=False)
@@ -362,6 +389,7 @@ class BusinessAlert(BaseModel):
 # Pydantic schemas for API validation
 class KPIDefinitionCreateSchema(BaseModel):
     """Schema for creating a KPI definition"""
+
     model_config = ConfigDict(from_attributes=True)
 
     name: str = Field(..., max_length=100)
@@ -370,18 +398,19 @@ class KPIDefinitionCreateSchema(BaseModel):
     category: MetricCategory
     calculation_method: str
     data_source: str
-    formula: Optional[str] = None
+    formula: str | None = None
 
-    target_value: Optional[float] = None
-    warning_threshold: Optional[float] = None
-    critical_threshold: Optional[float] = None
-    unit: Optional[str] = None
-    decimal_places: Optional[int] = 2
-    chart_type: Optional[ChartType] = None
+    target_value: float | None = None
+    warning_threshold: float | None = None
+    critical_threshold: float | None = None
+    unit: str | None = None
+    decimal_places: int | None = 2
+    chart_type: ChartType | None = None
 
 
 class KPIDefinitionResponseSchema(BaseModel):
     """Schema for KPI definition API response"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -389,8 +418,8 @@ class KPIDefinitionResponseSchema(BaseModel):
     display_name: str
     description: str
     category: MetricCategory
-    target_value: Optional[float] = None
-    unit: Optional[str] = None
+    target_value: float | None = None
+    unit: str | None = None
     decimal_places: int = 2
     is_active: bool = True
     created_at: datetime
@@ -399,20 +428,22 @@ class KPIDefinitionResponseSchema(BaseModel):
 
 class MetricValueCreateSchema(BaseModel):
     """Schema for creating a metric value"""
+
     model_config = ConfigDict(from_attributes=True)
 
     kpi_id: UUID
     date: date
     timeframe: AnalyticsTimeframe
     value: float
-    target: Optional[float] = None
-    previous_value: Optional[float] = None
-    data_points: Optional[int] = 1
-    confidence_score: Optional[float] = None
+    target: float | None = None
+    previous_value: float | None = None
+    data_points: int | None = 1
+    confidence_score: float | None = None
 
 
 class MetricValueResponseSchema(BaseModel):
     """Schema for metric value API response"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -420,13 +451,14 @@ class MetricValueResponseSchema(BaseModel):
     date: date
     timeframe: AnalyticsTimeframe
     value: float
-    target: Optional[float] = None
-    previous_value: Optional[float] = None
+    target: float | None = None
+    previous_value: float | None = None
     calculated_at: datetime
 
 
 class RevenueAnalyticsResponseSchema(BaseModel):
     """Schema for revenue analytics API response"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -448,6 +480,7 @@ class RevenueAnalyticsResponseSchema(BaseModel):
 
 class TeamPerformanceResponseSchema(BaseModel):
     """Schema for team performance API response"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -462,22 +495,24 @@ class TeamPerformanceResponseSchema(BaseModel):
     avg_deal_size: Decimal
     quota_achievement_pct: float
     performance_score: float
-    rank_in_team: Optional[int] = None
+    rank_in_team: int | None = None
 
 
 # Request Models
 class AnalyticsRequest(BaseModel):
     """Base analytics request model"""
+
     timeframe: AnalyticsTimeframe = AnalyticsTimeframe.MTD
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
-    filters: Optional[Dict[str, Any]] = None
-    group_by: Optional[List[str]] = None
+    start_date: date | None = None
+    end_date: date | None = None
+    filters: dict[str, Any] | None = None
+    group_by: list[str] | None = None
 
 
 class KPIRequest(AnalyticsRequest):
     """KPI calculation request"""
-    kpi_names: Optional[List[str]] = None
+
+    kpi_names: list[str] | None = None
     include_trends: bool = True
     include_targets: bool = True
     include_breakdown: bool = False
@@ -485,6 +520,7 @@ class KPIRequest(AnalyticsRequest):
 
 class RevenueAnalysisRequest(AnalyticsRequest):
     """Revenue analysis request"""
+
     include_forecast: bool = True
     forecast_months: int = 3
     include_breakdown: bool = True
@@ -493,7 +529,8 @@ class RevenueAnalysisRequest(AnalyticsRequest):
 
 class TeamPerformanceRequest(AnalyticsRequest):
     """Team performance request"""
-    team_member_ids: Optional[List[UUID]] = None
+
+    team_member_ids: list[UUID] | None = None
     include_rankings: bool = True
     include_targets: bool = True
     include_activities: bool = True

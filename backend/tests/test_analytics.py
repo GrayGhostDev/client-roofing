@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Test script to verify analytics components work properly."""
 
-import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), 'frontend-reflex'))
+import sys
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "frontend-reflex"))
 
 try:
     import reflex as rx
@@ -17,15 +18,15 @@ try:
 
     # Test that all required state variables exist
     state_vars = [
-        'analytics_data',
-        'analytics_loading',
-        'analytics_date_range',
-        'analytics_selected_metric',
-        'analytics_view_mode',
-        'kpi_data',
-        'conversion_funnel_data',
-        'revenue_data',
-        'team_performance_data'
+        "analytics_data",
+        "analytics_loading",
+        "analytics_date_range",
+        "analytics_selected_metric",
+        "analytics_view_mode",
+        "kpi_data",
+        "conversion_funnel_data",
+        "revenue_data",
+        "team_performance_data",
     ]
 
     missing_vars = []
@@ -40,13 +41,13 @@ try:
 
     # Test that all required methods exist
     methods = [
-        'load_analytics_data',
-        'set_analytics_date_range',
-        'set_analytics_view_mode',
-        'analytics_kpi_summary',
-        'analytics_conversion_stages',
-        'analytics_revenue_trends',
-        'analytics_team_leaderboard'
+        "load_analytics_data",
+        "set_analytics_date_range",
+        "set_analytics_view_mode",
+        "analytics_kpi_summary",
+        "analytics_conversion_stages",
+        "analytics_revenue_trends",
+        "analytics_team_leaderboard",
     ]
 
     missing_methods = []

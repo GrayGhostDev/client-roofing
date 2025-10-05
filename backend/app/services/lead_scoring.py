@@ -28,17 +28,16 @@ Temperature Classification:
     COLD: 0-39 points (low priority/unqualified)
 """
 
-from typing import Dict, Any, Optional, Set
+import logging
+
 from app.models.lead import (
     Lead,
     LeadScoreBreakdown,
-    LeadTemperature,
     LeadSource,
     LeadStatus,
-    UrgencyLevel
+    LeadTemperature,
+    UrgencyLevel,
 )
-from datetime import datetime, timedelta
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -52,28 +51,44 @@ class LeadScoringEngine:
     """
 
     # Premium zip codes in Southeast Michigan (highest value areas)
-    PREMIUM_ZIP_CODES: Set[str] = {
-        "48009", "48012", "48025", "48067",  # Birmingham, Beverly Hills
-        "48301", "48302", "48304",            # Bloomfield Hills, Bloomfield Township
-        "48236", "48230", "48236",            # Grosse Pointe (multiple areas)
-        "48306", "48309",                     # Rochester Hills
+    PREMIUM_ZIP_CODES: set[str] = {
+        "48009",
+        "48012",
+        "48025",
+        "48067",  # Birmingham, Beverly Hills
+        "48301",
+        "48302",
+        "48304",  # Bloomfield Hills, Bloomfield Township
+        "48236",
+        "48230",
+        # Grosse Pointe (multiple areas)
+        "48306",
+        "48309",  # Rochester Hills
     }
 
     # Target market zip codes (secondary premium areas)
-    TARGET_ZIP_CODES: Set[str] = {
-        "48075", "48084", "48098",            # Troy, West Bloomfield
-        "48167", "48103", "48105", "48108",  # Northville, Ann Arbor
-        "48331", "48334", "48335",            # Farmington Hills
-        "48187", "48188",                     # Canton, Plymouth
+    TARGET_ZIP_CODES: set[str] = {
+        "48075",
+        "48084",
+        "48098",  # Troy, West Bloomfield
+        "48167",
+        "48103",
+        "48105",
+        "48108",  # Northville, Ann Arbor
+        "48331",
+        "48334",
+        "48335",  # Farmington Hills
+        "48187",
+        "48188",  # Canton, Plymouth
     }
 
     def calculate_score(
         self,
         lead: Lead,
         interaction_count: int = 0,
-        response_time_minutes: Optional[int] = None,
+        response_time_minutes: int | None = None,
         budget_confirmed: bool = False,
-        is_decision_maker: bool = False
+        is_decision_maker: bool = False,
     ) -> LeadScoreBreakdown:
         """
         Calculate comprehensive lead score with detailed breakdown.
@@ -97,12 +112,16 @@ class LeadScoringEngine:
 
             # Behavioral (35 points)
             engagement_pts = self._score_engagement(lead.source, lead.status)
-            response_pts = self._score_response_time(response_time_minutes or lead.response_time_minutes)
+            response_pts = self._score_response_time(
+                response_time_minutes or lead.response_time_minutes
+            )
             interaction_pts = self._score_interactions(interaction_count or lead.interaction_count)
             behavioral_total = engagement_pts + response_pts + interaction_pts
 
             # BANT (10 points max)
-            budget_pts = self._score_budget(budget_confirmed, lead.budget_range_min, lead.property_value)
+            budget_pts = self._score_budget(
+                budget_confirmed, lead.budget_range_min, lead.property_value
+            )
             authority_pts = 7 if is_decision_maker else 1
             need_pts = self._score_urgency(lead.urgency)
             timeline_pts = self._score_timeline(lead.urgency)
@@ -132,7 +151,7 @@ class LeadScoringEngine:
                 budget_points=budget_pts,
                 authority_points=authority_pts,
                 need_points=need_pts,
-                timeline_points=timeline_pts
+                timeline_points=timeline_pts,
             )
 
         except Exception as e:
@@ -140,7 +159,7 @@ class LeadScoringEngine:
             # Return minimum score on error
             return self._get_default_score()
 
-    def _score_property_value(self, value: Optional[int]) -> int:
+    def _score_property_value(self, value: int | None) -> int:
         """
         Score based on property value (0-30 points).
 
@@ -157,9 +176,9 @@ class LeadScoringEngine:
         elif value >= 200000:
             return 10  # Middle market
         else:
-            return 5   # Entry-level market
+            return 5  # Entry-level market
 
-    def _score_location(self, zip_code: Optional[str]) -> int:
+    def _score_location(self, zip_code: str | None) -> int:
         """
         Score based on location/ZIP code (0-10 points).
 
@@ -175,11 +194,11 @@ class LeadScoringEngine:
         if cleaned_zip in self.PREMIUM_ZIP_CODES:
             return 10  # Premium locations (Bloomfield, Grosse Pointe, etc.)
         elif cleaned_zip in self.TARGET_ZIP_CODES:
-            return 7   # Target market locations (Troy, Ann Arbor, etc.)
+            return 7  # Target market locations (Troy, Ann Arbor, etc.)
         else:
-            return 3   # Other locations
+            return 3  # Other locations
 
-    def _estimate_income_score(self, property_value: Optional[int], zip_code: Optional[str]) -> int:
+    def _estimate_income_score(self, property_value: int | None, zip_code: str | None) -> int:
         """
         Estimate income level based on property value and location (0-15 points).
 
@@ -193,13 +212,13 @@ class LeadScoringEngine:
             if property_value >= 500000:
                 score += 10  # Likely $200K+ household income
             elif property_value >= 300000:
-                score += 5   # Likely $100-200K household income
+                score += 5  # Likely $100-200K household income
 
         # Location indicator
         if zip_code:
             cleaned_zip = zip_code[:5] if len(zip_code) > 5 else zip_code
             if cleaned_zip in self.PREMIUM_ZIP_CODES:
-                score += 5   # Premium areas typically have higher incomes
+                score += 5  # Premium areas typically have higher incomes
 
         return min(15, score)  # Cap at 15 points
 
@@ -212,18 +231,18 @@ class LeadScoringEngine:
         """
         # Base score by source (intent level)
         source_scores = {
-            LeadSource.WEBSITE_FORM: 15,      # Highest intent - filled out form
-            LeadSource.PHONE_INQUIRY: 15,     # Direct contact
-            LeadSource.EMAIL_INQUIRY: 14,     # Direct contact
-            LeadSource.REFERRAL: 13,          # Trusted referral
-            LeadSource.GOOGLE_LSA: 12,        # High-intent Google ads
-            LeadSource.GOOGLE_ADS: 12,        # Paid search
+            LeadSource.WEBSITE_FORM: 15,  # Highest intent - filled out form
+            LeadSource.PHONE_INQUIRY: 15,  # Direct contact
+            LeadSource.EMAIL_INQUIRY: 14,  # Direct contact
+            LeadSource.REFERRAL: 13,  # Trusted referral
+            LeadSource.GOOGLE_LSA: 12,  # High-intent Google ads
+            LeadSource.GOOGLE_ADS: 12,  # Paid search
             LeadSource.PARTNER_REFERRAL: 11,  # Professional referral
-            LeadSource.ORGANIC_SEARCH: 10,    # Organic search
-            LeadSource.FACEBOOK_ADS: 9,       # Social media
-            LeadSource.STORM_RESPONSE: 11,    # Urgent need
-            LeadSource.REPEAT_CUSTOMER: 14,   # Previous customer
-            LeadSource.DOOR_TO_DOOR: 6,       # Lowest intent
+            LeadSource.ORGANIC_SEARCH: 10,  # Organic search
+            LeadSource.FACEBOOK_ADS: 9,  # Social media
+            LeadSource.STORM_RESPONSE: 11,  # Urgent need
+            LeadSource.REPEAT_CUSTOMER: 14,  # Previous customer
+            LeadSource.DOOR_TO_DOOR: 6,  # Lowest intent
         }
 
         base_score = source_scores.get(source, 8)
@@ -232,7 +251,7 @@ class LeadScoringEngine:
         qualified_statuses = {
             LeadStatus.QUALIFIED,
             LeadStatus.APPOINTMENT_SCHEDULED,
-            LeadStatus.INSPECTION_COMPLETED
+            LeadStatus.INSPECTION_COMPLETED,
         }
 
         if status in qualified_statuses:
@@ -240,7 +259,7 @@ class LeadScoringEngine:
 
         return base_score
 
-    def _score_response_time(self, minutes: Optional[int]) -> int:
+    def _score_response_time(self, minutes: int | None) -> int:
         """
         Score response time (0-10 points).
 
@@ -253,15 +272,15 @@ class LeadScoringEngine:
         if minutes <= 2:
             return 10  # Target: 2-minute response (best practice)
         elif minutes <= 5:
-            return 9   # Excellent response
+            return 9  # Excellent response
         elif minutes <= 15:
-            return 7   # Good response
+            return 7  # Good response
         elif minutes <= 60:
-            return 5   # Acceptable response (within 1 hour)
+            return 5  # Acceptable response (within 1 hour)
         elif minutes <= 1440:  # 24 hours
-            return 3   # Delayed response
+            return 3  # Delayed response
         else:
-            return 1   # Poor response (>24 hours)
+            return 1  # Poor response (>24 hours)
 
     def _score_interactions(self, count: int) -> int:
         """
@@ -271,21 +290,18 @@ class LeadScoringEngine:
         Industry standard: 16+ touchpoints for conversion.
         """
         if count == 0:
-            return 0   # No engagement yet
+            return 0  # No engagement yet
         elif count >= 10:
             return 10  # Highly engaged (approaching 16-touch standard)
         elif count >= 5:
-            return 7   # Well engaged
+            return 7  # Well engaged
         elif count >= 3:
-            return 5   # Moderately engaged
+            return 5  # Moderately engaged
         else:
-            return 3   # Minimally engaged (1-2 interactions)
+            return 3  # Minimally engaged (1-2 interactions)
 
     def _score_budget(
-        self,
-        budget_confirmed: bool,
-        budget_range_min: Optional[int],
-        property_value: Optional[int]
+        self, budget_confirmed: bool, budget_range_min: int | None, property_value: int | None
     ) -> int:
         """
         Score budget qualification (0-8 points).
@@ -305,31 +321,31 @@ class LeadScoringEngine:
         else:
             return 0  # No budget information
 
-    def _score_urgency(self, urgency: Optional[UrgencyLevel]) -> int:
+    def _score_urgency(self, urgency: UrgencyLevel | None) -> int:
         """
         Score need urgency (0-5 points).
 
         Urgency indicates the 'N' (Need) in BANT - how pressing is the need?
         """
         urgency_map = {
-            UrgencyLevel.IMMEDIATE: 5,           # Urgent need (storm damage, leak)
-            UrgencyLevel.ONE_TO_THREE_MONTHS: 3, # Near-term need
-            UrgencyLevel.THREE_TO_SIX_MONTHS: 2, # Planning ahead
-            UrgencyLevel.PLANNING: 1              # Long-term planning
+            UrgencyLevel.IMMEDIATE: 5,  # Urgent need (storm damage, leak)
+            UrgencyLevel.ONE_TO_THREE_MONTHS: 3,  # Near-term need
+            UrgencyLevel.THREE_TO_SIX_MONTHS: 2,  # Planning ahead
+            UrgencyLevel.PLANNING: 1,  # Long-term planning
         }
         return urgency_map.get(urgency, 1) if urgency else 1
 
-    def _score_timeline(self, urgency: Optional[UrgencyLevel]) -> int:
+    def _score_timeline(self, urgency: UrgencyLevel | None) -> int:
         """
         Score timeline (0-5 points).
 
         Timeline is the 'T' in BANT - when do they plan to buy?
         """
         timeline_map = {
-            UrgencyLevel.IMMEDIATE: 5,           # Ready to buy now
-            UrgencyLevel.ONE_TO_THREE_MONTHS: 3, # Near-term buyer
-            UrgencyLevel.THREE_TO_SIX_MONTHS: 1, # Future buyer
-            UrgencyLevel.PLANNING: 0              # No immediate timeline
+            UrgencyLevel.IMMEDIATE: 5,  # Ready to buy now
+            UrgencyLevel.ONE_TO_THREE_MONTHS: 3,  # Near-term buyer
+            UrgencyLevel.THREE_TO_SIX_MONTHS: 1,  # Future buyer
+            UrgencyLevel.PLANNING: 0,  # No immediate timeline
         }
         return timeline_map.get(urgency, 0) if urgency else 0
 
@@ -369,14 +385,10 @@ class LeadScoringEngine:
             budget_points=0,
             authority_points=0,
             need_points=0,
-            timeline_points=0
+            timeline_points=0,
         )
 
-    def recalculate_lead_score(
-        self,
-        lead: Lead,
-        interaction_count: int
-    ) -> LeadScoreBreakdown:
+    def recalculate_lead_score(self, lead: Lead, interaction_count: int) -> LeadScoreBreakdown:
         """
         Recalculate lead score with current data.
 
@@ -392,7 +404,7 @@ class LeadScoringEngine:
         return self.calculate_score(
             lead=lead,
             interaction_count=interaction_count,
-            response_time_minutes=lead.response_time_minutes
+            response_time_minutes=lead.response_time_minutes,
         )
 
 

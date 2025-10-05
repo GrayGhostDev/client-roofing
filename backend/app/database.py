@@ -5,11 +5,11 @@ Version: 1.0.0
 SQLAlchemy session management with PostgreSQL connection.
 """
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from collections.abc import Generator
 from contextlib import contextmanager
-import os
-from typing import Generator
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import get_config
 
@@ -21,7 +21,7 @@ engine = create_engine(
     config.DATABASE_URL,
     pool_pre_ping=True,
     pool_recycle=300,
-    echo=config.DEBUG  # Log SQL queries in debug mode
+    echo=config.DEBUG,  # Log SQL queries in debug mode
 )
 
 # Create session factory
@@ -67,19 +67,6 @@ def get_db_session():
 def init_db():
     """Initialize database tables."""
     # Import all models here to ensure they are registered
-    from app.models.lead_sqlalchemy import Lead
-    from app.models.customer import Customer
-    from app.models.project import Project
-    from app.models.team import TeamMember
-    from app.models.interaction import Interaction
-    from app.models.appointment import Appointment
-    from app.models.review import Review
-    from app.models.partnership import Partnership
-    from app.models.user import User
-    from app.models.alert import Alert
-    from app.models.notification import Notification
-    from app.models.analytics import AnalyticsEvent
-    from app.models.partner import Partner
 
     # Create all tables
     Base.metadata.create_all(bind=engine)

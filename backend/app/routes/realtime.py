@@ -3,15 +3,17 @@ iSwitch Roofs CRM - Real-time API Routes (Pusher)
 Version: 1.0.0
 """
 
-from flask import Blueprint, request, jsonify, current_app
-from app.services.realtime_service import realtime_service
 import logging
 
-bp = Blueprint('realtime', __name__)
+from flask import Blueprint, jsonify, request
+
+from app.services.realtime_service import realtime_service
+
+bp = Blueprint("realtime", __name__)
 logger = logging.getLogger(__name__)
 
 
-@bp.route('/auth', methods=['POST'])
+@bp.route("/auth", methods=["POST"])
 def pusher_auth():
     """
     Authenticate Pusher private/presence channel subscriptions.
@@ -24,21 +26,21 @@ def pusher_auth():
             return jsonify({"error": "Real-time features not configured"}), 503
 
         # Get data from request
-        socket_id = request.form.get('socket_id')
-        channel_name = request.form.get('channel_name')
+        socket_id = request.form.get("socket_id")
+        channel_name = request.form.get("channel_name")
 
         if not socket_id or not channel_name:
             return jsonify({"error": "Missing socket_id or channel_name"}), 400
 
         # TODO: Get authenticated user ID from session/JWT
         # For now, using a placeholder
-        user_id = request.headers.get('X-User-ID', 'anonymous')
+        user_id = request.headers.get("X-User-ID", "anonymous")
 
         # Build user data for presence channels
         user_data = {
-            'id': user_id,
-            'name': request.headers.get('X-User-Name', 'Anonymous'),
-            'email': request.headers.get('X-User-Email', '')
+            "id": user_id,
+            "name": request.headers.get("X-User-Name", "Anonymous"),
+            "email": request.headers.get("X-User-Email", ""),
         }
 
         # Authenticate the channel subscription
@@ -54,7 +56,7 @@ def pusher_auth():
         return jsonify({"error": "Authentication failed"}), 500
 
 
-@bp.route('/trigger', methods=['POST'])
+@bp.route("/trigger", methods=["POST"])
 def trigger_event():
     """
     Manually trigger a real-time event.
@@ -68,15 +70,15 @@ def trigger_event():
 
         data = request.get_json()
 
-        if not data or not all(k in data for k in ['channel', 'event', 'data']):
+        if not data or not all(k in data for k in ["channel", "event", "data"]):
             return jsonify({"error": "Missing required fields: channel, event, data"}), 400
 
         # Trigger the event
         success = realtime_service.trigger_event(
-            channel=data['channel'],
-            event=data['event'],
-            data=data['data'],
-            socket_id=data.get('socket_id')
+            channel=data["channel"],
+            event=data["event"],
+            data=data["data"],
+            socket_id=data.get("socket_id"),
         )
 
         if success:
@@ -89,17 +91,22 @@ def trigger_event():
         return jsonify({"error": str(e)}), 500
 
 
-@bp.route('/status', methods=['GET'])
+@bp.route("/status", methods=["GET"])
 def realtime_status():
     """Check if real-time features are available."""
-    return jsonify({
-        "available": realtime_service.client is not None,
-        "service": "Pusher",
-        "configured": realtime_service.client is not None
-    }), 200
+    return (
+        jsonify(
+            {
+                "available": realtime_service.client is not None,
+                "service": "Pusher",
+                "configured": realtime_service.client is not None,
+            }
+        ),
+        200,
+    )
 
 
-@bp.route('/config', methods=['GET'])
+@bp.route("/config", methods=["GET"])
 def pusher_config():
     """
     Get Pusher configuration for client-side initialization.
@@ -109,8 +116,13 @@ def pusher_config():
     if not realtime_service.client:
         return jsonify({"error": "Real-time features not configured"}), 503
 
-    return jsonify({
-        "key": realtime_service.key,
-        "cluster": realtime_service.cluster,
-        "authEndpoint": "/api/realtime/auth"
-    }), 200
+    return (
+        jsonify(
+            {
+                "key": realtime_service.key,
+                "cluster": realtime_service.cluster,
+                "authEndpoint": "/api/realtime/auth",
+            }
+        ),
+        200,
+    )

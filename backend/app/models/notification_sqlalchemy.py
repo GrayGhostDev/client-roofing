@@ -5,18 +5,20 @@ Version: 1.0.0
 Notification data model for tracking all sent notifications.
 """
 
-from sqlalchemy import Column, String, Integer, Boolean, Text, DateTime, Enum as SQLEnum
-from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
-from typing import Optional, List, Dict, Any
 from datetime import datetime
-from uuid import UUID
 from enum import Enum
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
+from sqlalchemy import Enum as SQLEnum
 
 from app.models.base import BaseModel
 
 
 class NotificationChannel(str, Enum):
     """Notification delivery channels."""
+
     EMAIL = "email"
     SMS = "sms"
     PUSH = "push"
@@ -26,14 +28,16 @@ class NotificationChannel(str, Enum):
 
 class NotificationPriority(str, Enum):
     """Notification priority levels."""
-    URGENT = "urgent"      # Immediate delivery
-    HIGH = "high"          # Within 5 minutes
-    NORMAL = "normal"      # Within 30 minutes
-    LOW = "low"            # Batched delivery
+
+    URGENT = "urgent"  # Immediate delivery
+    HIGH = "high"  # Within 5 minutes
+    NORMAL = "normal"  # Within 30 minutes
+    LOW = "low"  # Batched delivery
 
 
 class NotificationStatus(str, Enum):
     """Notification delivery status."""
+
     PENDING = "pending"
     QUEUED = "queued"
     SENDING = "sending"
@@ -48,6 +52,7 @@ class NotificationStatus(str, Enum):
 
 class NotificationType(str, Enum):
     """Types of notifications."""
+
     # Lead notifications
     LEAD_CREATED = "lead_created"
     LEAD_HOT = "lead_hot"
@@ -96,7 +101,8 @@ class Notification(BaseModel):
     """
     Notification SQLAlchemy model for tracking all sent notifications.
     """
-    __tablename__ = 'notifications'
+
+    __tablename__ = "notifications"
 
     # Basic Information
     type = Column(SQLEnum(NotificationType), nullable=False, index=True)
@@ -148,7 +154,8 @@ class NotificationTemplate(BaseModel):
     """
     Reusable notification templates.
     """
-    __tablename__ = 'notification_templates'
+
+    __tablename__ = "notification_templates"
 
     name = Column(String(100), nullable=False)
     type = Column(SQLEnum(NotificationType), nullable=False)
@@ -179,6 +186,7 @@ class NotificationTemplate(BaseModel):
 # Pydantic schemas for API validation
 class NotificationCreateSchema(BaseModel):
     """Schema for creating a new notification"""
+
     model_config = ConfigDict(from_attributes=True)
 
     type: NotificationType
@@ -187,83 +195,86 @@ class NotificationCreateSchema(BaseModel):
     priority: NotificationPriority = NotificationPriority.NORMAL
 
     # Recipients
-    recipient_id: Optional[UUID] = None
-    recipient_email: Optional[EmailStr] = None
-    recipient_phone: Optional[str] = None
-    recipient_name: Optional[str] = None
+    recipient_id: UUID | None = None
+    recipient_email: EmailStr | None = None
+    recipient_phone: str | None = None
+    recipient_name: str | None = None
 
     # Content
-    subject: Optional[str] = None
-    content_plain: Optional[str] = None
-    template_id: Optional[UUID] = None
+    subject: str | None = None
+    content_plain: str | None = None
+    template_id: UUID | None = None
 
     # Scheduling
-    scheduled_for: Optional[datetime] = None
+    scheduled_for: datetime | None = None
 
     # Related entities
-    related_lead_id: Optional[UUID] = None
-    related_customer_id: Optional[UUID] = None
-    related_project_id: Optional[UUID] = None
-    related_appointment_id: Optional[UUID] = None
+    related_lead_id: UUID | None = None
+    related_customer_id: UUID | None = None
+    related_project_id: UUID | None = None
+    related_appointment_id: UUID | None = None
 
-    @field_validator('recipient_phone')
+    @field_validator("recipient_phone")
     @classmethod
-    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
+    def validate_phone(cls, v: str | None) -> str | None:
         """Validate phone number format."""
         if not v:
             return v
 
         # Remove non-digits except +
-        cleaned = ''.join(c for c in v if c.isdigit() or c == '+')
+        cleaned = "".join(c for c in v if c.isdigit() or c == "+")
 
         # Ensure it starts with + for international format
-        if not cleaned.startswith('+'):
+        if not cleaned.startswith("+"):
             # Assume US number if no country code
             if len(cleaned) == 10:
-                cleaned = '+1' + cleaned
-            elif len(cleaned) == 11 and cleaned.startswith('1'):
-                cleaned = '+' + cleaned
+                cleaned = "+1" + cleaned
+            elif len(cleaned) == 11 and cleaned.startswith("1"):
+                cleaned = "+" + cleaned
 
         return cleaned
 
 
 class NotificationUpdateSchema(BaseModel):
     """Schema for updating a notification"""
+
     model_config = ConfigDict(from_attributes=True)
 
-    status: Optional[NotificationStatus] = None
-    sent_at: Optional[datetime] = None
-    delivered_at: Optional[datetime] = None
-    opened_at: Optional[datetime] = None
-    clicked_at: Optional[datetime] = None
-    bounce_reason: Optional[str] = None
-    external_id: Optional[str] = None
-    open_count: Optional[int] = None
-    click_count: Optional[int] = None
+    status: NotificationStatus | None = None
+    sent_at: datetime | None = None
+    delivered_at: datetime | None = None
+    opened_at: datetime | None = None
+    clicked_at: datetime | None = None
+    bounce_reason: str | None = None
+    external_id: str | None = None
+    open_count: int | None = None
+    click_count: int | None = None
 
 
 class NotificationResponseSchema(BaseModel):
     """Schema for notification API response"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
     type: NotificationType
     channel: NotificationChannel
     priority: NotificationPriority
-    recipient_email: Optional[str] = None
-    recipient_phone: Optional[str] = None
-    recipient_name: Optional[str] = None
-    subject: Optional[str] = None
+    recipient_email: str | None = None
+    recipient_phone: str | None = None
+    recipient_name: str | None = None
+    subject: str | None = None
     status: NotificationStatus
-    scheduled_for: Optional[datetime] = None
-    sent_at: Optional[datetime] = None
-    delivered_at: Optional[datetime] = None
+    scheduled_for: datetime | None = None
+    sent_at: datetime | None = None
+    delivered_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
 
 class NotificationTemplateCreateSchema(BaseModel):
     """Schema for creating a notification template"""
+
     model_config = ConfigDict(from_attributes=True)
 
     name: str = Field(..., min_length=1, max_length=100)
@@ -271,22 +282,23 @@ class NotificationTemplateCreateSchema(BaseModel):
     channel: NotificationChannel
     content_plain: str
 
-    subject: Optional[str] = None
-    content_html: Optional[str] = None
-    description: Optional[str] = None
-    category: Optional[str] = None
-    is_default: Optional[bool] = False
+    subject: str | None = None
+    content_html: str | None = None
+    description: str | None = None
+    category: str | None = None
+    is_default: bool | None = False
 
 
 class NotificationTemplateResponseSchema(BaseModel):
     """Schema for notification template API response"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
     name: str
     type: NotificationType
     channel: NotificationChannel
-    subject: Optional[str] = None
+    subject: str | None = None
     content_plain: str
     is_active: bool = True
     is_default: bool = False
@@ -297,11 +309,14 @@ class NotificationTemplateResponseSchema(BaseModel):
 
 class NotificationListFiltersSchema(BaseModel):
     """Filter parameters for notification list endpoint"""
-    type: Optional[str] = Field(None, description="Comma-separated types")
-    channel: Optional[NotificationChannel] = Field(None, description="Filter by channel")
-    status: Optional[str] = Field(None, description="Comma-separated statuses")
-    priority: Optional[NotificationPriority] = Field(None, description="Filter by priority")
-    recipient_id: Optional[UUID] = Field(None, description="Filter by recipient")
-    date_from: Optional[datetime] = Field(None, description="Filter from date")
-    date_to: Optional[datetime] = Field(None, description="Filter to date")
-    needs_retry: Optional[bool] = Field(None, description="Filter failed notifications needing retry")
+
+    type: str | None = Field(None, description="Comma-separated types")
+    channel: NotificationChannel | None = Field(None, description="Filter by channel")
+    status: str | None = Field(None, description="Comma-separated statuses")
+    priority: NotificationPriority | None = Field(None, description="Filter by priority")
+    recipient_id: UUID | None = Field(None, description="Filter by recipient")
+    date_from: datetime | None = Field(None, description="Filter from date")
+    date_to: datetime | None = Field(None, description="Filter to date")
+    needs_retry: bool | None = Field(
+        None, description="Filter failed notifications needing retry"
+    )

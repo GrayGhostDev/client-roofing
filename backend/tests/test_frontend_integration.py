@@ -3,12 +3,11 @@ Frontend Integration Testing for iSwitch Roofs CRM
 Tests the integration between Reflex frontend and Flask backend
 """
 
-import pytest
-import asyncio
+from datetime import datetime
+from unittest.mock import MagicMock, patch
+
 import httpx
-from unittest.mock import patch, MagicMock
-import json
-from datetime import datetime, timedelta
+import pytest
 
 
 class TestFrontendBackendIntegration:
@@ -22,7 +21,7 @@ class TestFrontendBackendIntegration:
     @pytest.fixture
     def mock_httpx_client(self):
         """Mock httpx client for frontend requests."""
-        with patch('httpx.AsyncClient') as mock_client:
+        with patch("httpx.AsyncClient") as mock_client:
             yield mock_client
 
     def test_load_dashboard_data(self, mock_httpx_client, mock_backend_url):
@@ -31,20 +30,16 @@ class TestFrontendBackendIntegration:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
-            'leads': [
+            "leads": [
                 {
-                    'id': 'lead-1',
-                    'first_name': 'John',
-                    'last_name': 'Doe',
-                    'status': 'new',
-                    'lead_score': 85
+                    "id": "lead-1",
+                    "first_name": "John",
+                    "last_name": "Doe",
+                    "status": "new",
+                    "lead_score": 85,
                 }
             ],
-            'metrics': {
-                'total_leads': 25,
-                'hot_leads': 8,
-                'conversion_rate': 12.5
-            }
+            "metrics": {"total_leads": 25, "hot_leads": 8, "conversion_rate": 12.5},
         }
 
         mock_httpx_client.return_value.__aenter__.return_value.get.return_value = mock_response
@@ -59,13 +54,13 @@ class TestFrontendBackendIntegration:
         mock_response = MagicMock()
         mock_response.status_code = 201
         mock_response.json.return_value = {
-            'id': 'new-lead-123',
-            'first_name': 'Jane',
-            'last_name': 'Smith',
-            'email': 'jane@example.com',
-            'phone': '555-1234',
-            'status': 'new',
-            'created_at': datetime.utcnow().isoformat()
+            "id": "new-lead-123",
+            "first_name": "Jane",
+            "last_name": "Smith",
+            "email": "jane@example.com",
+            "phone": "555-1234",
+            "status": "new",
+            "created_at": datetime.utcnow().isoformat(),
         }
 
         mock_httpx_client.return_value.__aenter__.return_value.post.return_value = mock_response
@@ -80,9 +75,9 @@ class TestFrontendBackendIntegration:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
-            'id': 'lead-1',
-            'status': 'qualified',
-            'updated_at': datetime.utcnow().isoformat()
+            "id": "lead-1",
+            "status": "qualified",
+            "updated_at": datetime.utcnow().isoformat(),
         }
 
         mock_httpx_client.return_value.__aenter__.return_value.put.return_value = mock_response
@@ -94,18 +89,14 @@ class TestFrontendBackendIntegration:
     def test_real_time_updates(self, mock_httpx_client):
         """Test real-time updates via Pusher integration."""
         # Mock Pusher event handling
-        with patch('pusher.Pusher') as mock_pusher:
+        with patch("pusher.Pusher") as mock_pusher:
             mock_channel = MagicMock()
             mock_pusher.return_value.subscribe.return_value = mock_channel
 
             # Test real-time lead update
             test_event = {
-                'event': 'lead_updated',
-                'data': {
-                    'id': 'lead-1',
-                    'status': 'hot',
-                    'temperature': 'hot'
-                }
+                "event": "lead_updated",
+                "data": {"id": "lead-1", "status": "hot", "temperature": "hot"},
             }
 
             # Simulate Pusher event
@@ -118,8 +109,8 @@ class TestFrontendBackendIntegration:
         mock_response = MagicMock()
         mock_response.status_code = 500
         mock_response.json.return_value = {
-            'error': 'Internal Server Error',
-            'message': 'Database connection failed'
+            "error": "Internal Server Error",
+            "message": "Database connection failed",
         }
 
         mock_httpx_client.return_value.__aenter__.return_value.get.return_value = mock_response
@@ -167,11 +158,11 @@ class TestAPIClientIntegration:
     @pytest.mark.asyncio
     async def test_api_error_retry_logic(self):
         """Test API retry logic for failed requests."""
-        with patch('httpx.AsyncClient') as mock_client:
+        with patch("httpx.AsyncClient") as mock_client:
             # Mock initial failure followed by success
             mock_responses = [
                 MagicMock(status_code=500),  # First attempt fails
-                MagicMock(status_code=200, json=lambda: {'data': 'success'})  # Retry succeeds
+                MagicMock(status_code=200, json=lambda: {"data": "success"}),  # Retry succeeds
             ]
 
             mock_client.return_value.__aenter__.return_value.get.side_effect = mock_responses
@@ -183,21 +174,23 @@ class TestAPIClientIntegration:
     async def test_authentication_token_management(self):
         """Test JWT token management in API requests."""
         # Mock token refresh scenario
-        with patch('httpx.AsyncClient') as mock_client:
+        with patch("httpx.AsyncClient") as mock_client:
             # Mock expired token response
             mock_auth_response = MagicMock()
             mock_auth_response.status_code = 401
-            mock_auth_response.json.return_value = {'error': 'Token expired'}
+            mock_auth_response.json.return_value = {"error": "Token expired"}
 
             # Mock refresh token response
             mock_refresh_response = MagicMock()
             mock_refresh_response.status_code = 200
             mock_refresh_response.json.return_value = {
-                'access_token': 'new_token_123',
-                'expires_in': 3600
+                "access_token": "new_token_123",
+                "expires_in": 3600,
             }
 
-            mock_client.return_value.__aenter__.return_value.post.return_value = mock_refresh_response
+            mock_client.return_value.__aenter__.return_value.post.return_value = (
+                mock_refresh_response
+            )
 
             # Test token refresh logic
             assert True
@@ -209,14 +202,14 @@ class TestDataValidationIntegration:
     def test_lead_data_validation_consistency(self):
         """Test that frontend and backend validation rules match."""
         # Test email validation
-        invalid_emails = ['invalid-email', '@domain.com', 'user@', '']
+        invalid_emails = ["invalid-email", "@domain.com", "user@", ""]
         for email in invalid_emails:
             # Frontend should validate these before sending to backend
             assert True  # Replace with actual validation tests
 
     def test_phone_number_validation(self):
         """Test phone number validation consistency."""
-        invalid_phones = ['123', 'abc-def-ghij', '+1-invalid']
+        invalid_phones = ["123", "abc-def-ghij", "+1-invalid"]
         for phone in invalid_phones:
             # Test frontend validation matches backend validation
             assert True
@@ -224,7 +217,7 @@ class TestDataValidationIntegration:
     def test_date_format_validation(self):
         """Test date format validation across systems."""
         # Test appointment date validation
-        invalid_dates = ['invalid-date', '2025-13-01', '2025-01-32']
+        invalid_dates = ["invalid-date", "2025-13-01", "2025-01-32"]
         for date in invalid_dates:
             # Test consistent date validation
             assert True
@@ -263,14 +256,15 @@ class TestPerformanceIntegration:
     def test_memory_usage_monitoring(self):
         """Test memory usage during data operations."""
         # Monitor memory usage during large operations
-        import psutil
         import os
+
+        import psutil
 
         process = psutil.Process(os.getpid())
         initial_memory = process.memory_info().rss
 
         # Simulate large data operation
-        large_data = ['test'] * 10000
+        large_data = ["test"] * 10000
         del large_data
 
         final_memory = process.memory_info().rss
@@ -351,7 +345,4 @@ class TestAccessibilityIntegration:
 
 
 # Mark all tests as integration tests
-pytestmark = [
-    pytest.mark.integration,
-    pytest.mark.frontend
-]
+pytestmark = [pytest.mark.integration, pytest.mark.frontend]

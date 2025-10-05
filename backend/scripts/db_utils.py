@@ -15,18 +15,16 @@ Date: 2025-10-05
 """
 
 import argparse
-import sys
 import logging
-from pathlib import Path
+import sys
+
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
 
 class DatabaseUtils:
     """Database utility operations"""
@@ -57,9 +55,16 @@ class DatabaseUtils:
         logger.info("=" * 50)
 
         crm_tables = [
-            'leads', 'customers', 'team_members', 'appointments',
-            'projects', 'interactions', 'reviews', 'partnerships',
-            'notifications', 'alerts'
+            "leads",
+            "customers",
+            "team_members",
+            "appointments",
+            "projects",
+            "interactions",
+            "reviews",
+            "partnerships",
+            "notifications",
+            "alerts",
         ]
 
         try:
@@ -70,12 +75,16 @@ class DatabaseUtils:
                     count = cursor.fetchone()[0]
 
                     # Get recent records info
-                    cursor.execute(f"""
+                    cursor.execute(
+                        f"""
                         SELECT created_at FROM {table}
                         ORDER BY created_at DESC LIMIT 1
-                    """)
+                    """
+                    )
                     result = cursor.fetchone()
-                    last_created = result[0].strftime('%Y-%m-%d %H:%M:%S') if result else 'No records'
+                    last_created = (
+                        result[0].strftime("%Y-%m-%d %H:%M:%S") if result else "No records"
+                    )
 
                     status = "✅" if count > 0 else "⚪"
                     logger.info(f"{status} {table:<15} | {count:>4} records | Last: {last_created}")
@@ -92,33 +101,39 @@ class DatabaseUtils:
             with self.connection.cursor() as cursor:
                 # Show leads
                 logger.info("\n📋 LEADS (Sample):")
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT first_name, last_name, city, lead_score, status
                     FROM leads
                     ORDER BY created_at DESC
                     LIMIT 3
-                """)
+                """
+                )
                 for row in cursor.fetchall():
                     logger.info(f"  • {row[0]} {row[1]} | {row[2]} | Score: {row[3]} | {row[4]}")
 
                 # Show customers
                 logger.info("\n👥 CUSTOMERS (Sample):")
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT first_name, last_name, city, lifetime_value, status
                     FROM customers
                     ORDER BY created_at DESC
                     LIMIT 3
-                """)
+                """
+                )
                 for row in cursor.fetchall():
                     logger.info(f"  • {row[0]} {row[1]} | {row[2]} | LTV: ${row[3]:,} | {row[4]}")
 
                 # Show team members
                 logger.info("\n👨‍💼 TEAM MEMBERS:")
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT first_name, last_name, email, role, status
                     FROM team_members
                     ORDER BY created_at DESC
-                """)
+                """
+                )
                 for row in cursor.fetchall():
                     logger.info(f"  • {row[0]} {row[1]} | {row[2]} | {row[3]} | {row[4]}")
 
@@ -131,8 +146,15 @@ class DatabaseUtils:
         logger.info("=" * 50)
 
         tables = [
-            'interactions', 'reviews', 'appointments', 'projects',
-            'notifications', 'alerts', 'partnerships', 'leads', 'customers'
+            "interactions",
+            "reviews",
+            "appointments",
+            "projects",
+            "notifications",
+            "alerts",
+            "partnerships",
+            "leads",
+            "customers",
         ]
 
         try:
@@ -142,7 +164,9 @@ class DatabaseUtils:
                     logger.info(f"✅ Cleared {table}")
 
                 # Keep one team member for testing
-                cursor.execute("DELETE FROM team_members WHERE email != 'john.sales@iswitchroofs.com'")
+                cursor.execute(
+                    "DELETE FROM team_members WHERE email != 'john.sales@iswitchroofs.com'"
+                )
                 logger.info("✅ Cleared team_members (kept John Sales)")
 
             logger.info("\n🔄 Sample data cleared. Tables are ready for fresh data.")
@@ -159,30 +183,91 @@ class DatabaseUtils:
             with self.connection.cursor() as cursor:
                 # Add more team members
                 team_members = [
-                    ('Sarah', 'Manager', 'sarah.manager@iswitchroofs.com', 'sales_manager'),
-                    ('Mike', 'Estimator', 'mike.estimator@iswitchroofs.com', 'estimator'),
-                    ('Lisa', 'Coordinator', 'lisa.coord@iswitchroofs.com', 'project_coordinator')
+                    ("Sarah", "Manager", "sarah.manager@iswitchroofs.com", "sales_manager"),
+                    ("Mike", "Estimator", "mike.estimator@iswitchroofs.com", "estimator"),
+                    ("Lisa", "Coordinator", "lisa.coord@iswitchroofs.com", "project_coordinator"),
                 ]
 
                 for first_name, last_name, email, role in team_members:
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         INSERT INTO team_members (first_name, last_name, email, role)
                         VALUES (%s, %s, %s, %s)
                         ON CONFLICT (email) DO NOTHING
-                    """, (first_name, last_name, email, role))
+                    """,
+                        (first_name, last_name, email, role),
+                    )
 
                 # Add more leads
                 leads = [
-                    ('Amanda', 'Thompson', '248-555-9999', 'amanda.t@email.com', 'google_ads', 'Birmingham', 'MI', '48009', 'qualified', 88),
-                    ('James', 'Miller', '313-555-8888', 'james.miller@email.com', 'referral', 'Grosse Pointe', 'MI', '48236', 'contacted', 92),
-                    ('Patricia', 'Anderson', '586-555-7777', 'patricia.a@email.com', 'facebook_ads', 'Rochester Hills', 'MI', '48309', 'new', 67)
+                    (
+                        "Amanda",
+                        "Thompson",
+                        "248-555-9999",
+                        "amanda.t@email.com",
+                        "google_ads",
+                        "Birmingham",
+                        "MI",
+                        "48009",
+                        "qualified",
+                        88,
+                    ),
+                    (
+                        "James",
+                        "Miller",
+                        "313-555-8888",
+                        "james.miller@email.com",
+                        "referral",
+                        "Grosse Pointe",
+                        "MI",
+                        "48236",
+                        "contacted",
+                        92,
+                    ),
+                    (
+                        "Patricia",
+                        "Anderson",
+                        "586-555-7777",
+                        "patricia.a@email.com",
+                        "facebook_ads",
+                        "Rochester Hills",
+                        "MI",
+                        "48309",
+                        "new",
+                        67,
+                    ),
                 ]
 
-                for first_name, last_name, phone, email, source, city, state, zip_code, status, score in leads:
-                    cursor.execute("""
+                for (
+                    first_name,
+                    last_name,
+                    phone,
+                    email,
+                    source,
+                    city,
+                    state,
+                    zip_code,
+                    status,
+                    score,
+                ) in leads:
+                    cursor.execute(
+                        """
                         INSERT INTO leads (first_name, last_name, phone, email, source, city, state, zip_code, status, lead_score)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (first_name, last_name, phone, email, source, city, state, zip_code, status, score))
+                    """,
+                        (
+                            first_name,
+                            last_name,
+                            phone,
+                            email,
+                            source,
+                            city,
+                            state,
+                            zip_code,
+                            status,
+                            score,
+                        ),
+                    )
 
                 logger.info("✅ Added 3 team members and 3 leads")
                 logger.info("🎯 Database now has expanded sample data for testing")
@@ -190,13 +275,14 @@ class DatabaseUtils:
         except psycopg2.Error as e:
             logger.error(f"Error adding sample data: {e}")
 
+
 def main():
     """Main function with command line arguments"""
-    parser = argparse.ArgumentParser(description='iSwitch Roofs CRM Database Utilities')
-    parser.add_argument('--check-tables', action='store_true', help='Check all CRM tables')
-    parser.add_argument('--sample-data', action='store_true', help='Show sample data')
-    parser.add_argument('--clear-data', action='store_true', help='Clear sample data')
-    parser.add_argument('--add-data', action='store_true', help='Add more sample data')
+    parser = argparse.ArgumentParser(description="iSwitch Roofs CRM Database Utilities")
+    parser.add_argument("--check-tables", action="store_true", help="Check all CRM tables")
+    parser.add_argument("--sample-data", action="store_true", help="Show sample data")
+    parser.add_argument("--clear-data", action="store_true", help="Clear sample data")
+    parser.add_argument("--add-data", action="store_true", help="Add more sample data")
 
     args = parser.parse_args()
 
@@ -220,7 +306,7 @@ def main():
 
         if args.clear_data:
             confirm = input("Are you sure you want to clear all sample data? (yes/no): ")
-            if confirm.lower() == 'yes':
+            if confirm.lower() == "yes":
                 db_utils.clear_sample_data()
             else:
                 logger.info("Operation cancelled.")
@@ -230,6 +316,7 @@ def main():
 
     finally:
         db_utils.disconnect()
+
 
 if __name__ == "__main__":
     main()

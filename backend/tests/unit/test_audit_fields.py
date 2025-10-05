@@ -5,12 +5,10 @@ Version: 1.0.0
 Tests for audit field functionality (created_by, updated_by).
 """
 
-import pytest
 from datetime import datetime
-from uuid import UUID
-from unittest.mock import MagicMock, patch
 
-from app.models.base import BaseDBModel, AuditMixin
+import pytest
+from app.models.base import AuditMixin, BaseDBModel
 from app.models.lead import Lead
 
 
@@ -24,10 +22,10 @@ class TestAuditFields:
         mixin = AuditMixin()
 
         # These fields should exist (will be None before saving)
-        assert hasattr(mixin, 'created_by')
-        assert hasattr(mixin, 'updated_by')
-        assert hasattr(mixin, 'created_by_email')
-        assert hasattr(mixin, 'updated_by_email')
+        assert hasattr(mixin, "created_by")
+        assert hasattr(mixin, "updated_by")
+        assert hasattr(mixin, "created_by_email")
+        assert hasattr(mixin, "updated_by_email")
 
     @pytest.mark.unit
     def test_base_model_includes_audit_fields(self):
@@ -35,13 +33,13 @@ class TestAuditFields:
         model = BaseDBModel()
 
         # Check inherited fields from BaseDBModel
-        assert hasattr(model, 'id')
-        assert hasattr(model, 'created_at')
-        assert hasattr(model, 'updated_at')
+        assert hasattr(model, "id")
+        assert hasattr(model, "created_at")
+        assert hasattr(model, "updated_at")
 
         # Check audit fields
-        assert hasattr(model, 'created_by')
-        assert hasattr(model, 'updated_by')
+        assert hasattr(model, "created_by")
+        assert hasattr(model, "updated_by")
 
     @pytest.mark.unit
     def test_audit_fields_are_optional(self):
@@ -80,14 +78,14 @@ class TestAuditFields:
             "last_name": "Doe",
             "email": "john@example.com",
             "phone": "2485551234",
-            "source": "website_form"
+            "source": "website_form",
         }
 
         lead = Lead(**lead_data)
 
         # Check that lead has audit fields
-        assert hasattr(lead, 'created_by')
-        assert hasattr(lead, 'updated_by')
+        assert hasattr(lead, "created_by")
+        assert hasattr(lead, "updated_by")
         assert lead.created_by is None  # Should be None initially
         assert lead.updated_by is None
 
@@ -106,12 +104,12 @@ class TestAuditFields:
         model_dict = model.model_dump(exclude_none=False)
 
         # Check audit fields are in dict
-        assert 'created_by' in model_dict
-        assert 'updated_by' in model_dict
-        assert 'created_by_email' in model_dict
-        assert 'updated_by_email' in model_dict
-        assert model_dict['created_by'] == user_id
-        assert model_dict['updated_by'] == user_id
+        assert "created_by" in model_dict
+        assert "updated_by" in model_dict
+        assert "created_by_email" in model_dict
+        assert "updated_by_email" in model_dict
+        assert model_dict["created_by"] == user_id
+        assert model_dict["updated_by"] == user_id
 
     @pytest.mark.unit
     def test_model_dict_excludes_none_audit_fields(self):
@@ -122,10 +120,10 @@ class TestAuditFields:
         model_dict = model.model_dump(exclude_none=True)
 
         # Audit fields should not be in dict when None
-        assert 'created_by' not in model_dict
-        assert 'updated_by' not in model_dict
-        assert 'created_by_email' not in model_dict
-        assert 'updated_by_email' not in model_dict
+        assert "created_by" not in model_dict
+        assert "updated_by" not in model_dict
+        assert "created_by_email" not in model_dict
+        assert "updated_by_email" not in model_dict
 
     @pytest.mark.unit
     def test_audit_fields_validation(self):
@@ -191,6 +189,7 @@ class TestAuditFields:
 
         # Parse and check
         import json
+
         parsed = json.loads(json_dict)
-        assert parsed.get('created_by') == user_id
-        assert parsed.get('updated_by') == user_id
+        assert parsed.get("created_by") == user_id
+        assert parsed.get("updated_by") == user_id

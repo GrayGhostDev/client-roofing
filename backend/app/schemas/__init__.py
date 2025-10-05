@@ -5,23 +5,22 @@ Version: 1.0.0
 Validation schemas for API requests and responses.
 """
 
-from .lead import (
-    LeadCreate,
-    LeadUpdate,
-    LeadResponse,
-    LeadListResponse,
-    LeadScoreBreakdown,
-    LeadListFilters
-)
-
 from .customer import (
     Customer,
     CustomerCreate,
-    CustomerUpdate,
-    CustomerResponse,
     CustomerListFilters,
+    CustomerResponse,
+    CustomerSegment,
     CustomerStatus,
-    CustomerSegment
+    CustomerUpdate,
+)
+from .lead import (
+    LeadCreate,
+    LeadListFilters,
+    LeadListResponse,
+    LeadResponse,
+    LeadScoreBreakdown,
+    LeadUpdate,
 )
 
 __all__ = [
@@ -37,5 +36,5 @@ __all__ = [
     "CustomerResponse",
     "CustomerListFilters",
     "CustomerStatus",
-    "CustomerSegment"
+    "CustomerSegment",
 ]

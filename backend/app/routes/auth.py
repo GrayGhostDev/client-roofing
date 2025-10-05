@@ -15,20 +15,20 @@ Author: iSwitch Roofs Development Team
 Date: 2025-01-04
 """
 
-from flask import Blueprint, request, jsonify, g
-from typing import Optional
 import logging
 from datetime import datetime
 
-from app.services.auth_service import auth_service, UserRole
+from flask import Blueprint, g, jsonify, request
+
+from app.services.auth_service import UserRole, auth_service
 from app.utils.auth import require_auth
 from app.utils.validators import validate_email_format, validate_phone_format
 
 logger = logging.getLogger(__name__)
-bp = Blueprint('auth', __name__)
+bp = Blueprint("auth", __name__)
 
 
-@bp.route('/register', methods=['POST'])
+@bp.route("/register", methods=["POST"])
 def register():
     """
     Register a new user account
@@ -66,34 +66,37 @@ def register():
             return jsonify({"error": "Request body is required"}), 400
 
         # Validate required fields
-        required_fields = ['email', 'password', 'name']
+        required_fields = ["email", "password", "name"]
         for field in required_fields:
             if field not in data:
                 return jsonify({"error": f"{field} is required"}), 400
 
         # Validate email format
-        if not validate_email_format(data['email']):
+        if not validate_email_format(data["email"]):
             return jsonify({"error": "Invalid email format"}), 400
 
         # Validate phone format if provided
-        phone = data.get('phone')
+        phone = data.get("phone")
         if phone and not validate_phone_format(phone):
             return jsonify({"error": "Invalid phone format"}), 400
 
         # Validate role if provided
-        role = data.get('role', UserRole.SALES_REP)
+        role = data.get("role", UserRole.SALES_REP)
         valid_roles = [UserRole.ADMIN, UserRole.MANAGER, UserRole.SALES_REP, UserRole.FIELD_TECH]
         if role not in valid_roles:
-            return jsonify({"error": f"Invalid role. Must be one of: {', '.join(valid_roles)}"}), 400
+            return (
+                jsonify({"error": f"Invalid role. Must be one of: {', '.join(valid_roles)}"}),
+                400,
+            )
 
         # Register user
         success, user_data, error = auth_service.register_user(
-            email=data['email'],
-            password=data['password'],
-            name=data['name'],
+            email=data["email"],
+            password=data["password"],
+            name=data["name"],
             phone=phone,
             role=role,
-            team_id=data.get('team_id')
+            team_id=data.get("team_id"),
         )
 
         if not success:
@@ -101,18 +104,23 @@ def register():
                 return jsonify({"error": error}), 409
             return jsonify({"error": error}), 400
 
-        return jsonify({
-            "success": True,
-            "message": "User registered successfully. Please check your email to verify your account.",
-            "user": user_data
-        }), 201
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "User registered successfully. Please check your email to verify your account.",
+                    "user": user_data,
+                }
+            ),
+            201,
+        )
 
     except Exception as e:
         logger.error(f"Error in registration: {str(e)}")
         return jsonify({"error": "Failed to register user"}), 500
 
 
-@bp.route('/login', methods=['POST'])
+@bp.route("/login", methods=["POST"])
 def login():
     """
     Login user and get JWT tokens
@@ -150,48 +158,40 @@ def login():
             return jsonify({"error": "Request body is required"}), 400
 
         # Validate required fields
-        if 'email' not in data or 'password' not in data:
+        if "email" not in data or "password" not in data:
             return jsonify({"error": "Email and password are required"}), 400
 
         # Get device info
-        device_info = data.get('device_info', {})
+        device_info = data.get("device_info", {})
         if not device_info:
             # Extract from request headers
             device_info = {
-                'user_agent': request.headers.get('User-Agent'),
-                'ip_address': request.remote_addr,
-                'device_type': 'web'
+                "user_agent": request.headers.get("User-Agent"),
+                "ip_address": request.remote_addr,
+                "device_type": "web",
             }
 
         # Attempt login
         success, token_data, error = auth_service.login(
-            email=data['email'],
-            password=data['password'],
-            device_info=device_info
+            email=data["email"], password=data["password"], device_info=device_info
         )
 
         if not success:
             if "too many" in str(error).lower():
                 return jsonify({"error": error}), 429
-            elif "locked" in str(error).lower() or "inactive" in str(error).lower():
-                return jsonify({"error": error}), 403
-            elif "not verified" in str(error).lower():
+            elif "locked" in str(error).lower() or "inactive" in str(error).lower() or "not verified" in str(error).lower():
                 return jsonify({"error": error}), 403
             else:
                 return jsonify({"error": error}), 400
 
-        return jsonify({
-            "success": True,
-            "message": "Login successful",
-            **token_data
-        }), 200
+        return jsonify({"success": True, "message": "Login successful", **token_data}), 200
 
     except Exception as e:
         logger.error(f"Error in login: {str(e)}")
         return jsonify({"error": "Failed to login"}), 500
 
 
-@bp.route('/logout', methods=['POST'])
+@bp.route("/logout", methods=["POST"])
 @require_auth
 def logout():
     """
@@ -215,31 +215,28 @@ def logout():
     """
     try:
         # Get user from request context (set by require_auth)
-        user = g.get('user')
+        user = g.get("user")
         if not user:
             return jsonify({"error": "User not found in context"}), 401
 
         # Get session ID if provided
         data = request.get_json() or {}
-        session_id = data.get('session_id')
+        session_id = data.get("session_id")
 
         # Logout user
-        success = auth_service.logout(user['user_id'], session_id)
+        success = auth_service.logout(user["user_id"], session_id)
 
         if not success:
             return jsonify({"error": "Failed to logout"}), 500
 
-        return jsonify({
-            "success": True,
-            "message": "Logout successful"
-        }), 200
+        return jsonify({"success": True, "message": "Logout successful"}), 200
 
     except Exception as e:
         logger.error(f"Error in logout: {str(e)}")
         return jsonify({"error": "Failed to logout"}), 500
 
 
-@bp.route('/refresh', methods=['POST'])
+@bp.route("/refresh", methods=["POST"])
 def refresh_token():
     """
     Refresh access token using refresh token
@@ -263,27 +260,26 @@ def refresh_token():
     try:
         data = request.get_json()
 
-        if not data or 'refresh_token' not in data:
+        if not data or "refresh_token" not in data:
             return jsonify({"error": "Refresh token is required"}), 400
 
         # Refresh token
-        success, token_data, error = auth_service.refresh_token(data['refresh_token'])
+        success, token_data, error = auth_service.refresh_token(data["refresh_token"])
 
         if not success:
             return jsonify({"error": error}), 400
 
-        return jsonify({
-            "success": True,
-            "message": "Token refreshed successfully",
-            **token_data
-        }), 200
+        return (
+            jsonify({"success": True, "message": "Token refreshed successfully", **token_data}),
+            200,
+        )
 
     except Exception as e:
         logger.error(f"Error refreshing token: {str(e)}")
         return jsonify({"error": "Failed to refresh token"}), 500
 
 
-@bp.route('/password/reset/request', methods=['POST'])
+@bp.route("/password/reset/request", methods=["POST"])
 def request_password_reset():
     """
     Request password reset email
@@ -306,24 +302,29 @@ def request_password_reset():
     try:
         data = request.get_json()
 
-        if not data or 'email' not in data:
+        if not data or "email" not in data:
             return jsonify({"error": "Email is required"}), 400
 
         # Request password reset
-        success, error = auth_service.request_password_reset(data['email'])
+        success, error = auth_service.request_password_reset(data["email"])
 
         # Always return success for security (don't reveal if email exists)
-        return jsonify({
-            "success": True,
-            "message": "If an account exists with this email, a password reset link has been sent."
-        }), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "If an account exists with this email, a password reset link has been sent.",
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         logger.error(f"Error requesting password reset: {str(e)}")
         return jsonify({"error": "Failed to process request"}), 500
 
 
-@bp.route('/password/reset', methods=['POST'])
+@bp.route("/password/reset", methods=["POST"])
 def reset_password():
     """
     Reset password with token
@@ -353,29 +354,33 @@ def reset_password():
             return jsonify({"error": "Request body is required"}), 400
 
         # Validate required fields
-        if 'token' not in data or 'new_password' not in data:
+        if "token" not in data or "new_password" not in data:
             return jsonify({"error": "Token and new password are required"}), 400
 
         # Reset password
         success, error = auth_service.reset_password(
-            reset_token=data['token'],
-            new_password=data['new_password']
+            reset_token=data["token"], new_password=data["new_password"]
         )
 
         if not success:
             return jsonify({"error": error}), 400
 
-        return jsonify({
-            "success": True,
-            "message": "Password reset successful. Please login with your new password."
-        }), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Password reset successful. Please login with your new password.",
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         logger.error(f"Error resetting password: {str(e)}")
         return jsonify({"error": "Failed to reset password"}), 500
 
 
-@bp.route('/password/change', methods=['POST'])
+@bp.route("/password/change", methods=["POST"])
 @require_auth
 def change_password():
     """
@@ -405,7 +410,7 @@ def change_password():
     """
     try:
         # Get user from request context
-        user = g.get('user')
+        user = g.get("user")
         if not user:
             return jsonify({"error": "User not found in context"}), 401
 
@@ -415,30 +420,27 @@ def change_password():
             return jsonify({"error": "Request body is required"}), 400
 
         # Validate required fields
-        if 'current_password' not in data or 'new_password' not in data:
+        if "current_password" not in data or "new_password" not in data:
             return jsonify({"error": "Current and new passwords are required"}), 400
 
         # Change password
         success, error = auth_service.change_password(
-            user_id=user['user_id'],
-            current_password=data['current_password'],
-            new_password=data['new_password']
+            user_id=user["user_id"],
+            current_password=data["current_password"],
+            new_password=data["new_password"],
         )
 
         if not success:
             return jsonify({"error": error}), 400
 
-        return jsonify({
-            "success": True,
-            "message": "Password changed successfully"
-        }), 200
+        return jsonify({"success": True, "message": "Password changed successfully"}), 200
 
     except Exception as e:
         logger.error(f"Error changing password: {str(e)}")
         return jsonify({"error": "Failed to change password"}), 500
 
 
-@bp.route('/verify-email', methods=['POST'])
+@bp.route("/verify-email", methods=["POST"])
 def verify_email():
     """
     Verify email with token
@@ -462,26 +464,28 @@ def verify_email():
     try:
         data = request.get_json()
 
-        if not data or 'token' not in data:
+        if not data or "token" not in data:
             return jsonify({"error": "Verification token is required"}), 400
 
         # Verify email
-        success, error = auth_service.verify_email(data['token'])
+        success, error = auth_service.verify_email(data["token"])
 
         if not success:
             return jsonify({"error": error}), 400
 
-        return jsonify({
-            "success": True,
-            "message": "Email verified successfully. You can now login."
-        }), 200
+        return (
+            jsonify(
+                {"success": True, "message": "Email verified successfully. You can now login."}
+            ),
+            200,
+        )
 
     except Exception as e:
         logger.error(f"Error verifying email: {str(e)}")
         return jsonify({"error": "Failed to verify email"}), 500
 
 
-@bp.route('/me', methods=['GET'])
+@bp.route("/me", methods=["GET"])
 @require_auth
 def get_current_user():
     """
@@ -500,19 +504,33 @@ def get_current_user():
     """
     try:
         # Get user from request context
-        user = g.get('user')
+        user = g.get("user")
         if not user:
             return jsonify({"error": "User not found in context"}), 401
 
         # Get full user data from database
         from app.config import get_supabase_client
+
         supabase = get_supabase_client()
 
-        result = supabase.table('users').select(
-            'id', 'email', 'name', 'role', 'phone', 'team_id',
-            'is_active', 'is_verified', 'created_at', 'last_login',
-            'settings'
-        ).eq('id', user['user_id']).execute()
+        result = (
+            supabase.table("users")
+            .select(
+                "id",
+                "email",
+                "name",
+                "role",
+                "phone",
+                "team_id",
+                "is_active",
+                "is_verified",
+                "created_at",
+                "last_login",
+                "settings",
+            )
+            .eq("id", user["user_id"])
+            .execute()
+        )
 
         if not result.data:
             return jsonify({"error": "User not found"}), 404
@@ -520,20 +538,16 @@ def get_current_user():
         user_data = result.data[0]
 
         # Get permissions for role
-        permissions = auth_service.get_user_permissions(user_data['role'])
+        permissions = auth_service.get_user_permissions(user_data["role"])
 
-        return jsonify({
-            "success": True,
-            "user": user_data,
-            "permissions": permissions
-        }), 200
+        return jsonify({"success": True, "user": user_data, "permissions": permissions}), 200
 
     except Exception as e:
         logger.error(f"Error getting current user: {str(e)}")
         return jsonify({"error": "Failed to get user information"}), 500
 
 
-@bp.route('/validate', methods=['POST'])
+@bp.route("/validate", methods=["POST"])
 def validate_token():
     """
     Validate JWT token
@@ -557,36 +571,40 @@ def validate_token():
     try:
         data = request.get_json()
 
-        if not data or 'token' not in data:
+        if not data or "token" not in data:
             return jsonify({"error": "Token is required"}), 400
 
         # Validate token
-        payload = auth_service.validate_token(data['token'])
+        payload = auth_service.validate_token(data["token"])
 
         if not payload:
-            return jsonify({
-                "success": False,
-                "valid": False,
-                "error": "Invalid or expired token"
-            }), 400
+            return (
+                jsonify({"success": False, "valid": False, "error": "Invalid or expired token"}),
+                400,
+            )
 
-        return jsonify({
-            "success": True,
-            "valid": True,
-            "payload": {
-                "user_id": payload.get('user_id'),
-                "email": payload.get('email'),
-                "role": payload.get('role'),
-                "expires_at": payload.get('exp')
-            }
-        }), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "valid": True,
+                    "payload": {
+                        "user_id": payload.get("user_id"),
+                        "email": payload.get("email"),
+                        "role": payload.get("role"),
+                        "expires_at": payload.get("exp"),
+                    },
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         logger.error(f"Error validating token: {str(e)}")
         return jsonify({"error": "Failed to validate token"}), 500
 
 
-@bp.route('/permissions/<permission>', methods=['GET'])
+@bp.route("/permissions/<permission>", methods=["GET"])
 @require_auth
 def check_permission(permission: str):
     """
@@ -608,19 +626,24 @@ def check_permission(permission: str):
     """
     try:
         # Get user from request context
-        user = g.get('user')
+        user = g.get("user")
         if not user:
             return jsonify({"error": "User not found in context"}), 401
 
         # Check permission
-        has_permission = auth_service.has_permission(user['role'], permission)
+        has_permission = auth_service.has_permission(user["role"], permission)
 
-        return jsonify({
-            "success": True,
-            "permission": permission,
-            "has_permission": has_permission,
-            "user_role": user['role']
-        }), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "permission": permission,
+                    "has_permission": has_permission,
+                    "user_role": user["role"],
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         logger.error(f"Error checking permission: {str(e)}")
@@ -628,7 +651,7 @@ def check_permission(permission: str):
 
 
 # Health check endpoint
-@bp.route('/health', methods=['GET'])
+@bp.route("/health", methods=["GET"])
 def health_check():
     """
     Check auth service health
@@ -636,12 +659,17 @@ def health_check():
     Returns:
         200: Service is healthy
     """
-    return jsonify({
-        "success": True,
-        "service": "auth",
-        "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat()
-    }), 200
+    return (
+        jsonify(
+            {
+                "success": True,
+                "service": "auth",
+                "status": "healthy",
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+        ),
+        200,
+    )
 
 
 # Error handlers

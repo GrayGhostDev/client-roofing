@@ -5,18 +5,15 @@ Version: 1.0.0
 Handles SMS delivery through Twilio API with scheduling, opt-out management, and tracking.
 """
 
-import os
 import logging
-from typing import Optional, List, Dict, Any, Tuple
-from datetime import datetime, timedelta
+import os
 import re
+from datetime import datetime
+from typing import Any
 
-from twilio.rest import Client
 from twilio.base.exceptions import TwilioRestException
+from twilio.rest import Client
 from twilio.twiml.messaging_response import MessagingResponse
-
-from app.models.notification import NotificationStatus
-
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +21,12 @@ logger = logging.getLogger(__name__)
 class SMSService:
     """Service for sending SMS messages via Twilio."""
 
-    def __init__(self,
-                 account_sid: Optional[str] = None,
-                 auth_token: Optional[str] = None,
-                 from_number: Optional[str] = None):
+    def __init__(
+        self,
+        account_sid: str | None = None,
+        auth_token: str | None = None,
+        from_number: str | None = None,
+    ):
         """
         Initialize SMS Service.
 
@@ -36,9 +35,9 @@ class SMSService:
             auth_token: Twilio Auth Token
             from_number: Twilio phone number to send from
         """
-        self.account_sid = account_sid or os.environ.get('TWILIO_ACCOUNT_SID')
-        self.auth_token = auth_token or os.environ.get('TWILIO_AUTH_TOKEN')
-        self.from_number = from_number or os.environ.get('TWILIO_PHONE_NUMBER')
+        self.account_sid = account_sid or os.environ.get("TWILIO_ACCOUNT_SID")
+        self.auth_token = auth_token or os.environ.get("TWILIO_AUTH_TOKEN")
+        self.from_number = from_number or os.environ.get("TWILIO_PHONE_NUMBER")
 
         if not all([self.account_sid, self.auth_token, self.from_number]):
             logger.warning("Twilio credentials not fully configured")
@@ -48,21 +47,23 @@ class SMSService:
 
         # Message settings
         self.max_message_length = 1600  # Maximum SMS length
-        self.default_country_code = '+1'  # Default to US
+        self.default_country_code = "+1"  # Default to US
 
         # Opt-out keywords
-        self.opt_out_keywords = ['STOP', 'STOPALL', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT']
-        self.opt_in_keywords = ['START', 'YES', 'UNSTOP', 'SUBSCRIBE']
+        self.opt_out_keywords = ["STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT"]
+        self.opt_in_keywords = ["START", "YES", "UNSTOP", "SUBSCRIBE"]
 
-    def send_sms(self,
-                 to_phone: str,
-                 message: str,
-                 from_number: Optional[str] = None,
-                 messaging_service_sid: Optional[str] = None,
-                 media_url: Optional[List[str]] = None,
-                 callback_url: Optional[str] = None,
-                 send_at: Optional[datetime] = None,
-                 validity_period: Optional[int] = None) -> Tuple[bool, Optional[str], Optional[Dict]]:
+    def send_sms(
+        self,
+        to_phone: str,
+        message: str,
+        from_number: str | None = None,
+        messaging_service_sid: str | None = None,
+        media_url: list[str] | None = None,
+        callback_url: str | None = None,
+        send_at: datetime | None = None,
+        validity_period: int | None = None,
+    ) -> tuple[bool, str | None, dict | None]:
         """
         Send an SMS message via Twilio.
 
@@ -89,69 +90,74 @@ class SMSService:
 
             # Validate message length
             if len(message) > self.max_message_length:
-                logger.warning(f"Message truncated from {len(message)} to {self.max_message_length} characters")
-                message = message[:self.max_message_length]
+                logger.warning(
+                    f"Message truncated from {len(message)} to {self.max_message_length} characters"
+                )
+                message = message[: self.max_message_length]
 
             # Prepare message parameters
-            params = {
-                'body': message,
-                'to': to_phone
-            }
+            params = {"body": message, "to": to_phone}
 
             # Set from number or messaging service
             if messaging_service_sid:
-                params['messaging_service_sid'] = messaging_service_sid
+                params["messaging_service_sid"] = messaging_service_sid
             else:
-                params['from_'] = from_number or self.from_number
+                params["from_"] = from_number or self.from_number
 
             # Add media URLs for MMS
             if media_url:
-                params['media_url'] = media_url
+                params["media_url"] = media_url
 
             # Add status callback
             if callback_url:
-                params['status_callback'] = callback_url
+                params["status_callback"] = callback_url
 
             # Add validity period
             if validity_period:
-                params['validity_period'] = validity_period
+                params["validity_period"] = validity_period
 
             # Schedule message (requires Messaging Service)
             if send_at and messaging_service_sid:
-                params['send_at'] = send_at.isoformat()
-                params['schedule_type'] = 'fixed'
+                params["send_at"] = send_at.isoformat()
+                params["schedule_type"] = "fixed"
 
             # Send message
             message_instance = self.client.messages.create(**params)
 
             logger.info(f"SMS sent to {to_phone} (SID: {message_instance.sid})")
 
-            return True, message_instance.sid, {
-                "sid": message_instance.sid,
-                "status": message_instance.status,
-                "date_created": message_instance.date_created.isoformat() if message_instance.date_created else None,
-                "price": message_instance.price,
-                "price_unit": message_instance.price_unit,
-                "num_segments": message_instance.num_segments
-            }
+            return (
+                True,
+                message_instance.sid,
+                {
+                    "sid": message_instance.sid,
+                    "status": message_instance.status,
+                    "date_created": (
+                        message_instance.date_created.isoformat()
+                        if message_instance.date_created
+                        else None
+                    ),
+                    "price": message_instance.price,
+                    "price_unit": message_instance.price_unit,
+                    "num_segments": message_instance.num_segments,
+                },
+            )
 
         except TwilioRestException as e:
             logger.error(f"Twilio API error: {e}")
-            return False, None, {
-                "error": str(e),
-                "code": e.code,
-                "status": e.status
-            }
+            return False, None, {"error": str(e), "code": e.code, "status": e.status}
 
         except Exception as e:
             logger.error(f"Failed to send SMS: {str(e)}")
             return False, None, {"error": str(e)}
 
-    def send_bulk_sms(self,
-                     recipients: List[str],
-                     message: str,
-                     personalized: bool = False,
-                     personalization_data: Optional[Dict[str, Dict]] = None) -> Dict[str, Any]:
+    def send_bulk_sms(
+        self,
+        recipients: list[str],
+        message: str,
+        personalized: bool = False,
+        personalization_data: dict[str, dict] | None = None,
+    ) -> dict[str, Any]:
         """
         Send SMS to multiple recipients.
 
@@ -167,12 +173,7 @@ class SMSService:
         if not self.client:
             return {"success": False, "error": "SMS service not configured"}
 
-        results = {
-            "total": len(recipients),
-            "sent": 0,
-            "failed": 0,
-            "errors": []
-        }
+        results = {"total": len(recipients), "sent": 0, "failed": 0, "errors": []}
 
         for phone in recipients:
             try:
@@ -189,22 +190,18 @@ class SMSService:
                     results["sent"] += 1
                 else:
                     results["failed"] += 1
-                    results["errors"].append({
-                        "phone": phone,
-                        "error": data.get("error", "Unknown error")
-                    })
+                    results["errors"].append(
+                        {"phone": phone, "error": data.get("error", "Unknown error")}
+                    )
 
             except Exception as e:
                 results["failed"] += 1
-                results["errors"].append({
-                    "phone": phone,
-                    "error": str(e)
-                })
+                results["errors"].append({"phone": phone, "error": str(e)})
 
         results["success"] = results["failed"] == 0
         return results
 
-    def get_message_status(self, message_sid: str) -> Optional[Dict[str, Any]]:
+    def get_message_status(self, message_sid: str) -> dict[str, Any] | None:
         """
         Get the status of a sent message.
 
@@ -232,7 +229,7 @@ class SMSService:
                 "error_message": message.error_message,
                 "num_segments": message.num_segments,
                 "price": message.price,
-                "price_unit": message.price_unit
+                "price_unit": message.price_unit,
             }
 
         except Exception as e:
@@ -253,8 +250,8 @@ class SMSService:
             return False
 
         try:
-            message = self.client.messages(message_sid).update(status='canceled')
-            return message.status == 'canceled'
+            message = self.client.messages(message_sid).update(status="canceled")
+            return message.status == "canceled"
 
         except Exception as e:
             logger.error(f"Failed to cancel message: {str(e)}")
@@ -313,10 +310,10 @@ class SMSService:
             E.164 formatted phone number
         """
         # Remove all non-digit characters except +
-        cleaned = re.sub(r'[^\d+]', '', phone)
+        cleaned = re.sub(r"[^\d+]", "", phone)
 
         # If already in E.164 format
-        if cleaned.startswith('+'):
+        if cleaned.startswith("+"):
             return cleaned
 
         # US number without country code
@@ -324,7 +321,7 @@ class SMSService:
             return f"{self.default_country_code}{cleaned}"
 
         # US number with 1
-        if len(cleaned) == 11 and cleaned.startswith('1'):
+        if len(cleaned) == 11 and cleaned.startswith("1"):
             return f"+{cleaned}"
 
         # Assume it needs default country code
@@ -343,7 +340,7 @@ class SMSService:
         if not self.client:
             # Basic validation only
             formatted = self._format_phone_number(phone)
-            return len(formatted) >= 10 and formatted.startswith('+')
+            return len(formatted) >= 10 and formatted.startswith("+")
 
         try:
             # Use Twilio Lookup API for validation
@@ -356,7 +353,7 @@ class SMSService:
         except Exception:
             return False
 
-    def get_phone_info(self, phone: str) -> Optional[Dict[str, Any]]:
+    def get_phone_info(self, phone: str) -> dict[str, Any] | None:
         """
         Get information about a phone number using Twilio Lookup.
 
@@ -372,14 +369,14 @@ class SMSService:
         try:
             phone_number = self.client.lookups.v2.phone_numbers(
                 self._format_phone_number(phone)
-            ).fetch(fields='carrier,caller_name')
+            ).fetch(fields="carrier,caller_name")
 
             return {
                 "phone_number": phone_number.phone_number,
                 "national_format": phone_number.national_format,
                 "country_code": phone_number.country_code,
                 "carrier": phone_number.carrier,
-                "caller_name": phone_number.caller_name
+                "caller_name": phone_number.caller_name,
             }
 
         except Exception as e:
@@ -402,11 +399,11 @@ class SMSService:
             return False
 
         # Check carrier type
-        carrier = info.get('carrier', {})
-        carrier_type = carrier.get('type', '')
+        carrier = info.get("carrier", {})
+        carrier_type = carrier.get("type", "")
 
         # Mobile and voip numbers can typically receive SMS
-        return carrier_type in ['mobile', 'voip']
+        return carrier_type in ["mobile", "voip"]
 
     def calculate_message_segments(self, message: str) -> int:
         """

@@ -5,15 +5,13 @@ Version: 1.0.0
 Handles customer lifecycle management, segmentation, and value calculations.
 """
 
-from typing import Optional, List, Dict, Any, Tuple
-from datetime import datetime, timedelta
-from uuid import UUID
-from enum import Enum
 import logging
+from datetime import datetime, timedelta
+from enum import Enum
+from typing import Any
+from uuid import UUID
 
-from app.models.customer import Customer, CustomerStatus, CustomerSegment
-from app.models.customer_sqlalchemy import CustomerStatusEnum, CustomerSegmentEnum
-
+from app.models.customer import Customer, CustomerSegment, CustomerStatus
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +22,13 @@ class CustomerService:
     def __init__(self):
         """Initialize Customer Service."""
         self.segment_thresholds = {
-            'premium_ltv': 50000,      # LTV for premium segment
-            'repeat_projects': 2,       # Projects for repeat customer
-            'vip_ltv': 100000,         # LTV for VIP status
-            'referral_min': 3,         # Min referrals for partner
+            "premium_ltv": 50000,  # LTV for premium segment
+            "repeat_projects": 2,  # Projects for repeat customer
+            "vip_ltv": 100000,  # LTV for VIP status
+            "referral_min": 3,  # Min referrals for partner
         }
 
-    def calculate_lifetime_value(self, projects: List[Dict[str, Any]]) -> Tuple[int, int]:
+    def calculate_lifetime_value(self, projects: list[dict[str, Any]]) -> tuple[int, int]:
         """
         Calculate customer lifetime value from projects.
 
@@ -44,11 +42,11 @@ class CustomerService:
         completed_count = 0
 
         for project in projects:
-            if project.get('status') in ['completed', 'in_progress']:
-                amount = project.get('total_amount', 0)
+            if project.get("status") in ["completed", "in_progress"]:
+                amount = project.get("total_amount", 0)
                 if amount:
                     total_value += amount
-                    if project.get('status') == 'completed':
+                    if project.get("status") == "completed":
                         completed_count += 1
 
         return total_value, completed_count
@@ -64,21 +62,21 @@ class CustomerService:
             CustomerSegment enum value
         """
         # Premium segment - high lifetime value
-        if customer.lifetime_value >= self.segment_thresholds['premium_ltv']:
+        if customer.lifetime_value >= self.segment_thresholds["premium_ltv"]:
             return CustomerSegment.PREMIUM
 
         # Referral source - active referrers
-        if customer.referral_count >= self.segment_thresholds['referral_min']:
+        if customer.referral_count >= self.segment_thresholds["referral_min"]:
             return CustomerSegment.REFERRAL_SOURCE
 
         # Repeat customer - multiple projects
-        if customer.project_count >= self.segment_thresholds['repeat_projects']:
+        if customer.project_count >= self.segment_thresholds["repeat_projects"]:
             return CustomerSegment.REPEAT
 
         # Standard segment
         return CustomerSegment.STANDARD
 
-    def determine_segment_from_dict(self, customer_data: Dict[str, Any]) -> str:
+    def determine_segment_from_dict(self, customer_data: dict[str, Any]) -> str:
         """
         Determine customer segment based on metrics from dict data.
 
@@ -88,27 +86,28 @@ class CustomerService:
         Returns:
             String segment value
         """
-        lifetime_value = customer_data.get('lifetime_value', 0)
-        referral_count = customer_data.get('referral_count', 0)
-        project_count = customer_data.get('project_count', 0)
+        lifetime_value = customer_data.get("lifetime_value", 0)
+        referral_count = customer_data.get("referral_count", 0)
+        project_count = customer_data.get("project_count", 0)
 
         # Premium segment - high lifetime value
-        if lifetime_value >= self.segment_thresholds['premium_ltv']:
-            return 'premium'
+        if lifetime_value >= self.segment_thresholds["premium_ltv"]:
+            return "premium"
 
         # Referral source - active referrers
-        if referral_count >= self.segment_thresholds['referral_min']:
-            return 'referral_source'
+        if referral_count >= self.segment_thresholds["referral_min"]:
+            return "referral_source"
 
         # Repeat customer - multiple projects
-        if project_count >= self.segment_thresholds['repeat_projects']:
-            return 'repeat'
+        if project_count >= self.segment_thresholds["repeat_projects"]:
+            return "repeat"
 
         # Standard segment
-        return 'standard'
+        return "standard"
 
-    def determine_status(self, customer: Customer,
-                         last_project_date: Optional[datetime] = None) -> CustomerStatus:
+    def determine_status(
+        self, customer: Customer, last_project_date: datetime | None = None
+    ) -> CustomerStatus:
         """
         Determine customer status based on activity.
 
@@ -120,7 +119,7 @@ class CustomerService:
             CustomerStatus enum value
         """
         # VIP status for high-value customers
-        if customer.lifetime_value >= self.segment_thresholds['vip_ltv']:
+        if customer.lifetime_value >= self.segment_thresholds["vip_ltv"]:
             return CustomerStatus.VIP
 
         # Check for churn (no activity in 18 months)
@@ -137,7 +136,7 @@ class CustomerService:
 
         return CustomerStatus.ACTIVE
 
-    def calculate_nps_category(self, nps_score: Optional[int]) -> str:
+    def calculate_nps_category(self, nps_score: int | None) -> str:
         """
         Categorize NPS score.
 
@@ -156,8 +155,7 @@ class CustomerService:
         else:
             return "detractor"
 
-    def calculate_average_project_value(self, lifetime_value: int,
-                                       project_count: int) -> int:
+    def calculate_average_project_value(self, lifetime_value: int, project_count: int) -> int:
         """
         Calculate average project value.
 
@@ -172,8 +170,9 @@ class CustomerService:
             return 0
         return lifetime_value // project_count
 
-    def get_follow_up_schedule(self, customer: Customer,
-                              last_project_date: Optional[datetime]) -> Optional[datetime]:
+    def get_follow_up_schedule(
+        self, customer: Customer, last_project_date: datetime | None
+    ) -> datetime | None:
         """
         Determine next follow-up date based on customer profile.
 
@@ -205,8 +204,9 @@ class CustomerService:
         # Default to monthly
         return datetime.utcnow() + timedelta(days=30)
 
-    def merge_customers(self, primary_id: UUID, duplicate_id: UUID,
-                       customer_data: Dict[str, Any]) -> Dict[str, Any]:
+    def merge_customers(
+        self, primary_id: UUID, duplicate_id: UUID, customer_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Merge duplicate customer records.
 
@@ -219,34 +219,35 @@ class CustomerService:
             Merged customer data
         """
         # Combine lifetime values
-        primary_ltv = customer_data.get('primary', {}).get('lifetime_value', 0)
-        duplicate_ltv = customer_data.get('duplicate', {}).get('lifetime_value', 0)
+        primary_ltv = customer_data.get("primary", {}).get("lifetime_value", 0)
+        duplicate_ltv = customer_data.get("duplicate", {}).get("lifetime_value", 0)
 
         # Combine project counts
-        primary_projects = customer_data.get('primary', {}).get('project_count', 0)
-        duplicate_projects = customer_data.get('duplicate', {}).get('project_count', 0)
+        primary_projects = customer_data.get("primary", {}).get("project_count", 0)
+        duplicate_projects = customer_data.get("duplicate", {}).get("project_count", 0)
 
         # Combine referral metrics
-        primary_referrals = customer_data.get('primary', {}).get('referral_count', 0)
-        duplicate_referrals = customer_data.get('duplicate', {}).get('referral_count', 0)
+        primary_referrals = customer_data.get("primary", {}).get("referral_count", 0)
+        duplicate_referrals = customer_data.get("duplicate", {}).get("referral_count", 0)
 
         merged = {
-            'id': str(primary_id),
-            'lifetime_value': primary_ltv + duplicate_ltv,
-            'project_count': primary_projects + duplicate_projects,
-            'referral_count': primary_referrals + duplicate_referrals,
-            'merged_from': str(duplicate_id),
-            'merge_date': datetime.utcnow().isoformat()
+            "id": str(primary_id),
+            "lifetime_value": primary_ltv + duplicate_ltv,
+            "project_count": primary_projects + duplicate_projects,
+            "referral_count": primary_referrals + duplicate_referrals,
+            "merged_from": str(duplicate_id),
+            "merge_date": datetime.utcnow().isoformat(),
         }
 
         # Recalculate average project value
-        if merged['project_count'] > 0:
-            merged['avg_project_value'] = merged['lifetime_value'] // merged['project_count']
+        if merged["project_count"] > 0:
+            merged["avg_project_value"] = merged["lifetime_value"] // merged["project_count"]
 
         return merged
 
-    def export_customers_csv(self, customers: List[Customer],
-                            include_fields: Optional[List[str]] = None) -> str:
+    def export_customers_csv(
+        self, customers: list[Customer], include_fields: list[str] | None = None
+    ) -> str:
         """
         Export customers to CSV format.
 
@@ -263,10 +264,20 @@ class CustomerService:
         # Default fields if not specified
         if not include_fields:
             include_fields = [
-                'first_name', 'last_name', 'email', 'phone',
-                'street_address', 'city', 'state', 'zip_code',
-                'lifetime_value', 'project_count', 'status',
-                'segment', 'nps_score', 'created_at'
+                "first_name",
+                "last_name",
+                "email",
+                "phone",
+                "street_address",
+                "city",
+                "state",
+                "zip_code",
+                "lifetime_value",
+                "project_count",
+                "status",
+                "segment",
+                "nps_score",
+                "created_at",
             ]
 
         output = io.StringIO()
@@ -349,9 +360,9 @@ class CustomerService:
 
         return min(score, 100)
 
-    def get_customer_insights(self, customer: Customer,
-                             interactions: List[Dict],
-                             projects: List[Dict]) -> Dict[str, Any]:
+    def get_customer_insights(
+        self, customer: Customer, interactions: list[dict], projects: list[dict]
+    ) -> dict[str, Any]:
         """
         Generate insights about a customer.
 
@@ -364,38 +375,41 @@ class CustomerService:
             Dictionary of insights
         """
         insights = {
-            'health_score': self.calculate_customer_health_score(customer),
-            'nps_category': self.calculate_nps_category(customer.nps_score),
-            'is_at_risk': False,
-            'opportunities': [],
-            'recommendations': []
+            "health_score": self.calculate_customer_health_score(customer),
+            "nps_category": self.calculate_nps_category(customer.nps_score),
+            "is_at_risk": False,
+            "opportunities": [],
+            "recommendations": [],
         }
 
         # Check if at risk
         if customer.status in [CustomerStatus.INACTIVE, CustomerStatus.CHURNED]:
-            insights['is_at_risk'] = True
-            insights['recommendations'].append("Schedule re-engagement campaign")
+            insights["is_at_risk"] = True
+            insights["recommendations"].append("Schedule re-engagement campaign")
 
         # Check for opportunities
         if customer.lifetime_value > 30000 and not customer.is_referral_partner:
-            insights['opportunities'].append("Candidate for referral program")
+            insights["opportunities"].append("Candidate for referral program")
 
         if customer.project_count == 1 and customer.roof_age and customer.roof_age > 15:
-            insights['opportunities'].append("May need maintenance or replacement soon")
+            insights["opportunities"].append("May need maintenance or replacement soon")
 
         # Recent interaction patterns
         if interactions:
-            recent_interactions = [i for i in interactions
-                                  if (datetime.utcnow() - datetime.fromisoformat(i['date'])).days <= 30]
+            recent_interactions = [
+                i
+                for i in interactions
+                if (datetime.utcnow() - datetime.fromisoformat(i["date"])).days <= 30
+            ]
             if len(recent_interactions) > 5:
-                insights['opportunities'].append("High engagement - potential upsell opportunity")
+                insights["opportunities"].append("High engagement - potential upsell opportunity")
 
         # Seasonal recommendations
         current_month = datetime.utcnow().month
         if current_month in [3, 4, 5]:  # Spring
-            insights['recommendations'].append("Good time for roof inspection outreach")
+            insights["recommendations"].append("Good time for roof inspection outreach")
         elif current_month in [9, 10]:  # Fall
-            insights['recommendations'].append("Winter preparation services")
+            insights["recommendations"].append("Winter preparation services")
 
         return insights
 

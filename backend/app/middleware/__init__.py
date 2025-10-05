@@ -7,16 +7,16 @@ Middleware for request/response processing.
 
 from .audit_middleware import (
     AuditMiddleware,
+    add_audit_fields,
     audit_middleware,
     get_current_user,
-    add_audit_fields,
-    setup_audit_middleware
+    setup_audit_middleware,
 )
 
 __all__ = [
-    'AuditMiddleware',
-    'audit_middleware',
-    'get_current_user',
-    'add_audit_fields',
-    'setup_audit_middleware'
+    "AuditMiddleware",
+    "audit_middleware",
+    "get_current_user",
+    "add_audit_fields",
+    "setup_audit_middleware",
 ]

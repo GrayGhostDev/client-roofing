@@ -5,16 +5,16 @@ Version: 1.0.0
 Middleware for automatically tracking user actions in audit fields.
 """
 
-from flask import g, request
-from functools import wraps
-from typing import Optional, Dict, Any
-import jwt
 import logging
+from functools import wraps
+from typing import Any
+
+from flask import g, request
 
 logger = logging.getLogger(__name__)
 
 
-def get_current_user() -> Optional[Dict[str, Any]]:
+def get_current_user() -> dict[str, Any] | None:
     """
     Get the current user from the request context.
 
@@ -24,22 +24,22 @@ def get_current_user() -> Optional[Dict[str, Any]]:
         Dict: User information including id and email, or None if not authenticated
     """
     # Check if user is already set in Flask's g object
-    if hasattr(g, 'current_user') and g.current_user:
+    if hasattr(g, "current_user") and g.current_user:
         return g.current_user
 
     # Try to extract from JWT token in Authorization header
-    auth_header = request.headers.get('Authorization', '')
-    if auth_header.startswith('Bearer '):
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
         try:
-            token = auth_header.split(' ')[1]
+            token = auth_header.split(" ")[1]
             # This will be replaced with actual JWT decoding when auth is implemented
             # For now, return mock user for testing
             if token == "mock_token_for_testing":
                 user = {
-                    'id': 'test_user_id',
-                    'email': 'test@iswitchroofs.com',
-                    'name': 'Test User',
-                    'role': 'admin'
+                    "id": "test_user_id",
+                    "email": "test@iswitchroofs.com",
+                    "name": "Test User",
+                    "role": "admin",
                 }
                 g.current_user = user
                 return user
@@ -73,7 +73,7 @@ def get_current_user() -> Optional[Dict[str, Any]]:
     return None
 
 
-def add_audit_fields(data: Dict[str, Any], is_update: bool = False) -> Dict[str, Any]:
+def add_audit_fields(data: dict[str, Any], is_update: bool = False) -> dict[str, Any]:
     """
     Add audit fields to data dictionary.
 
@@ -89,14 +89,14 @@ def add_audit_fields(data: Dict[str, Any], is_update: bool = False) -> Dict[str,
     if user:
         if not is_update:
             # For create operations, set both created and updated fields
-            data['created_by'] = user.get('id')
-            data['created_by_email'] = user.get('email')
-            data['updated_by'] = user.get('id')
-            data['updated_by_email'] = user.get('email')
+            data["created_by"] = user.get("id")
+            data["created_by_email"] = user.get("email")
+            data["updated_by"] = user.get("id")
+            data["updated_by_email"] = user.get("email")
         else:
             # For update operations, only set updated fields
-            data['updated_by'] = user.get('id')
-            data['updated_by_email'] = user.get('email')
+            data["updated_by"] = user.get("id")
+            data["updated_by_email"] = user.get("email")
 
     return data
 
@@ -115,10 +115,11 @@ def audit_middleware(f):
             data = request.get_json()  # Will have audit fields
             ...
     """
+
     @wraps(f)
     def decorated_function(*args, **kwargs):
         # Only process for methods that modify data
-        if request.method in ['POST', 'PUT', 'PATCH']:
+        if request.method in ["POST", "PUT", "PATCH"]:
             # Get the current user
             user = get_current_user()
 
@@ -130,7 +131,7 @@ def audit_middleware(f):
                 if request.is_json:
                     data = request.get_json()
                     if data:
-                        is_update = request.method in ['PUT', 'PATCH']
+                        is_update = request.method in ["PUT", "PATCH"]
                         # Add audit fields to the data
                         data = add_audit_fields(data, is_update=is_update)
                         # Store modified data in g for use in the route

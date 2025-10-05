@@ -6,20 +6,30 @@ Project data model for managing roofing projects with status tracking, timeline 
 and document storage.
 """
 
-from sqlalchemy import Column, String, Integer, Boolean, Text, DateTime, Date, Float, Enum as SQLEnum
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from pydantic import BaseModel, Field, field_validator, ConfigDict
-from typing import Optional, List, Dict, Any
-from uuid import UUID
-from datetime import datetime, date
+from datetime import date, datetime
 from enum import Enum
-import uuid
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    Float,
+    Integer,
+    String,
+    Text,
+)
+from sqlalchemy import (
+    Enum as SQLEnum,
+)
 
 from app.models.base import BaseModel
 
 
 class ProjectStatus(str, Enum):
     """Project status enumeration"""
+
     QUOTE_REQUESTED = "quote_requested"
     QUOTE_SENT = "quote_sent"
     QUOTE_APPROVED = "quote_approved"
@@ -35,6 +45,7 @@ class ProjectStatus(str, Enum):
 
 class ProjectType(str, Enum):
     """Project type enumeration"""
+
     FULL_REPLACEMENT = "full_replacement"
     REPAIR = "repair"
     INSPECTION = "inspection"
@@ -46,6 +57,7 @@ class ProjectType(str, Enum):
 
 class ProjectPriority(str, Enum):
     """Project priority level"""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -54,6 +66,7 @@ class ProjectPriority(str, Enum):
 
 class RoofMaterial(str, Enum):
     """Roofing material types"""
+
     ASPHALT_SHINGLES = "asphalt_shingles"
     METAL = "metal"
     TILE = "tile"
@@ -71,7 +84,8 @@ class Project(BaseModel):
     Tracks complete project lifecycle from quote to completion with status,
     timeline, financial, and document management.
     """
-    __tablename__ = 'projects'
+
+    __tablename__ = "projects"
 
     # Basic Information (Required)
     customer_id = Column(String(36), nullable=False, index=True)
@@ -146,7 +160,7 @@ class Project(BaseModel):
     cancelled_date = Column(Date, nullable=True)
 
     @property
-    def full_address(self) -> Optional[str]:
+    def full_address(self) -> str | None:
         """Get formatted project address"""
         if not self.property_address:
             return None
@@ -169,7 +183,7 @@ class Project(BaseModel):
             ProjectStatus.QUOTE_APPROVED,
             ProjectStatus.SCHEDULED,
             ProjectStatus.IN_PROGRESS,
-            ProjectStatus.INSPECTION
+            ProjectStatus.INSPECTION,
         ]
         return self.status in active_statuses
 
@@ -191,7 +205,7 @@ class Project(BaseModel):
         return self.balance_due == 0 and self.final_amount and self.final_amount > 0
 
     @property
-    def days_until_completion(self) -> Optional[int]:
+    def days_until_completion(self) -> int | None:
         """Calculate days until estimated completion"""
         if self.estimated_completion_date:
             delta = self.estimated_completion_date - date.today()
@@ -209,6 +223,7 @@ class Project(BaseModel):
 # Pydantic schemas for API validation
 class ProjectCreateSchema(BaseModel):
     """Schema for creating a new project"""
+
     model_config = ConfigDict(from_attributes=True)
 
     customer_id: UUID
@@ -217,77 +232,79 @@ class ProjectCreateSchema(BaseModel):
     priority: ProjectPriority = ProjectPriority.MEDIUM
 
     # Optional fields
-    property_address: Optional[str] = None
-    city: Optional[str] = None
-    state: Optional[str] = None
-    zip_code: Optional[str] = None
-    is_insurance_claim: Optional[bool] = False
-    claim_number: Optional[str] = None
-    roof_size_sqft: Optional[int] = None
-    roof_material: Optional[RoofMaterial] = None
-    description: Optional[str] = None
-    quote_amount: Optional[int] = None
-    scheduled_start_date: Optional[date] = None
-    estimated_duration_days: Optional[int] = None
-    project_manager_id: Optional[UUID] = None
-    sales_rep_id: Optional[UUID] = None
-    notes: Optional[str] = None
+    property_address: str | None = None
+    city: str | None = None
+    state: str | None = None
+    zip_code: str | None = None
+    is_insurance_claim: bool | None = False
+    claim_number: str | None = None
+    roof_size_sqft: int | None = None
+    roof_material: RoofMaterial | None = None
+    description: str | None = None
+    quote_amount: int | None = None
+    scheduled_start_date: date | None = None
+    estimated_duration_days: int | None = None
+    project_manager_id: UUID | None = None
+    sales_rep_id: UUID | None = None
+    notes: str | None = None
 
-    @field_validator('zip_code')
+    @field_validator("zip_code")
     @classmethod
-    def validate_zip_code(cls, v: Optional[str]) -> Optional[str]:
+    def validate_zip_code(cls, v: str | None) -> str | None:
         """Validate ZIP code format"""
         if v is None:
             return v
 
-        cleaned = ''.join(filter(str.isdigit, v))
+        cleaned = "".join(filter(str.isdigit, v))
 
         if len(cleaned) not in [5, 9]:
-            raise ValueError('ZIP code must be 5 or 9 digits')
+            raise ValueError("ZIP code must be 5 or 9 digits")
 
         return v
 
-    @field_validator('state')
+    @field_validator("state")
     @classmethod
-    def validate_state(cls, v: Optional[str]) -> Optional[str]:
+    def validate_state(cls, v: str | None) -> str | None:
         """Validate state code"""
         if v is None:
             return v
 
         if len(v) != 2:
-            raise ValueError('State must be 2-letter code')
+            raise ValueError("State must be 2-letter code")
 
         return v.upper()
 
 
 class ProjectUpdateSchema(BaseModel):
     """Schema for updating a project"""
+
     model_config = ConfigDict(from_attributes=True)
 
-    name: Optional[str] = Field(None, min_length=1, max_length=200)
-    status: Optional[ProjectStatus] = None
-    priority: Optional[ProjectPriority] = None
-    description: Optional[str] = None
-    quote_amount: Optional[int] = None
-    final_amount: Optional[int] = None
-    amount_paid: Optional[int] = None
-    scheduled_start_date: Optional[date] = None
-    actual_start_date: Optional[date] = None
-    estimated_completion_date: Optional[date] = None
-    actual_completion_date: Optional[date] = None
-    project_manager_id: Optional[UUID] = None
-    lead_installer_id: Optional[UUID] = None
-    permit_number: Optional[str] = None
-    permit_approved: Optional[bool] = None
-    final_inspection_passed: Optional[bool] = None
-    customer_rating: Optional[float] = None
-    notes: Optional[str] = None
-    customer_notes: Optional[str] = None
-    cancellation_reason: Optional[str] = None
+    name: str | None = Field(None, min_length=1, max_length=200)
+    status: ProjectStatus | None = None
+    priority: ProjectPriority | None = None
+    description: str | None = None
+    quote_amount: int | None = None
+    final_amount: int | None = None
+    amount_paid: int | None = None
+    scheduled_start_date: date | None = None
+    actual_start_date: date | None = None
+    estimated_completion_date: date | None = None
+    actual_completion_date: date | None = None
+    project_manager_id: UUID | None = None
+    lead_installer_id: UUID | None = None
+    permit_number: str | None = None
+    permit_approved: bool | None = None
+    final_inspection_passed: bool | None = None
+    customer_rating: float | None = None
+    notes: str | None = None
+    customer_notes: str | None = None
+    cancellation_reason: str | None = None
 
 
 class ProjectResponseSchema(BaseModel):
     """Schema for project API response"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -296,30 +313,31 @@ class ProjectResponseSchema(BaseModel):
     project_type: ProjectType
     status: ProjectStatus
     priority: ProjectPriority
-    property_address: Optional[str] = None
-    city: Optional[str] = None
-    state: Optional[str] = None
-    zip_code: Optional[str] = None
-    quote_amount: Optional[int] = None
-    final_amount: Optional[int] = None
+    property_address: str | None = None
+    city: str | None = None
+    state: str | None = None
+    zip_code: str | None = None
+    quote_amount: int | None = None
+    final_amount: int | None = None
     amount_paid: int = 0
-    scheduled_start_date: Optional[date] = None
-    actual_start_date: Optional[date] = None
-    estimated_completion_date: Optional[date] = None
-    actual_completion_date: Optional[date] = None
+    scheduled_start_date: date | None = None
+    actual_start_date: date | None = None
+    estimated_completion_date: date | None = None
+    actual_completion_date: date | None = None
     created_at: datetime
     updated_at: datetime
 
 
 class ProjectListFiltersSchema(BaseModel):
     """Filter parameters for project list endpoint"""
-    status: Optional[str] = Field(None, description="Comma-separated status values")
-    project_type: Optional[str] = Field(None, description="Comma-separated type values")
-    priority: Optional[str] = Field(None, description="Comma-separated priority values")
-    customer_id: Optional[UUID] = Field(None, description="Filter by customer")
-    project_manager_id: Optional[UUID] = Field(None, description="Filter by project manager")
-    is_insurance_claim: Optional[bool] = Field(None, description="Filter insurance claims")
-    scheduled_after: Optional[date] = Field(None, description="Scheduled after date")
-    scheduled_before: Optional[date] = Field(None, description="Scheduled before date")
-    min_amount: Optional[int] = Field(None, ge=0, description="Minimum project amount")
-    is_overdue: Optional[bool] = Field(None, description="Filter overdue projects")
+
+    status: str | None = Field(None, description="Comma-separated status values")
+    project_type: str | None = Field(None, description="Comma-separated type values")
+    priority: str | None = Field(None, description="Comma-separated priority values")
+    customer_id: UUID | None = Field(None, description="Filter by customer")
+    project_manager_id: UUID | None = Field(None, description="Filter by project manager")
+    is_insurance_claim: bool | None = Field(None, description="Filter insurance claims")
+    scheduled_after: date | None = Field(None, description="Scheduled after date")
+    scheduled_before: date | None = Field(None, description="Scheduled before date")
+    min_amount: int | None = Field(None, ge=0, description="Minimum project amount")
+    is_overdue: bool | None = Field(None, description="Filter overdue projects")

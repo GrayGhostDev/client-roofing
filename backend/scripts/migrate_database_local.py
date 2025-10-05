@@ -17,24 +17,24 @@ Author: Database Architect Agent
 Date: 2025-10-05
 """
 
-import os
-import sys
 import logging
+import sys
 from pathlib import Path
-from typing import Optional, Tuple, List
+
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler('migration_local.log', mode='w')
-    ]
+        logging.FileHandler("migration_local.log", mode="w"),
+    ],
 )
 logger = logging.getLogger(__name__)
+
 
 class LocalDatabaseMigrator:
     """Handle local database migration operations"""
@@ -42,7 +42,7 @@ class LocalDatabaseMigrator:
     def __init__(self, database_url: str):
         """Initialize the migrator with database connection details"""
         self.database_url = database_url
-        self.connection: Optional[psycopg2.extensions.connection] = None
+        self.connection: psycopg2.extensions.connection | None = None
 
     def connect(self) -> bool:
         """Establish connection to the database"""
@@ -85,7 +85,7 @@ class LocalDatabaseMigrator:
                 logger.error(f"SQL file not found: {sql_file_path}")
                 return False
 
-            with open(sql_file_path, 'r', encoding='utf-8') as file:
+            with open(sql_file_path, encoding="utf-8") as file:
                 sql_content = file.read()
 
             logger.info(f"Executing SQL from: {sql_file_path}")
@@ -104,24 +104,33 @@ class LocalDatabaseMigrator:
             logger.error(f"Unexpected error during SQL execution: {e}")
             return False
 
-    def verify_tables_created(self) -> Tuple[bool, List[str]]:
+    def verify_tables_created(self) -> tuple[bool, list[str]]:
         """Verify that all expected tables were created"""
         expected_tables = [
-            'leads', 'customers', 'team_members', 'appointments',
-            'projects', 'interactions', 'reviews', 'partnerships',
-            'notifications', 'alerts'
+            "leads",
+            "customers",
+            "team_members",
+            "appointments",
+            "projects",
+            "interactions",
+            "reviews",
+            "partnerships",
+            "notifications",
+            "alerts",
         ]
 
         try:
             with self.connection.cursor() as cursor:
                 # Query to get all table names
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT table_name
                     FROM information_schema.tables
                     WHERE table_schema = 'public'
                     AND table_type = 'BASE TABLE'
                     ORDER BY table_name;
-                """)
+                """
+                )
 
                 existing_tables = [row[0] for row in cursor.fetchall()]
                 logger.info(f"Found {len(existing_tables)} tables in database")
@@ -146,7 +155,9 @@ class LocalDatabaseMigrator:
                 if success:
                     logger.info(f"✓ All {len(expected_tables)} expected tables verified")
                 else:
-                    logger.error(f"✗ {len(missing_tables)} tables missing: {', '.join(missing_tables)}")
+                    logger.error(
+                        f"✗ {len(missing_tables)} tables missing: {', '.join(missing_tables)}"
+                    )
 
                 return success, created_tables
 
@@ -157,12 +168,13 @@ class LocalDatabaseMigrator:
             logger.error(f"Unexpected error during table verification: {e}")
             return False, []
 
-    def get_table_info(self, table_name: str) -> Optional[dict]:
+    def get_table_info(self, table_name: str) -> dict | None:
         """Get detailed information about a specific table"""
         try:
             with self.connection.cursor() as cursor:
                 # Get column information
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT
                         column_name,
                         data_type,
@@ -172,7 +184,9 @@ class LocalDatabaseMigrator:
                     WHERE table_schema = 'public'
                     AND table_name = %s
                     ORDER BY ordinal_position;
-                """, (table_name,))
+                """,
+                    (table_name,),
+                )
 
                 columns = cursor.fetchall()
 
@@ -180,19 +194,17 @@ class LocalDatabaseMigrator:
                 cursor.execute(f"SELECT COUNT(*) FROM {table_name};")
                 row_count = cursor.fetchone()[0]
 
-                return {
-                    'columns': columns,
-                    'row_count': row_count
-                }
+                return {"columns": columns, "row_count": row_count}
 
         except psycopg2.Error as e:
             logger.error(f"Failed to get table info for '{table_name}': {e}")
             return None
 
-def find_local_sql_file() -> Optional[Path]:
+
+def find_local_sql_file() -> Path | None:
     """Find the local SQL migration file"""
     # Look for create_tables_local.sql in backend directory
-    sql_file = Path(__file__).parent.parent / 'create_tables_local.sql'
+    sql_file = Path(__file__).parent.parent / "create_tables_local.sql"
 
     if sql_file.exists():
         logger.info(f"Found local SQL file: {sql_file}")
@@ -200,6 +212,7 @@ def find_local_sql_file() -> Optional[Path]:
     else:
         logger.error(f"Local SQL file not found: {sql_file}")
         return None
+
 
 def main() -> int:
     """Main migration function"""
@@ -239,10 +252,14 @@ def main() -> int:
                 for table in created_tables:
                     info = migrator.get_table_info(table)
                     if info:
-                        logger.info(f"Table '{table}': {len(info['columns'])} columns, {info['row_count']} rows")
+                        logger.info(
+                            f"Table '{table}': {len(info['columns'])} columns, {info['row_count']} rows"
+                        )
 
                 logger.info("\nLocal database is ready for development!")
-                logger.info("Note: For production, use the Supabase migration script with proper credentials.")
+                logger.info(
+                    "Note: For production, use the Supabase migration script with proper credentials."
+                )
                 return 0
             else:
                 logger.error("=" * 60)
@@ -259,6 +276,7 @@ def main() -> int:
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
         return 1
+
 
 if __name__ == "__main__":
     exit_code = main()

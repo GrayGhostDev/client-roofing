@@ -3,18 +3,16 @@ Performance Testing Suite for iSwitch Roofs CRM
 Tests response times, memory usage, concurrent handling, and scalability
 """
 
-import pytest
-import time
-import threading
-import asyncio
-import psutil
-import os
 import gc
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from unittest.mock import patch, MagicMock
 import json
-from datetime import datetime, timedelta
+import os
 import statistics
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from unittest.mock import patch
+
+import psutil
+import pytest
 
 
 class TestAPIPerformance:
@@ -23,11 +21,11 @@ class TestAPIPerformance:
     def test_response_time_benchmarks(self, client, auth_headers):
         """Test API response time benchmarks."""
         endpoints_and_targets = [
-            ('/api/leads', 200),           # 200ms target
-            ('/api/customers', 200),       # 200ms target
-            ('/api/projects', 300),        # 300ms target
-            ('/api/analytics/dashboard', 500),  # 500ms target (complex queries)
-            ('/api/appointments', 200),    # 200ms target
+            ("/api/leads", 200),  # 200ms target
+            ("/api/customers", 200),  # 200ms target
+            ("/api/projects", 300),  # 300ms target
+            ("/api/analytics/dashboard", 500),  # 500ms target (complex queries)
+            ("/api/appointments", 200),  # 200ms target
         ]
 
         for endpoint, target_ms in endpoints_and_targets:
@@ -41,19 +39,21 @@ class TestAPIPerformance:
             print(f"{endpoint}: {response_time_ms:.2f}ms (target: {target_ms}ms)")
 
             # Should meet target response time
-            assert response_time_ms < target_ms * 2, f"{endpoint} too slow: {response_time_ms:.2f}ms"
+            assert (
+                response_time_ms < target_ms * 2
+            ), f"{endpoint} too slow: {response_time_ms:.2f}ms"
 
     def test_database_query_performance(self, client, auth_headers):
         """Test database query performance."""
-        with patch('app.services.leads.get_all_leads') as mock_service:
+        with patch("app.services.leads.get_all_leads") as mock_service:
             # Mock large dataset
             mock_service.return_value = {
-                'data': [{'id': f'lead-{i}', 'name': f'Lead {i}'} for i in range(1000)],
-                'total': 1000
+                "data": [{"id": f"lead-{i}", "name": f"Lead {i}"} for i in range(1000)],
+                "total": 1000,
             }
 
             start_time = time.time()
-            response = client.get('/api/leads?per_page=100', headers=auth_headers)
+            response = client.get("/api/leads?per_page=100", headers=auth_headers)
             end_time = time.time()
 
             query_time_ms = (end_time - start_time) * 1000
@@ -68,17 +68,17 @@ class TestAPIPerformance:
         max_acceptable_time = 1000  # 1 second
 
         for page_size in page_sizes:
-            with patch('app.services.leads.get_all_leads') as mock_service:
+            with patch("app.services.leads.get_all_leads") as mock_service:
                 # Mock paginated response
                 mock_service.return_value = {
-                    'data': [{'id': f'lead-{i}'} for i in range(page_size)],
-                    'total': 10000,
-                    'page': 1,
-                    'per_page': page_size
+                    "data": [{"id": f"lead-{i}"} for i in range(page_size)],
+                    "total": 10000,
+                    "page": 1,
+                    "per_page": page_size,
                 }
 
                 start_time = time.time()
-                response = client.get(f'/api/leads?per_page={page_size}', headers=auth_headers)
+                response = client.get(f"/api/leads?per_page={page_size}", headers=auth_headers)
                 end_time = time.time()
 
                 response_time_ms = (end_time - start_time) * 1000
@@ -89,41 +89,47 @@ class TestAPIPerformance:
     def test_search_performance(self, client, auth_headers):
         """Test search functionality performance."""
         search_queries = [
-            'John',           # Simple name search
-            'john@example',   # Email search
-            '555-1234',       # Phone search
-            'roof replacement',  # Description search
+            "John",  # Simple name search
+            "john@example",  # Email search
+            "555-1234",  # Phone search
+            "roof replacement",  # Description search
         ]
 
         for query in search_queries:
-            with patch('app.services.leads.search_leads') as mock_search:
+            with patch("app.services.leads.search_leads") as mock_search:
                 mock_search.return_value = {
-                    'data': [{'id': 'lead-1', 'first_name': 'John'}],
-                    'total': 1
+                    "data": [{"id": "lead-1", "first_name": "John"}],
+                    "total": 1,
                 }
 
                 start_time = time.time()
-                response = client.get(f'/api/leads?search={query}', headers=auth_headers)
+                response = client.get(f"/api/leads?search={query}", headers=auth_headers)
                 end_time = time.time()
 
                 search_time_ms = (end_time - start_time) * 1000
 
                 # Search should be fast
-                assert search_time_ms < 300, f"Search too slow for '{query}': {search_time_ms:.2f}ms"
+                assert (
+                    search_time_ms < 300
+                ), f"Search too slow for '{query}': {search_time_ms:.2f}ms"
 
     def test_analytics_performance(self, client, auth_headers):
         """Test analytics dashboard performance."""
-        with patch('app.services.analytics_service.get_dashboard_metrics') as mock_analytics:
+        with patch("app.services.analytics_service.get_dashboard_metrics") as mock_analytics:
             # Mock complex analytics data
             mock_analytics.return_value = {
-                'total_leads': 5000,
-                'conversion_rate': 15.5,
-                'revenue_data': [{'month': f'2025-{i:02d}', 'revenue': 50000 + i * 1000} for i in range(1, 13)],
-                'team_performance': [{'member': f'Member {i}', 'leads': 100 + i * 10} for i in range(10)]
+                "total_leads": 5000,
+                "conversion_rate": 15.5,
+                "revenue_data": [
+                    {"month": f"2025-{i:02d}", "revenue": 50000 + i * 1000} for i in range(1, 13)
+                ],
+                "team_performance": [
+                    {"member": f"Member {i}", "leads": 100 + i * 10} for i in range(10)
+                ],
             }
 
             start_time = time.time()
-            response = client.get('/api/analytics/dashboard', headers=auth_headers)
+            response = client.get("/api/analytics/dashboard", headers=auth_headers)
             end_time = time.time()
 
             analytics_time_ms = (end_time - start_time) * 1000
@@ -137,13 +143,14 @@ class TestConcurrencyPerformance:
 
     def test_concurrent_read_requests(self, client, auth_headers):
         """Test handling of concurrent read requests."""
+
         def make_request():
             start_time = time.time()
-            response = client.get('/api/leads', headers=auth_headers)
+            response = client.get("/api/leads", headers=auth_headers)
             end_time = time.time()
             return {
-                'status_code': response.status_code,
-                'response_time': (end_time - start_time) * 1000
+                "status_code": response.status_code,
+                "response_time": (end_time - start_time) * 1000,
             }
 
         # Test with 20 concurrent requests
@@ -152,39 +159,40 @@ class TestConcurrencyPerformance:
             results = [future.result() for future in as_completed(futures)]
 
         # All requests should succeed
-        success_count = sum(1 for r in results if r['status_code'] == 200)
+        success_count = sum(1 for r in results if r["status_code"] == 200)
         assert success_count >= 18, f"Only {success_count}/20 requests succeeded"
 
         # Response times should be reasonable
-        avg_response_time = statistics.mean(r['response_time'] for r in results)
-        max_response_time = max(r['response_time'] for r in results)
+        avg_response_time = statistics.mean(r["response_time"] for r in results)
+        max_response_time = max(r["response_time"] for r in results)
 
-        print(f"Concurrent requests - Avg: {avg_response_time:.2f}ms, Max: {max_response_time:.2f}ms")
-        assert avg_response_time < 1000, f"Average response time too high: {avg_response_time:.2f}ms"
+        print(
+            f"Concurrent requests - Avg: {avg_response_time:.2f}ms, Max: {max_response_time:.2f}ms"
+        )
+        assert (
+            avg_response_time < 1000
+        ), f"Average response time too high: {avg_response_time:.2f}ms"
         assert max_response_time < 3000, f"Max response time too high: {max_response_time:.2f}ms"
 
     def test_concurrent_write_requests(self, client, auth_headers):
         """Test handling of concurrent write requests."""
+
         def create_lead(lead_id):
             lead_data = {
-                'first_name': f'TestLead{lead_id}',
-                'last_name': 'Performance',
-                'email': f'test{lead_id}@example.com',
-                'phone': f'555-{lead_id:04d}'
+                "first_name": f"TestLead{lead_id}",
+                "last_name": "Performance",
+                "email": f"test{lead_id}@example.com",
+                "phone": f"555-{lead_id:04d}",
             }
 
             start_time = time.time()
-            response = client.post(
-                '/api/leads',
-                data=json.dumps(lead_data),
-                headers=auth_headers
-            )
+            response = client.post("/api/leads", data=json.dumps(lead_data), headers=auth_headers)
             end_time = time.time()
 
             return {
-                'lead_id': lead_id,
-                'status_code': response.status_code,
-                'response_time': (end_time - start_time) * 1000
+                "lead_id": lead_id,
+                "status_code": response.status_code,
+                "response_time": (end_time - start_time) * 1000,
             }
 
         # Test with 10 concurrent write requests
@@ -193,26 +201,27 @@ class TestConcurrencyPerformance:
             results = [future.result() for future in as_completed(futures)]
 
         # Most requests should succeed (some may conflict)
-        success_count = sum(1 for r in results if r['status_code'] in [200, 201])
+        success_count = sum(1 for r in results if r["status_code"] in [200, 201])
         assert success_count >= 8, f"Only {success_count}/10 write requests succeeded"
 
     def test_mixed_concurrent_operations(self, client, auth_headers):
         """Test mixed read/write operations under concurrent load."""
+
         def read_operation():
-            return client.get('/api/leads', headers=auth_headers)
+            return client.get("/api/leads", headers=auth_headers)
 
         def write_operation(index):
             data = {
-                'first_name': f'Concurrent{index}',
-                'last_name': 'Test',
-                'email': f'concurrent{index}@test.com',
-                'phone': f'555-{index:04d}'
+                "first_name": f"Concurrent{index}",
+                "last_name": "Test",
+                "email": f"concurrent{index}@test.com",
+                "phone": f"555-{index:04d}",
             }
-            return client.post('/api/leads', data=json.dumps(data), headers=auth_headers)
+            return client.post("/api/leads", data=json.dumps(data), headers=auth_headers)
 
         def update_operation():
-            data = {'status': 'qualified'}
-            return client.put('/api/leads/test-lead', data=json.dumps(data), headers=auth_headers)
+            data = {"status": "qualified"}
+            return client.put("/api/leads/test-lead", data=json.dumps(data), headers=auth_headers)
 
         # Mix of operations: 15 reads, 3 writes, 2 updates
         with ThreadPoolExecutor(max_workers=20) as executor:
@@ -248,7 +257,7 @@ class TestMemoryPerformance:
 
         # Simulate sustained load
         for i in range(100):
-            response = client.get('/api/leads', headers=auth_headers)
+            response = client.get("/api/leads", headers=auth_headers)
 
             # Force garbage collection periodically
             if i % 20 == 0:
@@ -257,38 +266,37 @@ class TestMemoryPerformance:
         final_memory = process.memory_info().rss / 1024 / 1024  # MB
         memory_increase = final_memory - initial_memory
 
-        print(f"Memory usage - Initial: {initial_memory:.2f}MB, Final: {final_memory:.2f}MB, Increase: {memory_increase:.2f}MB")
+        print(
+            f"Memory usage - Initial: {initial_memory:.2f}MB, Final: {final_memory:.2f}MB, Increase: {memory_increase:.2f}MB"
+        )
 
         # Memory increase should be reasonable
         assert memory_increase < 50, f"Memory increase too high: {memory_increase:.2f}MB"
 
     def test_large_response_handling(self, client, auth_headers):
         """Test handling of large response payloads."""
-        with patch('app.services.leads.get_all_leads') as mock_service:
+        with patch("app.services.leads.get_all_leads") as mock_service:
             # Mock very large dataset
             large_dataset = [
                 {
-                    'id': f'lead-{i}',
-                    'first_name': f'FirstName{i}',
-                    'last_name': f'LastName{i}',
-                    'email': f'user{i}@example.com',
-                    'phone': f'555-{i:06d}',
-                    'description': 'A' * 1000,  # 1KB description each
-                    'notes': 'B' * 500          # 500B notes each
+                    "id": f"lead-{i}",
+                    "first_name": f"FirstName{i}",
+                    "last_name": f"LastName{i}",
+                    "email": f"user{i}@example.com",
+                    "phone": f"555-{i:06d}",
+                    "description": "A" * 1000,  # 1KB description each
+                    "notes": "B" * 500,  # 500B notes each
                 }
                 for i in range(1000)  # 1000 records ≈ 1.5MB
             ]
 
-            mock_service.return_value = {
-                'data': large_dataset,
-                'total': 1000
-            }
+            mock_service.return_value = {"data": large_dataset, "total": 1000}
 
             process = psutil.Process(os.getpid())
             memory_before = process.memory_info().rss
 
             start_time = time.time()
-            response = client.get('/api/leads?per_page=1000', headers=auth_headers)
+            response = client.get("/api/leads?per_page=1000", headers=auth_headers)
             end_time = time.time()
 
             memory_after = process.memory_info().rss
@@ -310,7 +318,7 @@ class TestMemoryPerformance:
         # Take memory measurements during repeated operations
         for i in range(50):
             # Perform operation
-            client.get('/api/leads', headers=auth_headers)
+            client.get("/api/leads", headers=auth_headers)
 
             # Sample memory every 10 operations
             if i % 10 == 0:
@@ -325,7 +333,9 @@ class TestMemoryPerformance:
             print(f"Memory trend over {len(memory_samples)} samples: {memory_trend:.2f}MB")
 
             # Memory should not increase significantly
-            assert memory_trend < 20, f"Potential memory leak detected: {memory_trend:.2f}MB increase"
+            assert (
+                memory_trend < 20
+            ), f"Potential memory leak detected: {memory_trend:.2f}MB increase"
 
 
 class TestScalabilityPerformance:
@@ -339,9 +349,10 @@ class TestScalabilityPerformance:
         baseline_time = None
 
         for user_count in user_counts:
+
             def user_simulation():
                 start_time = time.time()
-                response = client.get('/api/leads', headers=auth_headers)
+                response = client.get("/api/leads", headers=auth_headers)
                 end_time = time.time()
                 return (end_time - start_time) * 1000
 
@@ -357,26 +368,29 @@ class TestScalabilityPerformance:
 
             degradation_factor = avg_response_time / baseline_time
 
-            print(f"{user_count} users - Avg response: {avg_response_time:.2f}ms, Degradation: {degradation_factor:.2f}x")
+            print(
+                f"{user_count} users - Avg response: {avg_response_time:.2f}ms, Degradation: {degradation_factor:.2f}x"
+            )
 
             # Performance should degrade gracefully
-            assert degradation_factor < max_acceptable_degradation, \
-                f"Performance degraded too much with {user_count} users: {degradation_factor:.2f}x"
+            assert (
+                degradation_factor < max_acceptable_degradation
+            ), f"Performance degraded too much with {user_count} users: {degradation_factor:.2f}x"
 
     def test_data_volume_scaling(self, client, auth_headers):
         """Test performance scaling with increasing data volumes."""
         data_sizes = [100, 500, 1000, 5000]
 
         for size in data_sizes:
-            with patch('app.services.leads.get_all_leads') as mock_service:
+            with patch("app.services.leads.get_all_leads") as mock_service:
                 # Mock dataset of specified size
                 mock_service.return_value = {
-                    'data': [{'id': f'lead-{i}', 'name': f'Lead {i}'} for i in range(size)],
-                    'total': size
+                    "data": [{"id": f"lead-{i}", "name": f"Lead {i}"} for i in range(size)],
+                    "total": size,
                 }
 
                 start_time = time.time()
-                response = client.get(f'/api/leads?per_page={min(size, 100)}', headers=auth_headers)
+                response = client.get(f"/api/leads?per_page={min(size, 100)}", headers=auth_headers)
                 end_time = time.time()
 
                 response_time = (end_time - start_time) * 1000
@@ -385,8 +399,9 @@ class TestScalabilityPerformance:
 
                 # Response time should scale sub-linearly with data size
                 expected_max_time = 100 + (size / 100) * 50  # Base 100ms + 50ms per 100 records
-                assert response_time < expected_max_time, \
-                    f"Response time {response_time:.2f}ms too high for {size} records"
+                assert (
+                    response_time < expected_max_time
+                ), f"Response time {response_time:.2f}ms too high for {size} records"
 
 
 class TestResourceUtilization:
@@ -401,7 +416,7 @@ class TestResourceUtilization:
         start_time = time.time()
 
         for i in range(50):
-            client.get('/api/leads', headers=auth_headers)
+            client.get("/api/leads", headers=auth_headers)
 
             if i % 10 == 0:
                 cpu_percent = process.cpu_percent()
@@ -414,7 +429,9 @@ class TestResourceUtilization:
             avg_cpu = statistics.mean(cpu_samples)
             max_cpu = max(cpu_samples)
 
-            print(f"CPU utilization - Avg: {avg_cpu:.2f}%, Max: {max_cpu:.2f}%, Duration: {total_time:.2f}s")
+            print(
+                f"CPU utilization - Avg: {avg_cpu:.2f}%, Max: {max_cpu:.2f}%, Duration: {total_time:.2f}s"
+            )
 
             # CPU usage should be reasonable
             assert avg_cpu < 50, f"Average CPU usage too high: {avg_cpu:.2f}%"
@@ -424,26 +441,26 @@ class TestResourceUtilization:
         """Test database connection pool efficiency."""
         # This would test database connection pooling
         # Mock database connection monitoring
-        with patch('app.database.connection_pool') as mock_pool:
+        with patch("app.database.connection_pool") as mock_pool:
             mock_pool.get_stats.return_value = {
-                'active_connections': 5,
-                'idle_connections': 15,
-                'total_connections': 20
+                "active_connections": 5,
+                "idle_connections": 15,
+                "total_connections": 20,
             }
 
             # Perform multiple operations
             for _ in range(20):
-                client.get('/api/leads', headers=auth_headers)
+                client.get("/api/leads", headers=auth_headers)
 
             # Connection pool should be efficient
             stats = mock_pool.get_stats()
-            assert stats['active_connections'] <= stats['total_connections']
-            assert stats['idle_connections'] >= 0
+            assert stats["active_connections"] <= stats["total_connections"]
+            assert stats["idle_connections"] >= 0
 
     def test_cache_efficiency(self, client, auth_headers):
         """Test caching efficiency for repeated requests."""
         # Test that repeated requests are served from cache
-        endpoint = '/api/analytics/dashboard'
+        endpoint = "/api/analytics/dashboard"
 
         # First request (should be cached)
         start_time = time.time()
@@ -455,7 +472,9 @@ class TestResourceUtilization:
         response2 = client.get(endpoint, headers=auth_headers)
         second_request_time = (time.time() - start_time) * 1000
 
-        print(f"Cache test - First: {first_request_time:.2f}ms, Second: {second_request_time:.2f}ms")
+        print(
+            f"Cache test - First: {first_request_time:.2f}ms, Second: {second_request_time:.2f}ms"
+        )
 
         # Second request should be significantly faster (if caching is implemented)
         # If no caching, times should be similar
@@ -466,7 +485,4 @@ class TestResourceUtilization:
 
 
 # Performance test markers
-pytestmark = [
-    pytest.mark.performance,
-    pytest.mark.slow
-]
+pytestmark = [pytest.mark.performance, pytest.mark.slow]

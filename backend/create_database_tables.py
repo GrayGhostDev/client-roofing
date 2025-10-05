@@ -6,8 +6,8 @@ Version: 1.0.0
 Date: 2025-10-05
 """
 
-import sys
 import logging
+import sys
 from pathlib import Path
 
 # Add the app directory to Python path
@@ -20,6 +20,7 @@ from app.utils.supabase_client import SupabaseService
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 def create_tables():
     """Create all database tables using SQL from instructions."""
@@ -354,7 +355,7 @@ INSERT INTO customers (first_name, last_name, phone, email, city, state, zip_cod
 ON CONFLICT DO NOTHING;
 """
 
-    app = create_app('development')
+    app = create_app("development")
 
     with app.app_context():
         try:
@@ -366,7 +367,7 @@ ON CONFLICT DO NOTHING;
 
             # Execute table creation SQL using RPC
             try:
-                response = client.rpc('query', {'query': table_creation_sql}).execute()
+                response = client.rpc("query", {"query": table_creation_sql}).execute()
                 print("✅ Core tables created successfully")
             except Exception as e:
                 # Fallback: Try executing each CREATE TABLE statement individually
@@ -374,36 +375,38 @@ ON CONFLICT DO NOTHING;
                 print("🔄 Attempting individual table creation...")
 
                 # Split SQL into individual statements and execute
-                statements = [stmt.strip() for stmt in table_creation_sql.split(';') if stmt.strip()]
+                statements = [
+                    stmt.strip() for stmt in table_creation_sql.split(";") if stmt.strip()
+                ]
                 created_tables = []
 
                 for statement in statements:
-                    if statement.upper().startswith('CREATE TABLE'):
-                        table_name = statement.split('(')[0].split()[-1]
+                    if statement.upper().startswith("CREATE TABLE"):
+                        table_name = statement.split("(")[0].split()[-1]
                         try:
-                            client.rpc('query', {'query': statement + ';'}).execute()
+                            client.rpc("query", {"query": statement + ";"}).execute()
                             created_tables.append(table_name)
                             print(f"✅ Created table: {table_name}")
                         except Exception as table_error:
                             print(f"❌ Failed to create {table_name}: {table_error}")
 
-                    elif statement.upper().startswith('CREATE INDEX'):
+                    elif statement.upper().startswith("CREATE INDEX"):
                         try:
-                            client.rpc('query', {'query': statement + ';'}).execute()
-                            print(f"✅ Created index")
+                            client.rpc("query", {"query": statement + ";"}).execute()
+                            print("✅ Created index")
                         except Exception as index_error:
                             print(f"⚠️ Index creation warning: {index_error}")
 
             print("\n📋 Step 2: Setting up Row Level Security...")
             try:
-                client.rpc('query', {'query': rls_policies_sql}).execute()
+                client.rpc("query", {"query": rls_policies_sql}).execute()
                 print("✅ RLS policies configured")
             except Exception as e:
                 print(f"⚠️ RLS setup warning: {e}")
 
             print("\n📋 Step 3: Adding sample data...")
             try:
-                client.rpc('query', {'query': sample_data_sql}).execute()
+                client.rpc("query", {"query": sample_data_sql}).execute()
                 print("✅ Sample data inserted")
             except Exception as e:
                 print(f"⚠️ Sample data warning: {e}")
@@ -412,9 +415,16 @@ ON CONFLICT DO NOTHING;
 
             # Test each expected table
             expected_tables = [
-                'leads', 'customers', 'team_members', 'appointments',
-                'projects', 'interactions', 'reviews', 'partnerships',
-                'notifications', 'alerts'
+                "leads",
+                "customers",
+                "team_members",
+                "appointments",
+                "projects",
+                "interactions",
+                "reviews",
+                "partnerships",
+                "notifications",
+                "alerts",
             ]
 
             accessible_tables = []
@@ -423,42 +433,45 @@ ON CONFLICT DO NOTHING;
             for table in expected_tables:
                 try:
                     # Test table access and count rows
-                    count_response = client.table(table).select('*', count='exact').limit(1).execute()
-                    row_count = count_response.count if hasattr(count_response, 'count') else 0
+                    count_response = (
+                        client.table(table).select("*", count="exact").limit(1).execute()
+                    )
+                    row_count = count_response.count if hasattr(count_response, "count") else 0
 
                     accessible_tables.append(table)
                     table_row_counts[table] = row_count
                     print(f"✅ {table} - accessible ({row_count} rows)")
 
                 except Exception as e:
-                    if 'PGRST205' in str(e):
+                    if "PGRST205" in str(e):
                         print(f"❌ {table} - table not found")
                     else:
                         print(f"⚠️ {table} - error: {str(e)[:100]}")
 
-            print(f"\n📊 RESULTS SUMMARY")
+            print("\n📊 RESULTS SUMMARY")
             print("=" * 40)
             print(f"✅ Tables Created: {len(accessible_tables)}/10")
             print(f"📋 Accessible Tables: {', '.join(accessible_tables)}")
 
             if table_row_counts:
-                print(f"\n📊 Row Counts:")
+                print("\n📊 Row Counts:")
                 for table, count in table_row_counts.items():
                     print(f"  - {table}: {count} rows")
 
             if len(accessible_tables) >= 5:
-                print(f"\n🎉 SUCCESS! Database tables created successfully!")
-                print(f"🚀 Ready to start the Flask server")
+                print("\n🎉 SUCCESS! Database tables created successfully!")
+                print("🚀 Ready to start the Flask server")
                 return True
             else:
-                print(f"\n⚠️ PARTIAL SUCCESS - Some tables missing")
-                print(f"❓ Check Supabase dashboard for details")
+                print("\n⚠️ PARTIAL SUCCESS - Some tables missing")
+                print("❓ Check Supabase dashboard for details")
                 return False
 
         except Exception as e:
             print(f"❌ Critical error during table creation: {e}")
             logger.error(f"Table creation failed: {e}")
             return False
+
 
 def main():
     """Main execution function."""
@@ -476,5 +489,6 @@ def main():
         print("🌐 Try manual creation via Supabase dashboard")
         sys.exit(1)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -4,30 +4,28 @@ System Integration Testing Suite
 Comprehensive testing of the entire roofing CRM dashboard system
 """
 
-import pytest
-import requests
-import time
-import json
-import subprocess
-import sys
-import os
-from typing import Dict, List, Tuple, Optional
-from urllib.parse import urljoin
 import concurrent.futures
-from dataclasses import dataclass, asdict
+import json
+import os
+import sys
+import time
+from dataclasses import asdict, dataclass
+
+import requests
 
 
 @dataclass
 class SystemTestResult:
     """System test result container"""
+
     category: str
     test_name: str
     status: str  # PASS, FAIL, SKIP
     message: str
     duration: float
-    details: Optional[Dict] = None
-    expected: Optional[str] = None
-    actual: Optional[str] = None
+    details: dict | None = None
+    expected: str | None = None
+    actual: str | None = None
 
 
 class SystemIntegrationTester:
@@ -36,17 +34,27 @@ class SystemIntegrationTester:
     def __init__(self):
         self.frontend_url = "http://localhost:3000"
         self.backend_url = "http://127.0.0.1:8001"
-        self.results: List[SystemTestResult] = []
+        self.results: list[SystemTestResult] = []
 
-    def add_result(self, category: str, test_name: str, status: str, message: str,
-                   duration: float, details: Optional[Dict] = None,
-                   expected: Optional[str] = None, actual: Optional[str] = None):
+    def add_result(
+        self,
+        category: str,
+        test_name: str,
+        status: str,
+        message: str,
+        duration: float,
+        details: dict | None = None,
+        expected: str | None = None,
+        actual: str | None = None,
+    ):
         """Add a test result"""
-        self.results.append(SystemTestResult(
-            category, test_name, status, message, duration, details, expected, actual
-        ))
+        self.results.append(
+            SystemTestResult(
+                category, test_name, status, message, duration, details, expected, actual
+            )
+        )
 
-    def test_service_availability(self) -> List[SystemTestResult]:
+    def test_service_availability(self) -> list[SystemTestResult]:
         """Test that both services are available and responsive"""
         results = []
 
@@ -63,24 +71,28 @@ class SystemIntegrationTester:
                 status = "FAIL"
                 message = f"Frontend returned HTTP {response.status_code}"
 
-            results.append(SystemTestResult(
-                "Service Availability",
-                "Frontend Accessibility",
-                status,
-                message,
-                duration,
-                {"status_code": response.status_code, "content_length": len(response.content)}
-            ))
+            results.append(
+                SystemTestResult(
+                    "Service Availability",
+                    "Frontend Accessibility",
+                    status,
+                    message,
+                    duration,
+                    {"status_code": response.status_code, "content_length": len(response.content)},
+                )
+            )
 
         except requests.exceptions.RequestException as e:
             duration = time.time() - start_time
-            results.append(SystemTestResult(
-                "Service Availability",
-                "Frontend Accessibility",
-                "FAIL",
-                f"Frontend connection failed: {str(e)}",
-                duration
-            ))
+            results.append(
+                SystemTestResult(
+                    "Service Availability",
+                    "Frontend Accessibility",
+                    "FAIL",
+                    f"Frontend connection failed: {str(e)}",
+                    duration,
+                )
+            )
 
         # Test backend availability
         start_time = time.time()
@@ -97,28 +109,32 @@ class SystemIntegrationTester:
                 message = f"Backend health check failed (HTTP {response.status_code})"
                 details = {"status_code": response.status_code}
 
-            results.append(SystemTestResult(
-                "Service Availability",
-                "Backend Health Check",
-                status,
-                message,
-                duration,
-                details
-            ))
+            results.append(
+                SystemTestResult(
+                    "Service Availability",
+                    "Backend Health Check",
+                    status,
+                    message,
+                    duration,
+                    details,
+                )
+            )
 
         except requests.exceptions.RequestException as e:
             duration = time.time() - start_time
-            results.append(SystemTestResult(
-                "Service Availability",
-                "Backend Health Check",
-                "FAIL",
-                f"Backend connection failed: {str(e)}",
-                duration
-            ))
+            results.append(
+                SystemTestResult(
+                    "Service Availability",
+                    "Backend Health Check",
+                    "FAIL",
+                    f"Backend connection failed: {str(e)}",
+                    duration,
+                )
+            )
 
         return results
 
-    def test_cors_configuration(self) -> List[SystemTestResult]:
+    def test_cors_configuration(self) -> list[SystemTestResult]:
         """Test CORS configuration thoroughly"""
         results = []
 
@@ -126,88 +142,102 @@ class SystemIntegrationTester:
         start_time = time.time()
         try:
             headers = {
-                'Origin': 'http://localhost:3000',
-                'Access-Control-Request-Method': 'GET',
-                'Access-Control-Request-Headers': 'Content-Type'
+                "Origin": "http://localhost:3000",
+                "Access-Control-Request-Method": "GET",
+                "Access-Control-Request-Headers": "Content-Type",
             }
 
             response = requests.options(f"{self.backend_url}/health", headers=headers, timeout=10)
             duration = time.time() - start_time
 
             cors_headers = {
-                'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
-                'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
-                'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers'),
-                'Access-Control-Allow-Credentials': response.headers.get('Access-Control-Allow-Credentials')
+                "Access-Control-Allow-Origin": response.headers.get("Access-Control-Allow-Origin"),
+                "Access-Control-Allow-Methods": response.headers.get(
+                    "Access-Control-Allow-Methods"
+                ),
+                "Access-Control-Allow-Headers": response.headers.get(
+                    "Access-Control-Allow-Headers"
+                ),
+                "Access-Control-Allow-Credentials": response.headers.get(
+                    "Access-Control-Allow-Credentials"
+                ),
             }
 
-            if cors_headers['Access-Control-Allow-Origin'] == 'http://localhost:3000':
+            if cors_headers["Access-Control-Allow-Origin"] == "http://localhost:3000":
                 status = "PASS"
                 message = "CORS properly configured for localhost:3000"
-            elif cors_headers['Access-Control-Allow-Origin'] == '*':
+            elif cors_headers["Access-Control-Allow-Origin"] == "*":
                 status = "PASS"
                 message = "CORS configured for all origins"
             else:
                 status = "FAIL"
                 message = f"CORS misconfigured: {cors_headers['Access-Control-Allow-Origin']}"
 
-            results.append(SystemTestResult(
-                "CORS Configuration",
-                "Health Endpoint CORS",
-                status,
-                message,
-                duration,
-                cors_headers
-            ))
+            results.append(
+                SystemTestResult(
+                    "CORS Configuration",
+                    "Health Endpoint CORS",
+                    status,
+                    message,
+                    duration,
+                    cors_headers,
+                )
+            )
 
         except requests.exceptions.RequestException as e:
             duration = time.time() - start_time
-            results.append(SystemTestResult(
-                "CORS Configuration",
-                "Health Endpoint CORS",
-                "FAIL",
-                f"CORS test failed: {str(e)}",
-                duration
-            ))
+            results.append(
+                SystemTestResult(
+                    "CORS Configuration",
+                    "Health Endpoint CORS",
+                    "FAIL",
+                    f"CORS test failed: {str(e)}",
+                    duration,
+                )
+            )
 
         # Test actual GET request with Origin header
         start_time = time.time()
         try:
-            headers = {'Origin': 'http://localhost:3000'}
+            headers = {"Origin": "http://localhost:3000"}
             response = requests.get(f"{self.backend_url}/health", headers=headers, timeout=10)
             duration = time.time() - start_time
 
-            access_control_origin = response.headers.get('Access-Control-Allow-Origin')
+            access_control_origin = response.headers.get("Access-Control-Allow-Origin")
 
-            if access_control_origin in ['http://localhost:3000', '*']:
+            if access_control_origin in ["http://localhost:3000", "*"]:
                 status = "PASS"
                 message = f"GET request CORS working: {access_control_origin}"
             else:
                 status = "FAIL"
                 message = f"GET request CORS not working: {access_control_origin}"
 
-            results.append(SystemTestResult(
-                "CORS Configuration",
-                "GET Request CORS",
-                status,
-                message,
-                duration,
-                {"origin_header": access_control_origin, "status_code": response.status_code}
-            ))
+            results.append(
+                SystemTestResult(
+                    "CORS Configuration",
+                    "GET Request CORS",
+                    status,
+                    message,
+                    duration,
+                    {"origin_header": access_control_origin, "status_code": response.status_code},
+                )
+            )
 
         except requests.exceptions.RequestException as e:
             duration = time.time() - start_time
-            results.append(SystemTestResult(
-                "CORS Configuration",
-                "GET Request CORS",
-                "FAIL",
-                f"GET CORS test failed: {str(e)}",
-                duration
-            ))
+            results.append(
+                SystemTestResult(
+                    "CORS Configuration",
+                    "GET Request CORS",
+                    "FAIL",
+                    f"GET CORS test failed: {str(e)}",
+                    duration,
+                )
+            )
 
         return results
 
-    def test_api_endpoints(self) -> List[SystemTestResult]:
+    def test_api_endpoints(self) -> list[SystemTestResult]:
         """Test API endpoint availability and responses"""
         results = []
 
@@ -221,14 +251,14 @@ class SystemIntegrationTester:
             ("/api/appointments", "GET", "Appointments API"),
             ("/api/analytics/dashboard", "GET", "Analytics API"),
             ("/api/teams", "GET", "Teams API"),
-            ("/api/partnerships", "GET", "Partnerships API")
+            ("/api/partnerships", "GET", "Partnerships API"),
         ]
 
         for endpoint, method, description in endpoints:
             start_time = time.time()
             try:
                 url = f"{self.backend_url}{endpoint}"
-                headers = {'Origin': 'http://localhost:3000'}
+                headers = {"Origin": "http://localhost:3000"}
                 response = requests.request(method, url, headers=headers, timeout=10)
                 duration = time.time() - start_time
 
@@ -248,34 +278,38 @@ class SystemIntegrationTester:
                     status = "FAIL"
                     message = f"{description} unexpected response (HTTP {response.status_code})"
 
-                results.append(SystemTestResult(
-                    "API Endpoints",
-                    f"{method} {endpoint}",
-                    status,
-                    message,
-                    duration,
-                    {
-                        "status_code": response.status_code,
-                        "response_size": len(response.content),
-                        "has_cors": 'Access-Control-Allow-Origin' in response.headers
-                    },
-                    expected=str(expected_status),
-                    actual=str(response.status_code)
-                ))
+                results.append(
+                    SystemTestResult(
+                        "API Endpoints",
+                        f"{method} {endpoint}",
+                        status,
+                        message,
+                        duration,
+                        {
+                            "status_code": response.status_code,
+                            "response_size": len(response.content),
+                            "has_cors": "Access-Control-Allow-Origin" in response.headers,
+                        },
+                        expected=str(expected_status),
+                        actual=str(response.status_code),
+                    )
+                )
 
             except requests.exceptions.RequestException as e:
                 duration = time.time() - start_time
-                results.append(SystemTestResult(
-                    "API Endpoints",
-                    f"{method} {endpoint}",
-                    "FAIL",
-                    f"Request failed: {str(e)}",
-                    duration
-                ))
+                results.append(
+                    SystemTestResult(
+                        "API Endpoints",
+                        f"{method} {endpoint}",
+                        "FAIL",
+                        f"Request failed: {str(e)}",
+                        duration,
+                    )
+                )
 
         return results
 
-    def test_performance_metrics(self) -> List[SystemTestResult]:
+    def test_performance_metrics(self) -> list[SystemTestResult]:
         """Test basic performance metrics"""
         results = []
 
@@ -303,14 +337,16 @@ class SystemIntegrationTester:
                 status = "FAIL"
                 message = f"Frontend loads slowly (avg: {avg_load_time:.3f}s)"
 
-            results.append(SystemTestResult(
-                "Performance",
-                "Frontend Load Time",
-                status,
-                message,
-                avg_load_time,
-                {"load_times": load_times, "average": avg_load_time}
-            ))
+            results.append(
+                SystemTestResult(
+                    "Performance",
+                    "Frontend Load Time",
+                    status,
+                    message,
+                    avg_load_time,
+                    {"load_times": load_times, "average": avg_load_time},
+                )
+            )
 
         # Backend response time test
         response_times = []
@@ -339,18 +375,20 @@ class SystemIntegrationTester:
                 status = "FAIL"
                 message = f"Backend responds slowly (avg: {avg_response_time:.3f}s)"
 
-            results.append(SystemTestResult(
-                "Performance",
-                "Backend Response Time",
-                status,
-                message,
-                avg_response_time,
-                {"response_times": response_times, "average": avg_response_time}
-            ))
+            results.append(
+                SystemTestResult(
+                    "Performance",
+                    "Backend Response Time",
+                    status,
+                    message,
+                    avg_response_time,
+                    {"response_times": response_times, "average": avg_response_time},
+                )
+            )
 
         return results
 
-    def test_error_handling(self) -> List[SystemTestResult]:
+    def test_error_handling(self) -> list[SystemTestResult]:
         """Test error handling scenarios"""
         results = []
 
@@ -373,24 +411,23 @@ class SystemIntegrationTester:
                 message = f"Expected 404, got {response.status_code}"
                 details = {"status_code": response.status_code}
 
-            results.append(SystemTestResult(
-                "Error Handling",
-                "404 Not Found",
-                status,
-                message,
-                duration,
-                details
-            ))
+            results.append(
+                SystemTestResult(
+                    "Error Handling", "404 Not Found", status, message, duration, details
+                )
+            )
 
         except requests.exceptions.RequestException as e:
             duration = time.time() - start_time
-            results.append(SystemTestResult(
-                "Error Handling",
-                "404 Not Found",
-                "FAIL",
-                f"Error test failed: {str(e)}",
-                duration
-            ))
+            results.append(
+                SystemTestResult(
+                    "Error Handling",
+                    "404 Not Found",
+                    "FAIL",
+                    f"Error test failed: {str(e)}",
+                    duration,
+                )
+            )
 
         # Test method not allowed
         start_time = time.time()
@@ -405,28 +442,32 @@ class SystemIntegrationTester:
                 status = "PASS"  # Might be implemented differently
                 message = f"Method handling: HTTP {response.status_code}"
 
-            results.append(SystemTestResult(
-                "Error Handling",
-                "405 Method Not Allowed",
-                status,
-                message,
-                duration,
-                {"status_code": response.status_code}
-            ))
+            results.append(
+                SystemTestResult(
+                    "Error Handling",
+                    "405 Method Not Allowed",
+                    status,
+                    message,
+                    duration,
+                    {"status_code": response.status_code},
+                )
+            )
 
         except requests.exceptions.RequestException as e:
             duration = time.time() - start_time
-            results.append(SystemTestResult(
-                "Error Handling",
-                "405 Method Not Allowed",
-                "FAIL",
-                f"Method test failed: {str(e)}",
-                duration
-            ))
+            results.append(
+                SystemTestResult(
+                    "Error Handling",
+                    "405 Method Not Allowed",
+                    "FAIL",
+                    f"Method test failed: {str(e)}",
+                    duration,
+                )
+            )
 
         return results
 
-    def test_concurrent_requests(self) -> List[SystemTestResult]:
+    def test_concurrent_requests(self) -> list[SystemTestResult]:
         """Test system under concurrent load"""
         results = []
 
@@ -443,12 +484,18 @@ class SystemIntegrationTester:
         start_time = time.time()
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
             futures = [executor.submit(make_request) for _ in range(10)]
-            request_results = [future.result() for future in concurrent.futures.as_completed(futures)]
+            request_results = [
+                future.result() for future in concurrent.futures.as_completed(futures)
+            ]
 
         total_duration = time.time() - start_time
 
         successful_requests = [r for r in request_results if r.get("success", False)]
-        avg_response_time = sum(r["duration"] for r in successful_requests) / len(successful_requests) if successful_requests else 0
+        avg_response_time = (
+            sum(r["duration"] for r in successful_requests) / len(successful_requests)
+            if successful_requests
+            else 0
+        )
 
         if len(successful_requests) == 10:
             status = "PASS"
@@ -460,23 +507,25 @@ class SystemIntegrationTester:
             status = "FAIL"
             message = f"Only {len(successful_requests)}/10 concurrent requests succeeded"
 
-        results.append(SystemTestResult(
-            "Concurrency",
-            "Concurrent Requests",
-            status,
-            message,
-            total_duration,
-            {
-                "total_requests": 10,
-                "successful_requests": len(successful_requests),
-                "average_response_time": avg_response_time,
-                "total_time": total_duration
-            }
-        ))
+        results.append(
+            SystemTestResult(
+                "Concurrency",
+                "Concurrent Requests",
+                status,
+                message,
+                total_duration,
+                {
+                    "total_requests": 10,
+                    "successful_requests": len(successful_requests),
+                    "average_response_time": avg_response_time,
+                    "total_time": total_duration,
+                },
+            )
+        )
 
         return results
 
-    def run_all_tests(self) -> List[SystemTestResult]:
+    def run_all_tests(self) -> list[SystemTestResult]:
         """Run all integration tests"""
         print("Starting comprehensive system integration testing...")
         all_results = []
@@ -531,7 +580,7 @@ class SystemIntegrationTester:
 
         return all_results
 
-    def generate_comprehensive_report(self, results: List[SystemTestResult]) -> str:
+    def generate_comprehensive_report(self, results: list[SystemTestResult]) -> str:
         """Generate comprehensive system integration test report"""
 
         # Calculate summary statistics
@@ -570,12 +619,12 @@ CATEGORY BREAKDOWN:
         for category, cat_results in categories.items():
             cat_passed = len([r for r in cat_results if r.status == "PASS"])
             cat_total = len(cat_results)
-            cat_rate = (cat_passed/cat_total*100) if cat_total > 0 else 0
+            cat_rate = (cat_passed / cat_total * 100) if cat_total > 0 else 0
 
             status_icon = "✅" if cat_passed == cat_total else "❌"
             report += f"{status_icon} {category}: {cat_passed}/{cat_total} ({cat_rate:.1f}%)\n"
 
-        report += f"""
+        report += """
 
 DETAILED TEST RESULTS:
 ---------------------
@@ -586,7 +635,9 @@ DETAILED TEST RESULTS:
             report += "=" * len(category) + "=\n"
 
             for result in cat_results:
-                status_icon = "✅" if result.status == "PASS" else "❌" if result.status == "FAIL" else "⏩"
+                status_icon = (
+                    "✅" if result.status == "PASS" else "❌" if result.status == "FAIL" else "⏩"
+                )
                 report += f"\n{status_icon} {result.test_name}\n"
                 report += f"   Status: {result.status}\n"
                 report += f"   Message: {result.message}\n"
@@ -602,7 +653,7 @@ DETAILED TEST RESULTS:
         # Performance analysis
         performance_results = [r for r in results if r.category == "Performance"]
         if performance_results:
-            report += f"""
+            report += """
 
 PERFORMANCE ANALYSIS:
 --------------------
@@ -635,7 +686,9 @@ RECOMMENDATIONS:
 """
 
         if failed_tests == 0:
-            report += "✅ All tests passed! System is fully operational and ready for production use.\n\n"
+            report += (
+                "✅ All tests passed! System is fully operational and ready for production use.\n\n"
+            )
         else:
             report += f"❌ {failed_tests} test(s) failed. Address the following issues:\n\n"
 
@@ -648,18 +701,28 @@ RECOMMENDATIONS:
         if api_failures:
             report += "• API Endpoints: Some API endpoints are not responding correctly\n"
 
-        performance_issues = [r for r in results if r.category == "Performance" and r.duration > 3.0]
+        performance_issues = [
+            r for r in results if r.category == "Performance" and r.duration > 3.0
+        ]
         if performance_issues:
-            report += "• Performance: Some operations are slower than expected - consider optimization\n"
+            report += (
+                "• Performance: Some operations are slower than expected - consider optimization\n"
+            )
 
         concurrency_failures = [r for r in failed_results if r.category == "Concurrency"]
         if concurrency_failures:
-            report += "• Concurrency: System may have issues under load - review resource allocation\n"
+            report += (
+                "• Concurrency: System may have issues under load - review resource allocation\n"
+            )
 
         # System readiness assessment
-        critical_failures = [r for r in failed_results if r.category in ["Service Availability", "CORS Configuration"]]
+        critical_failures = [
+            r
+            for r in failed_results
+            if r.category in ["Service Availability", "CORS Configuration"]
+        ]
 
-        report += f"""
+        report += """
 
 SYSTEM READINESS ASSESSMENT:
 ---------------------------
@@ -688,24 +751,31 @@ def main():
     print(report)
 
     # Save report to file
-    report_file = "/Users/grayghostdata/Projects/client-roofing/backend/reports/system_integration_report.txt"
+    report_file = (
+        "/Users/grayghostdata/Projects/client-roofing/backend/reports/system_integration_report.txt"
+    )
     os.makedirs(os.path.dirname(report_file), exist_ok=True)
-    with open(report_file, 'w') as f:
+    with open(report_file, "w") as f:
         f.write(report)
 
     # Also save as JSON for programmatic access
     json_file = "/Users/grayghostdata/Projects/client-roofing/backend/reports/system_integration_results.json"
-    with open(json_file, 'w') as f:
+    with open(json_file, "w") as f:
         json.dump([asdict(result) for result in results], f, indent=2)
 
-    print(f"\nReports saved to:")
+    print("\nReports saved to:")
     print(f"  Text: {report_file}")
     print(f"  JSON: {json_file}")
 
     # Return exit code based on test results
     failed_tests = len([r for r in results if r.status == "FAIL"])
-    critical_failures = len([r for r in results if r.status == "FAIL" and
-                           r.category in ["Service Availability", "CORS Configuration"]])
+    critical_failures = len(
+        [
+            r
+            for r in results
+            if r.status == "FAIL" and r.category in ["Service Availability", "CORS Configuration"]
+        ]
+    )
 
     if critical_failures > 0:
         return 2  # Critical failure

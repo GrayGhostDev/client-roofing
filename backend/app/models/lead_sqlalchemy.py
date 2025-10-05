@@ -5,17 +5,18 @@ Version: 1.0.0
 Proper SQLAlchemy model for database operations
 """
 
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, Text, Enum
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from datetime import datetime
-import uuid
 import enum
+import uuid
+from datetime import datetime
+
+from sqlalchemy import Boolean, Column, DateTime, Enum, Integer, String, Text
 
 from app.models.base import BaseModel
 
 
 class LeadStatusEnum(enum.Enum):
     """Lead status enumeration"""
+
     NEW = "new"
     CONTACTED = "contacted"
     QUALIFIED = "qualified"
@@ -30,14 +31,16 @@ class LeadStatusEnum(enum.Enum):
 
 class LeadTemperatureEnum(enum.Enum):
     """Lead temperature classification"""
-    HOT = "hot"      # 80-100 points
-    WARM = "warm"    # 60-79 points
-    COOL = "cool"    # 40-59 points
-    COLD = "cold"    # 0-39 points
+
+    HOT = "hot"  # 80-100 points
+    WARM = "warm"  # 60-79 points
+    COOL = "cool"  # 40-59 points
+    COLD = "cold"  # 0-39 points
 
 
 class LeadSourceEnum(enum.Enum):
     """Lead source enumeration"""
+
     WEBSITE_FORM = "website_form"
     GOOGLE_LSA = "google_lsa"
     GOOGLE_ADS = "google_ads"
@@ -54,6 +57,7 @@ class LeadSourceEnum(enum.Enum):
 
 class UrgencyLevelEnum(enum.Enum):
     """Project urgency level"""
+
     IMMEDIATE = "immediate"
     ONE_TO_THREE_MONTHS = "1-3_months"
     THREE_TO_SIX_MONTHS = "3-6_months"
@@ -67,7 +71,8 @@ class Lead(BaseModel):
     Represents a potential customer in the CRM system with scoring,
     temperature classification, and full contact/property details.
     """
-    __tablename__ = 'leads'
+
+    __tablename__ = "leads"
 
     # Primary key - UUID as string for Supabase compatibility
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -163,7 +168,7 @@ class Lead(BaseModel):
             LeadStatusEnum.APPOINTMENT_SCHEDULED,
             LeadStatusEnum.INSPECTION_COMPLETED,
             LeadStatusEnum.QUOTE_SENT,
-            LeadStatusEnum.NEGOTIATION
+            LeadStatusEnum.NEGOTIATION,
         ]
         return self.status in qualified_statuses
 

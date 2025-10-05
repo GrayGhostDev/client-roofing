@@ -6,15 +6,8 @@ Comprehensive test suite for lead scoring engine with 20+ test scenarios.
 Tests all scoring components: demographics, behavioral, BANT, and temperature classification.
 """
 
-import pytest
-from backend.app.services.lead_scoring import LeadScoringEngine, lead_scoring_engine
-from backend.app.models.lead import (
-    Lead,
-    LeadSource,
-    LeadStatus,
-    LeadTemperature,
-    UrgencyLevel
-)
+from backend.app.models.lead import Lead, LeadSource, LeadStatus, LeadTemperature, UrgencyLevel
+from backend.app.services.lead_scoring import LeadScoringEngine
 
 
 class TestLeadScoringEngine:
@@ -38,7 +31,7 @@ class TestLeadScoringEngine:
             status=LeadStatus.QUALIFIED,
             property_value=600000,
             zip_code="48009",  # Birmingham (premium)
-            urgency=UrgencyLevel.IMMEDIATE
+            urgency=UrgencyLevel.IMMEDIATE,
         )
 
         breakdown = self.engine.calculate_score(
@@ -46,7 +39,7 @@ class TestLeadScoringEngine:
             interaction_count=5,
             response_time_minutes=1,
             budget_confirmed=True,
-            is_decision_maker=True
+            is_decision_maker=True,
         )
 
         assert breakdown.total_score >= 80, "Premium lead should score HOT"
@@ -65,7 +58,7 @@ class TestLeadScoringEngine:
             status=LeadStatus.APPOINTMENT_SCHEDULED,
             property_value=450000,
             zip_code="48075",  # Troy (target market)
-            urgency=UrgencyLevel.IMMEDIATE
+            urgency=UrgencyLevel.IMMEDIATE,
         )
 
         breakdown = self.engine.calculate_score(
@@ -73,7 +66,7 @@ class TestLeadScoringEngine:
             interaction_count=8,
             response_time_minutes=3,
             budget_confirmed=True,
-            is_decision_maker=True
+            is_decision_maker=True,
         )
 
         assert 60 <= breakdown.total_score < 80
@@ -87,14 +80,11 @@ class TestLeadScoringEngine:
             phone="2485558888",
             source=LeadSource.REPEAT_CUSTOMER,
             property_value=350000,
-            urgency=UrgencyLevel.ONE_TO_THREE_MONTHS
+            urgency=UrgencyLevel.ONE_TO_THREE_MONTHS,
         )
 
         breakdown = self.engine.calculate_score(
-            lead,
-            interaction_count=3,
-            response_time_minutes=5,
-            is_decision_maker=True
+            lead, interaction_count=3, response_time_minutes=5, is_decision_maker=True
         )
 
         # Repeat customers get high engagement points
@@ -115,14 +105,11 @@ class TestLeadScoringEngine:
             status=LeadStatus.QUALIFIED,
             property_value=350000,
             zip_code="48103",  # Ann Arbor (target)
-            urgency=UrgencyLevel.ONE_TO_THREE_MONTHS
+            urgency=UrgencyLevel.ONE_TO_THREE_MONTHS,
         )
 
         breakdown = self.engine.calculate_score(
-            lead,
-            interaction_count=4,
-            response_time_minutes=30,
-            budget_confirmed=True
+            lead, interaction_count=4, response_time_minutes=30, budget_confirmed=True
         )
 
         assert 60 <= breakdown.total_score < 80
@@ -136,14 +123,11 @@ class TestLeadScoringEngine:
             phone="2485556666",
             source=LeadSource.PHONE_INQUIRY,
             property_value=280000,
-            urgency=UrgencyLevel.IMMEDIATE
+            urgency=UrgencyLevel.IMMEDIATE,
         )
 
         breakdown = self.engine.calculate_score(
-            lead,
-            interaction_count=2,
-            response_time_minutes=2,
-            is_decision_maker=True
+            lead, interaction_count=2, response_time_minutes=2, is_decision_maker=True
         )
 
         assert 40 <= breakdown.total_score < 60
@@ -161,13 +145,11 @@ class TestLeadScoringEngine:
             phone="2485555555",
             source=LeadSource.ORGANIC_SEARCH,
             property_value=250000,
-            urgency=UrgencyLevel.THREE_TO_SIX_MONTHS
+            urgency=UrgencyLevel.THREE_TO_SIX_MONTHS,
         )
 
         breakdown = self.engine.calculate_score(
-            lead,
-            interaction_count=1,
-            response_time_minutes=120
+            lead, interaction_count=1, response_time_minutes=120
         )
 
         assert breakdown.total_score < 40
@@ -180,14 +162,10 @@ class TestLeadScoringEngine:
             last_name="Facebook",
             phone="2485554444",
             source=LeadSource.FACEBOOK_ADS,
-            property_value=220000
+            property_value=220000,
         )
 
-        breakdown = self.engine.calculate_score(
-            lead,
-            interaction_count=2,
-            response_time_minutes=60
-        )
+        breakdown = self.engine.calculate_score(lead, interaction_count=2, response_time_minutes=60)
 
         assert breakdown.total_score < 40
         assert breakdown.temperature == LeadTemperature.COLD
@@ -203,13 +181,11 @@ class TestLeadScoringEngine:
             last_name="Door",
             phone="2485553333",
             source=LeadSource.DOOR_TO_DOOR,
-            urgency=UrgencyLevel.PLANNING
+            urgency=UrgencyLevel.PLANNING,
         )
 
         breakdown = self.engine.calculate_score(
-            lead,
-            interaction_count=0,
-            response_time_minutes=None
+            lead, interaction_count=0, response_time_minutes=None
         )
 
         assert breakdown.total_score < 40
@@ -221,7 +197,7 @@ class TestLeadScoringEngine:
             first_name="Grace",
             last_name="Unknown",
             phone="2485552222",
-            source=LeadSource.ORGANIC_SEARCH
+            source=LeadSource.ORGANIC_SEARCH,
         )
 
         breakdown = self.engine.calculate_score(lead)
@@ -244,8 +220,8 @@ class TestLeadScoringEngine:
     def test_location_scoring(self):
         """Test ZIP code location scoring"""
         assert self.engine._score_location("48009") == 10  # Birmingham (premium)
-        assert self.engine._score_location("48075") == 7   # Troy (target)
-        assert self.engine._score_location("48201") == 3   # Detroit (other)
+        assert self.engine._score_location("48075") == 7  # Troy (target)
+        assert self.engine._score_location("48201") == 3  # Detroit (other)
         assert self.engine._score_location(None) == 3
 
     def test_income_estimate_scoring(self):
@@ -254,10 +230,10 @@ class TestLeadScoringEngine:
         assert score == 15  # Max score: premium property + premium location
 
         score = self.engine._estimate_income_score(400000, "48075")
-        assert score == 5   # Mid score: mid property + target location
+        assert score == 5  # Mid score: mid property + target location
 
         score = self.engine._estimate_income_score(None, None)
-        assert score == 0   # No data
+        assert score == 0  # No data
 
     def test_engagement_scoring_by_source(self):
         """Test engagement scoring for different lead sources"""
@@ -275,13 +251,13 @@ class TestLeadScoringEngine:
 
     def test_response_time_scoring_tiers(self):
         """Test response time scoring (critical 2-minute KPI)"""
-        assert self.engine._score_response_time(1) == 10   # Target: <2 min
-        assert self.engine._score_response_time(2) == 10   # Target: 2 min
-        assert self.engine._score_response_time(5) == 9    # Excellent
-        assert self.engine._score_response_time(30) == 5   # Acceptable
+        assert self.engine._score_response_time(1) == 10  # Target: <2 min
+        assert self.engine._score_response_time(2) == 10  # Target: 2 min
+        assert self.engine._score_response_time(5) == 9  # Excellent
+        assert self.engine._score_response_time(30) == 5  # Acceptable
         assert self.engine._score_response_time(120) == 3  # Delayed
-        assert self.engine._score_response_time(2000) == 1 # Poor
-        assert self.engine._score_response_time(None) == 1 # No response
+        assert self.engine._score_response_time(2000) == 1  # Poor
+        assert self.engine._score_response_time(None) == 1  # No response
 
     def test_interaction_count_scoring(self):
         """Test interaction count scoring (16-touch industry standard)"""
@@ -293,11 +269,11 @@ class TestLeadScoringEngine:
 
     def test_budget_scoring(self):
         """Test budget qualification scoring"""
-        assert self.engine._score_budget(True, None, None) == 8         # Confirmed
-        assert self.engine._score_budget(False, 20000, None) == 6       # High range
-        assert self.engine._score_budget(False, 10000, None) == 4       # Mid range
-        assert self.engine._score_budget(False, None, 400000) == 3      # Inferred from property
-        assert self.engine._score_budget(False, None, None) == 0        # Unknown
+        assert self.engine._score_budget(True, None, None) == 8  # Confirmed
+        assert self.engine._score_budget(False, 20000, None) == 6  # High range
+        assert self.engine._score_budget(False, 10000, None) == 4  # Mid range
+        assert self.engine._score_budget(False, None, 400000) == 3  # Inferred from property
+        assert self.engine._score_budget(False, None, None) == 0  # Unknown
 
     def test_urgency_need_scoring(self):
         """Test urgency (Need in BANT) scoring"""
@@ -340,7 +316,7 @@ class TestLeadScoringEngine:
             status=LeadStatus.QUALIFIED,
             property_value=1000000,  # Very high
             zip_code="48009",
-            urgency=UrgencyLevel.IMMEDIATE
+            urgency=UrgencyLevel.IMMEDIATE,
         )
 
         breakdown = self.engine.calculate_score(
@@ -348,7 +324,7 @@ class TestLeadScoringEngine:
             interaction_count=100,  # Excessive
             response_time_minutes=0,
             budget_confirmed=True,
-            is_decision_maker=True
+            is_decision_maker=True,
         )
 
         assert breakdown.total_score <= 100
@@ -356,10 +332,7 @@ class TestLeadScoringEngine:
     def test_missing_all_optional_data(self):
         """Test lead with only required fields"""
         lead = Lead(
-            first_name="Min",
-            last_name="Data",
-            phone="2485550000",
-            source=LeadSource.ORGANIC_SEARCH
+            first_name="Min", last_name="Data", phone="2485550000", source=LeadSource.ORGANIC_SEARCH
         )
 
         breakdown = self.engine.calculate_score(lead)
@@ -378,7 +351,7 @@ class TestLeadScoringEngine:
             status=LeadStatus.NEW,
             property_value=300000,
             response_time_minutes=5,
-            interaction_count=1
+            interaction_count=1,
         )
 
         # Initial score

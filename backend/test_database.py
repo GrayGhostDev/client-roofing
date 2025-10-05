@@ -11,10 +11,11 @@ from pathlib import Path
 app_dir = Path(__file__).parent
 sys.path.insert(0, str(app_dir))
 
+
 from app import create_app
 from app.config import get_supabase_client
 from app.utils.supabase_client import SupabaseService
-import json
+
 
 def test_database_connection():
     """Test basic database connection"""
@@ -28,6 +29,7 @@ def test_database_connection():
         print(f"❌ Database connection failed: {e}")
         return False
 
+
 def test_schema_inspection():
     """Inspect database schema and list tables"""
     print("\n📊 Inspecting Database Schema...")
@@ -40,9 +42,16 @@ def test_schema_inspection():
 
         # List of expected tables based on our migration
         expected_tables = [
-            'leads', 'customers', 'projects', 'appointments',
-            'team_members', 'interactions', 'reviews',
-            'partnerships', 'analytics', 'alerts'
+            "leads",
+            "customers",
+            "projects",
+            "appointments",
+            "team_members",
+            "interactions",
+            "reviews",
+            "partnerships",
+            "analytics",
+            "alerts",
         ]
 
         table_status = {}
@@ -52,17 +61,13 @@ def test_schema_inspection():
                 # Try to select count from each table
                 count_result = service.count(table)
                 table_status[table] = {
-                    'exists': True,
-                    'count': count_result,
-                    'status': 'accessible'
+                    "exists": True,
+                    "count": count_result,
+                    "status": "accessible",
                 }
                 print(f"✅ {table}: {count_result} records")
             except Exception as e:
-                table_status[table] = {
-                    'exists': False,
-                    'error': str(e),
-                    'status': 'error'
-                }
+                table_status[table] = {"exists": False, "error": str(e), "status": "error"}
                 print(f"❌ {table}: Error - {str(e)}")
 
         return table_status
@@ -70,6 +75,7 @@ def test_schema_inspection():
     except Exception as e:
         print(f"❌ Schema inspection failed: {e}")
         return {}
+
 
 def test_basic_crud_operations():
     """Test basic CRUD operations on a safe table"""
@@ -79,7 +85,7 @@ def test_basic_crud_operations():
         service = SupabaseService(use_admin=True)
 
         # Test with leads table (safest for testing)
-        test_table = 'leads'
+        test_table = "leads"
 
         # Test SELECT
         print(f"📖 Testing SELECT on {test_table}...")
@@ -95,26 +101,27 @@ def test_basic_crud_operations():
         # Test INSERT (with safe test data)
         print(f"📝 Testing INSERT on {test_table}...")
         test_lead = {
-            'first_name': 'Test',
-            'last_name': 'Customer',
-            'phone': '248-555-0123',
-            'email': 'test@example.com',
-            'source': 'website_form',
-            'status': 'new',
-            'notes': 'Database integration test record'
+            "first_name": "Test",
+            "last_name": "Customer",
+            "phone": "248-555-0123",
+            "email": "test@example.com",
+            "source": "website_form",
+            "status": "new",
+            "notes": "Database integration test record",
         }
 
         try:
             new_lead = service.insert(test_table, test_lead)
-            test_lead_id = new_lead['id']
+            test_lead_id = new_lead["id"]
             print(f"✅ INSERT successful - created record with ID: {test_lead_id}")
 
             # Test UPDATE
             print(f"✏️ Testing UPDATE on {test_table}...")
-            updated_lead = service.update(test_table, test_lead_id, {
-                'status': 'contacted',
-                'notes': 'Updated by database integration test'
-            })
+            updated_lead = service.update(
+                test_table,
+                test_lead_id,
+                {"status": "contacted", "notes": "Updated by database integration test"},
+            )
             print("✅ UPDATE successful")
 
             # Test DELETE (cleanup test record)
@@ -132,6 +139,7 @@ def test_basic_crud_operations():
         print(f"❌ CRUD operations test failed: {e}")
         return False
 
+
 def test_database_performance():
     """Test database performance and connection pooling"""
     print("\n⚡ Testing Database Performance...")
@@ -146,7 +154,7 @@ def test_database_performance():
 
         for i in range(5):
             try:
-                service.select('leads', limit=1)
+                service.select("leads", limit=1)
             except:
                 pass  # Table might not exist
 
@@ -168,38 +176,34 @@ def test_database_performance():
         print(f"❌ Performance test failed: {e}")
         return False
 
+
 def main():
     """Run all database tests"""
     print("🚀 iSwitch Roofs CRM - Database Integration Test")
     print("=" * 60)
 
     # Create Flask app and context
-    app = create_app('development')
+    app = create_app("development")
 
     with app.app_context():
         # Test results
-        results = {
-            'connection': False,
-            'schema': {},
-            'crud': False,
-            'performance': False
-        }
+        results = {"connection": False, "schema": {}, "crud": False, "performance": False}
 
         # 1. Test connection
-        results['connection'] = test_database_connection()
+        results["connection"] = test_database_connection()
 
-        if not results['connection']:
+        if not results["connection"]:
             print("\n❌ Cannot proceed without database connection")
             return results
 
         # 2. Test schema
-        results['schema'] = test_schema_inspection()
+        results["schema"] = test_schema_inspection()
 
         # 3. Test CRUD operations
-        results['crud'] = test_basic_crud_operations()
+        results["crud"] = test_basic_crud_operations()
 
         # 4. Test performance
-        results['performance'] = test_database_performance()
+        results["performance"] = test_database_performance()
 
         # Summary
         print("\n" + "=" * 60)
@@ -208,9 +212,11 @@ def main():
 
         print(f"🔌 Database Connection: {'✅ PASS' if results['connection'] else '❌ FAIL'}")
 
-        if results['schema']:
-            accessible_tables = sum(1 for table in results['schema'].values() if table.get('exists'))
-            total_tables = len(results['schema'])
+        if results["schema"]:
+            accessible_tables = sum(
+                1 for table in results["schema"].values() if table.get("exists")
+            )
+            total_tables = len(results["schema"])
             print(f"📊 Schema Inspection: ✅ {accessible_tables}/{total_tables} tables accessible")
         else:
             print("📊 Schema Inspection: ❌ FAIL")
@@ -222,22 +228,25 @@ def main():
         print("\n🎯 RECOMMENDATIONS")
         print("-" * 60)
 
-        if not results['connection']:
+        if not results["connection"]:
             print("❌ Fix database connection configuration")
             print("   - Check SUPABASE_URL and SUPABASE_KEY in .env")
             print("   - Verify Supabase project is active")
 
-        if results['schema'] and not any(table.get('exists') for table in results['schema'].values()):
+        if results["schema"] and not any(
+            table.get("exists") for table in results["schema"].values()
+        ):
             print("❌ No accessible tables found")
             print("   - Run database migrations")
             print("   - Check table permissions and RLS policies")
 
-        if not results['crud']:
+        if not results["crud"]:
             print("⚠️ CRUD operations failed")
             print("   - Tables may not exist yet")
             print("   - Check row-level security policies")
 
         return results
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

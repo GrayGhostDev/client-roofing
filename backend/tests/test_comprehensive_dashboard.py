@@ -4,27 +4,24 @@ Comprehensive Dashboard Testing Suite
 Tests both frontend (Reflex) and backend (Flask) components
 """
 
-import pytest
-import requests
-import time
 import json
-import subprocess
-import sys
 import os
-from typing import Dict, List, Tuple, Optional
-from urllib.parse import urljoin
-import concurrent.futures
+import sys
+import time
 from dataclasses import dataclass
+
+import requests
 
 
 @dataclass
 class TestResult:
     """Test result container"""
+
     test_name: str
     status: str  # PASS, FAIL, SKIP
     message: str
     duration: float
-    details: Optional[Dict] = None
+    details: dict | None = None
 
 
 class DashboardTester:
@@ -33,9 +30,16 @@ class DashboardTester:
     def __init__(self):
         self.frontend_url = "http://localhost:3000"
         self.backend_url = "http://127.0.0.1:8001"
-        self.results: List[TestResult] = []
+        self.results: list[TestResult] = []
 
-    def add_result(self, test_name: str, status: str, message: str, duration: float, details: Optional[Dict] = None):
+    def add_result(
+        self,
+        test_name: str,
+        status: str,
+        message: str,
+        duration: float,
+        details: dict | None = None,
+    ):
         """Add a test result"""
         self.results.append(TestResult(test_name, status, message, duration, details))
 
@@ -53,22 +57,19 @@ class DashboardTester:
                     "PASS",
                     f"Backend responding (HTTP {response.status_code})",
                     duration,
-                    data
+                    data,
                 )
             else:
                 return TestResult(
                     "Backend Health Check",
                     "FAIL",
                     f"Backend returned HTTP {response.status_code}",
-                    duration
+                    duration,
                 )
         except requests.exceptions.RequestException as e:
             duration = time.time() - start_time
             return TestResult(
-                "Backend Health Check",
-                "FAIL",
-                f"Backend connection failed: {str(e)}",
-                duration
+                "Backend Health Check", "FAIL", f"Backend connection failed: {str(e)}", duration
             )
 
     def test_backend_cors(self) -> TestResult:
@@ -76,9 +77,9 @@ class DashboardTester:
         start_time = time.time()
         try:
             headers = {
-                'Origin': 'http://localhost:3000',
-                'Access-Control-Request-Method': 'GET',
-                'Access-Control-Request-Headers': 'Content-Type'
+                "Origin": "http://localhost:3000",
+                "Access-Control-Request-Method": "GET",
+                "Access-Control-Request-Headers": "Content-Type",
             }
 
             # Send OPTIONS request to test CORS preflight
@@ -86,18 +87,22 @@ class DashboardTester:
             duration = time.time() - start_time
 
             cors_headers = {
-                'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
-                'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
-                'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers')
+                "Access-Control-Allow-Origin": response.headers.get("Access-Control-Allow-Origin"),
+                "Access-Control-Allow-Methods": response.headers.get(
+                    "Access-Control-Allow-Methods"
+                ),
+                "Access-Control-Allow-Headers": response.headers.get(
+                    "Access-Control-Allow-Headers"
+                ),
             }
 
-            if response.status_code in [200, 204] and cors_headers['Access-Control-Allow-Origin']:
+            if response.status_code in [200, 204] and cors_headers["Access-Control-Allow-Origin"]:
                 return TestResult(
                     "CORS Configuration",
                     "PASS",
                     "CORS headers properly configured",
                     duration,
-                    cors_headers
+                    cors_headers,
                 )
             else:
                 return TestResult(
@@ -105,18 +110,13 @@ class DashboardTester:
                     "FAIL",
                     f"CORS not properly configured (HTTP {response.status_code})",
                     duration,
-                    cors_headers
+                    cors_headers,
                 )
         except requests.exceptions.RequestException as e:
             duration = time.time() - start_time
-            return TestResult(
-                "CORS Configuration",
-                "FAIL",
-                f"CORS test failed: {str(e)}",
-                duration
-            )
+            return TestResult("CORS Configuration", "FAIL", f"CORS test failed: {str(e)}", duration)
 
-    def test_backend_endpoints(self) -> List[TestResult]:
+    def test_backend_endpoints(self) -> list[TestResult]:
         """Test various backend endpoints"""
         endpoints = [
             ("/health", "GET"),
@@ -126,7 +126,7 @@ class DashboardTester:
             ("/api/appointments", "GET"),
             ("/api/analytics/dashboard", "GET"),
             ("/api/teams", "GET"),
-            ("/api/partnerships", "GET")
+            ("/api/partnerships", "GET"),
         ]
 
         results = []
@@ -144,22 +144,29 @@ class DashboardTester:
                     status = "FAIL"
                     message = f"{method} {endpoint} failed (HTTP {response.status_code})"
 
-                results.append(TestResult(
-                    f"Backend Endpoint: {method} {endpoint}",
-                    status,
-                    message,
-                    duration,
-                    {"status_code": response.status_code, "response_size": len(response.content)}
-                ))
+                results.append(
+                    TestResult(
+                        f"Backend Endpoint: {method} {endpoint}",
+                        status,
+                        message,
+                        duration,
+                        {
+                            "status_code": response.status_code,
+                            "response_size": len(response.content),
+                        },
+                    )
+                )
 
             except requests.exceptions.RequestException as e:
                 duration = time.time() - start_time
-                results.append(TestResult(
-                    f"Backend Endpoint: {method} {endpoint}",
-                    "FAIL",
-                    f"Request failed: {str(e)}",
-                    duration
-                ))
+                results.append(
+                    TestResult(
+                        f"Backend Endpoint: {method} {endpoint}",
+                        "FAIL",
+                        f"Request failed: {str(e)}",
+                        duration,
+                    )
+                )
 
         return results
 
@@ -171,7 +178,7 @@ class DashboardTester:
             duration = time.time() - start_time
 
             if response.status_code == 200:
-                content_type = response.headers.get('content-type', '')
+                content_type = response.headers.get("content-type", "")
                 content_length = len(response.content)
 
                 return TestResult(
@@ -182,23 +189,20 @@ class DashboardTester:
                     {
                         "content_type": content_type,
                         "content_length": content_length,
-                        "has_html": "html" in content_type.lower()
-                    }
+                        "has_html": "html" in content_type.lower(),
+                    },
                 )
             else:
                 return TestResult(
                     "Frontend Accessibility",
                     "FAIL",
                     f"Frontend returned HTTP {response.status_code}",
-                    duration
+                    duration,
                 )
         except requests.exceptions.RequestException as e:
             duration = time.time() - start_time
             return TestResult(
-                "Frontend Accessibility",
-                "FAIL",
-                f"Frontend connection failed: {str(e)}",
-                duration
+                "Frontend Accessibility", "FAIL", f"Frontend connection failed: {str(e)}", duration
             )
 
     def test_service_integration(self) -> TestResult:
@@ -221,26 +225,23 @@ class DashboardTester:
                     duration,
                     {
                         "frontend_status": frontend_response.status_code,
-                        "backend_status": backend_response.status_code
-                    }
+                        "backend_status": backend_response.status_code,
+                    },
                 )
             else:
                 return TestResult(
                     "Service Integration",
                     "FAIL",
                     f"Service communication issue (Frontend: {frontend_response.status_code}, Backend: {backend_response.status_code})",
-                    duration
+                    duration,
                 )
         except requests.exceptions.RequestException as e:
             duration = time.time() - start_time
             return TestResult(
-                "Service Integration",
-                "FAIL",
-                f"Integration test failed: {str(e)}",
-                duration
+                "Service Integration", "FAIL", f"Integration test failed: {str(e)}", duration
             )
 
-    def test_performance_basic(self) -> List[TestResult]:
+    def test_performance_basic(self) -> list[TestResult]:
         """Basic performance testing"""
         results = []
 
@@ -260,20 +261,21 @@ class DashboardTester:
                 status = "FAIL"
                 message = f"Frontend loads slowly ({duration:.2f}s)"
 
-            results.append(TestResult(
-                "Frontend Load Performance",
-                status,
-                message,
-                duration,
-                {"load_time": duration, "threshold": 10.0}
-            ))
+            results.append(
+                TestResult(
+                    "Frontend Load Performance",
+                    status,
+                    message,
+                    duration,
+                    {"load_time": duration, "threshold": 10.0},
+                )
+            )
         except requests.exceptions.RequestException as e:
-            results.append(TestResult(
-                "Frontend Load Performance",
-                "FAIL",
-                f"Frontend load test failed: {str(e)}",
-                0
-            ))
+            results.append(
+                TestResult(
+                    "Frontend Load Performance", "FAIL", f"Frontend load test failed: {str(e)}", 0
+                )
+            )
 
         # Test backend response time
         start_time = time.time()
@@ -291,24 +293,28 @@ class DashboardTester:
                 status = "FAIL"
                 message = f"Backend responds slowly ({duration:.3f}s)"
 
-            results.append(TestResult(
-                "Backend Response Performance",
-                status,
-                message,
-                duration,
-                {"response_time": duration, "threshold": 3.0}
-            ))
+            results.append(
+                TestResult(
+                    "Backend Response Performance",
+                    status,
+                    message,
+                    duration,
+                    {"response_time": duration, "threshold": 3.0},
+                )
+            )
         except requests.exceptions.RequestException as e:
-            results.append(TestResult(
-                "Backend Response Performance",
-                "FAIL",
-                f"Backend performance test failed: {str(e)}",
-                0
-            ))
+            results.append(
+                TestResult(
+                    "Backend Response Performance",
+                    "FAIL",
+                    f"Backend performance test failed: {str(e)}",
+                    0,
+                )
+            )
 
         return results
 
-    def test_error_handling(self) -> List[TestResult]:
+    def test_error_handling(self) -> list[TestResult]:
         """Test error handling"""
         results = []
 
@@ -325,25 +331,26 @@ class DashboardTester:
                 status = "FAIL"
                 message = f"Backend returned {response.status_code} instead of 404"
 
-            results.append(TestResult(
-                "404 Error Handling",
-                status,
-                message,
-                duration,
-                {"status_code": response.status_code}
-            ))
+            results.append(
+                TestResult(
+                    "404 Error Handling",
+                    status,
+                    message,
+                    duration,
+                    {"status_code": response.status_code},
+                )
+            )
         except requests.exceptions.RequestException as e:
             duration = time.time() - start_time
-            results.append(TestResult(
-                "404 Error Handling",
-                "FAIL",
-                f"Error handling test failed: {str(e)}",
-                duration
-            ))
+            results.append(
+                TestResult(
+                    "404 Error Handling", "FAIL", f"Error handling test failed: {str(e)}", duration
+                )
+            )
 
         return results
 
-    def run_all_tests(self) -> List[TestResult]:
+    def run_all_tests(self) -> list[TestResult]:
         """Run all tests and return results"""
         print("Starting comprehensive dashboard testing...")
 
@@ -414,7 +421,9 @@ DETAILED RESULTS:
 """
 
         for result in self.results:
-            status_icon = "✅" if result.status == "PASS" else "❌" if result.status == "FAIL" else "⏩"
+            status_icon = (
+                "✅" if result.status == "PASS" else "❌" if result.status == "FAIL" else "⏩"
+            )
             report += f"{status_icon} {result.test_name}\n"
             report += f"   Status: {result.status}\n"
             report += f"   Message: {result.message}\n"
@@ -450,9 +459,11 @@ def main():
     print(report)
 
     # Save report to file
-    report_file = "/Users/grayghostdata/Projects/client-roofing/backend/reports/comprehensive_test_report.txt"
+    report_file = (
+        "/Users/grayghostdata/Projects/client-roofing/backend/reports/comprehensive_test_report.txt"
+    )
     os.makedirs(os.path.dirname(report_file), exist_ok=True)
-    with open(report_file, 'w') as f:
+    with open(report_file, "w") as f:
         f.write(report)
 
     print(f"Report saved to: {report_file}")

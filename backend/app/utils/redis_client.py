@@ -8,10 +8,11 @@ Author: iSwitch Roofs Development Team
 Date: 2025-01-04
 """
 
-import os
 import json
 import logging
-from typing import Optional, Any, Dict, List
+import os
+from typing import Any
+
 import redis
 from redis.exceptions import ConnectionError, TimeoutError
 
@@ -32,12 +33,12 @@ class RedisClient:
 
     def __init__(self):
         """Initialize Redis connection with configuration from environment"""
-        self.host = os.getenv('REDIS_HOST', 'localhost')
-        self.port = int(os.getenv('REDIS_PORT', 6379))
-        self.db = int(os.getenv('REDIS_DB', 0))
-        self.password = os.getenv('REDIS_PASSWORD', None)
-        self.max_connections = int(os.getenv('REDIS_MAX_CONNECTIONS', 50))
-        self.socket_timeout = int(os.getenv('REDIS_SOCKET_TIMEOUT', 5))
+        self.host = os.getenv("REDIS_HOST", "localhost")
+        self.port = int(os.getenv("REDIS_PORT", 6379))
+        self.db = int(os.getenv("REDIS_DB", 0))
+        self.password = os.getenv("REDIS_PASSWORD", None)
+        self.max_connections = int(os.getenv("REDIS_MAX_CONNECTIONS", 50))
+        self.socket_timeout = int(os.getenv("REDIS_SOCKET_TIMEOUT", 5))
         self.connection_pool = None
         self.client = None
         self.is_connected = False
@@ -57,7 +58,7 @@ class RedisClient:
                 max_connections=self.max_connections,
                 socket_timeout=self.socket_timeout,
                 socket_connect_timeout=self.socket_timeout,
-                decode_responses=True
+                decode_responses=True,
             )
 
             # Create Redis client
@@ -82,7 +83,7 @@ class RedisClient:
         if not self.is_connected:
             self._connect()
 
-    def get(self, key: str) -> Optional[str]:
+    def get(self, key: str) -> str | None:
         """Get value by key"""
         try:
             self._ensure_connected()
@@ -91,7 +92,7 @@ class RedisClient:
             logger.error(f"Redis GET error for key {key}: {str(e)}")
             return None
 
-    def set(self, key: str, value: str, ex: Optional[int] = None) -> bool:
+    def set(self, key: str, value: str, ex: int | None = None) -> bool:
         """
         Set key-value pair
 
@@ -173,7 +174,7 @@ class RedisClient:
             logger.error(f"Redis DECR error for key {key}: {str(e)}")
             return 0
 
-    def hget(self, name: str, key: str) -> Optional[str]:
+    def hget(self, name: str, key: str) -> str | None:
         """Get hash field value"""
         try:
             self._ensure_connected()
@@ -191,7 +192,7 @@ class RedisClient:
             logger.error(f"Redis HSET error for {name}:{key}: {str(e)}")
             return False
 
-    def hgetall(self, name: str) -> Dict[str, str]:
+    def hgetall(self, name: str) -> dict[str, str]:
         """Get all hash fields and values"""
         try:
             self._ensure_connected()
@@ -227,7 +228,7 @@ class RedisClient:
             logger.error(f"Redis RPUSH error for key {key}: {str(e)}")
             return 0
 
-    def lpop(self, key: str) -> Optional[str]:
+    def lpop(self, key: str) -> str | None:
         """Pop value from list head"""
         try:
             self._ensure_connected()
@@ -236,7 +237,7 @@ class RedisClient:
             logger.error(f"Redis LPOP error for key {key}: {str(e)}")
             return None
 
-    def rpop(self, key: str) -> Optional[str]:
+    def rpop(self, key: str) -> str | None:
         """Pop value from list tail"""
         try:
             self._ensure_connected()
@@ -245,7 +246,7 @@ class RedisClient:
             logger.error(f"Redis RPOP error for key {key}: {str(e)}")
             return None
 
-    def lrange(self, key: str, start: int, stop: int) -> List[str]:
+    def lrange(self, key: str, start: int, stop: int) -> list[str]:
         """Get list range"""
         try:
             self._ensure_connected()
@@ -310,7 +311,7 @@ class RedisClient:
             logger.error(f"Redis SUBSCRIBE error: {str(e)}")
             return None
 
-    def scan_keys(self, pattern: str = '*', count: int = 100) -> List[str]:
+    def scan_keys(self, pattern: str = "*", count: int = 100) -> list[str]:
         """Scan for keys matching pattern"""
         try:
             self._ensure_connected()
@@ -362,18 +363,20 @@ class MockRedisClient:
         self.expiry = {}
         logger.info("Initialized mock Redis client")
 
-    def get(self, key: str) -> Optional[str]:
+    def get(self, key: str) -> str | None:
         return self.storage.get(key)
 
-    def set(self, key: str, value: str, ex: Optional[int] = None) -> bool:
+    def set(self, key: str, value: str, ex: int | None = None) -> bool:
         self.storage[key] = value
         if ex:
             import time
+
             self.expiry[key] = time.time() + ex
         return True
 
     def setex(self, key: str, seconds: int, value: str) -> bool:
         import time
+
         self.storage[key] = value
         self.expiry[key] = time.time() + seconds
         return True
@@ -392,6 +395,7 @@ class MockRedisClient:
     def expire(self, key: str, seconds: int) -> bool:
         if key in self.storage:
             import time
+
             self.expiry[key] = time.time() + seconds
             return True
         return False
@@ -399,6 +403,7 @@ class MockRedisClient:
     def ttl(self, key: str) -> int:
         if key in self.expiry:
             import time
+
             remaining = self.expiry[key] - time.time()
             return int(remaining) if remaining > 0 else -2
         return -1 if key in self.storage else -2
@@ -417,7 +422,7 @@ class MockRedisClient:
         return True
 
     # Add other methods as needed with basic implementations
-    def hget(self, name: str, key: str) -> Optional[str]:
+    def hget(self, name: str, key: str) -> str | None:
         hash_key = f"{name}:{key}"
         return self.storage.get(hash_key)
 
@@ -426,12 +431,12 @@ class MockRedisClient:
         self.storage[hash_key] = value
         return True
 
-    def hgetall(self, name: str) -> Dict[str, str]:
+    def hgetall(self, name: str) -> dict[str, str]:
         prefix = f"{name}:"
         result = {}
         for k, v in self.storage.items():
             if k.startswith(prefix):
-                field = k[len(prefix):]
+                field = k[len(prefix) :]
                 result[field] = v
         return result
 
@@ -445,57 +450,57 @@ class MockRedisClient:
         return count
 
     def lpush(self, key: str, *values: str) -> int:
-        lst = json.loads(self.storage.get(key, '[]'))
+        lst = json.loads(self.storage.get(key, "[]"))
         for value in values:
             lst.insert(0, value)
         self.storage[key] = json.dumps(lst)
         return len(lst)
 
     def rpush(self, key: str, *values: str) -> int:
-        lst = json.loads(self.storage.get(key, '[]'))
+        lst = json.loads(self.storage.get(key, "[]"))
         lst.extend(values)
         self.storage[key] = json.dumps(lst)
         return len(lst)
 
-    def lpop(self, key: str) -> Optional[str]:
-        lst = json.loads(self.storage.get(key, '[]'))
+    def lpop(self, key: str) -> str | None:
+        lst = json.loads(self.storage.get(key, "[]"))
         if lst:
             val = lst.pop(0)
             self.storage[key] = json.dumps(lst)
             return val
         return None
 
-    def rpop(self, key: str) -> Optional[str]:
-        lst = json.loads(self.storage.get(key, '[]'))
+    def rpop(self, key: str) -> str | None:
+        lst = json.loads(self.storage.get(key, "[]"))
         if lst:
             val = lst.pop()
             self.storage[key] = json.dumps(lst)
             return val
         return None
 
-    def lrange(self, key: str, start: int, stop: int) -> List[str]:
-        lst = json.loads(self.storage.get(key, '[]'))
-        return lst[start:stop+1] if stop >= 0 else lst[start:]
+    def lrange(self, key: str, start: int, stop: int) -> list[str]:
+        lst = json.loads(self.storage.get(key, "[]"))
+        return lst[start : stop + 1] if stop >= 0 else lst[start:]
 
     def sadd(self, key: str, *values: str) -> int:
-        s = set(json.loads(self.storage.get(key, '[]')))
+        s = set(json.loads(self.storage.get(key, "[]")))
         orig_len = len(s)
         s.update(values)
         self.storage[key] = json.dumps(list(s))
         return len(s) - orig_len
 
     def srem(self, key: str, *values: str) -> int:
-        s = set(json.loads(self.storage.get(key, '[]')))
+        s = set(json.loads(self.storage.get(key, "[]")))
         orig_len = len(s)
         s.difference_update(values)
         self.storage[key] = json.dumps(list(s))
         return orig_len - len(s)
 
     def smembers(self, key: str) -> set:
-        return set(json.loads(self.storage.get(key, '[]')))
+        return set(json.loads(self.storage.get(key, "[]")))
 
     def sismember(self, key: str, value: str) -> bool:
-        s = set(json.loads(self.storage.get(key, '[]')))
+        s = set(json.loads(self.storage.get(key, "[]")))
         return value in s
 
     def publish(self, channel: str, message: str) -> int:
@@ -508,9 +513,10 @@ class MockRedisClient:
         logger.debug(f"Mock subscribe to channels: {channels}")
         return None
 
-    def scan(self, cursor: int, match: str = '*', count: int = 100):
+    def scan(self, cursor: int, match: str = "*", count: int = 100):
         # Mock scan
         import fnmatch
+
         matching_keys = [k for k in self.storage.keys() if fnmatch.fnmatch(k, match)]
 
         # Simple pagination
@@ -531,7 +537,7 @@ redis_client = RedisClient()
 
 
 # Export convenience functions
-def cache_get(key: str) -> Optional[Any]:
+def cache_get(key: str) -> Any | None:
     """Get cached value with JSON deserialization"""
     value = redis_client.get(key)
     if value:

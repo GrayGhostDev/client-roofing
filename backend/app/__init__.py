@@ -5,8 +5,8 @@ Date: 2025-10-01
 """
 
 import logging
-from logging.handlers import RotatingFileHandler
 import os
+from logging.handlers import RotatingFileHandler
 
 from flask import Flask
 from flask_cors import CORS
@@ -15,6 +15,7 @@ from flask_cors import CORS
 try:
     import sentry_sdk
     from sentry_sdk.integrations.flask import FlaskIntegration
+
     SENTRY_AVAILABLE = True
 except ImportError:
     SENTRY_AVAILABLE = False
@@ -69,7 +70,7 @@ def create_app(config_name: str | None = None):
         resources={
             r"/api/*": {"origins": app.config.get("CORS_ORIGINS", "*")},
             r"/health": {"origins": app.config.get("CORS_ORIGINS", "*")},
-            r"/": {"origins": app.config.get("CORS_ORIGINS", "*")}
+            r"/": {"origins": app.config.get("CORS_ORIGINS", "*")},
         },
         supports_credentials=True,
     )
@@ -122,9 +123,7 @@ def setup_logging(app):
             "logs/iswitch_roofs_crm.log", maxBytes=10240000, backupCount=10
         )
         file_handler.setFormatter(
-            logging.Formatter(
-                "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"
-            )
+            logging.Formatter("%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]")
         )
         file_handler.setLevel(logging.INFO)
         app.logger.addHandler(file_handler)
@@ -151,6 +150,7 @@ def register_blueprints(app):
     # Import and register all API route blueprints
     try:
         from app.routes import auth
+
         app.register_blueprint(auth.bp, url_prefix="/api/auth")
         app.logger.info("Auth routes registered successfully")
     except Exception as e:
@@ -158,6 +158,7 @@ def register_blueprints(app):
 
     try:
         from app.routes import leads
+
         app.register_blueprint(leads.bp, url_prefix="/api/leads")
         app.logger.info("Leads routes registered successfully")
     except Exception as e:
@@ -165,6 +166,7 @@ def register_blueprints(app):
 
     try:
         from app.routes import customers
+
         app.register_blueprint(customers.bp, url_prefix="/api/customers")
         app.logger.info("Customer routes registered successfully")
     except Exception as e:
@@ -172,6 +174,7 @@ def register_blueprints(app):
 
     try:
         from app.routes import projects
+
         app.register_blueprint(projects.bp, url_prefix="/api/projects")
         app.logger.info("Project routes registered successfully")
     except Exception as e:
@@ -179,6 +182,7 @@ def register_blueprints(app):
 
     try:
         from app.routes import interactions
+
         app.register_blueprint(interactions.bp, url_prefix="/api/interactions")
         app.logger.info("Interaction routes registered successfully")
     except Exception as e:
@@ -186,6 +190,7 @@ def register_blueprints(app):
 
     try:
         from app.routes import partnerships
+
         app.register_blueprint(partnerships.bp, url_prefix="/api/partnerships")
         app.logger.info("Partnership routes registered successfully")
     except Exception as e:
@@ -193,6 +198,7 @@ def register_blueprints(app):
 
     try:
         from app.routes import reviews
+
         app.register_blueprint(reviews.bp, url_prefix="/api/reviews")
         app.logger.info("Review routes registered successfully")
     except Exception as e:
@@ -200,6 +206,7 @@ def register_blueprints(app):
 
     try:
         from app.routes import appointments
+
         app.register_blueprint(appointments.bp, url_prefix="/api/appointments")
         app.logger.info("Appointment routes registered successfully")
     except Exception as e:
@@ -207,6 +214,7 @@ def register_blueprints(app):
 
     try:
         from app.routes import analytics
+
         app.register_blueprint(analytics.bp, url_prefix="/api/analytics")
         app.logger.info("Analytics routes registered successfully")
     except Exception as e:
@@ -214,6 +222,7 @@ def register_blueprints(app):
 
     try:
         from app.routes import enhanced_analytics
+
         app.register_blueprint(enhanced_analytics.bp, url_prefix="/api/enhanced-analytics")
         app.logger.info("Enhanced analytics routes registered successfully")
     except Exception as e:
@@ -221,6 +230,7 @@ def register_blueprints(app):
 
     try:
         from app.routes import team
+
         app.register_blueprint(team.bp, url_prefix="/api/team")
         app.logger.info("Team routes registered successfully")
     except Exception as e:
@@ -228,6 +238,7 @@ def register_blueprints(app):
 
     try:
         from app.routes import alerts
+
         app.register_blueprint(alerts.bp, url_prefix="/api/alerts")
         app.logger.info("Alert routes registered successfully")
     except Exception as e:
@@ -303,6 +314,7 @@ def register_commands(app):
     def routes():
         """Display all registered routes."""
         import urllib
+
         from flask import url_for
 
         output = []

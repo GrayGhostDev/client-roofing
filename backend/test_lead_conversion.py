@@ -9,11 +9,12 @@ This script verifies:
 4. Basic CRUD operations work
 """
 
-import sys
 import os
+import sys
 
 # Add the backend directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
+
 
 def test_imports():
     """Test that all imports work correctly."""
@@ -21,19 +22,28 @@ def test_imports():
 
     try:
         # Test SQLAlchemy model import
-        from app.models.lead_sqlalchemy import Lead, LeadStatusEnum, LeadTemperatureEnum, LeadSourceEnum
+        from app.models.lead_sqlalchemy import (
+            Lead,
+            LeadSourceEnum,
+            LeadStatusEnum,
+            LeadTemperatureEnum,
+        )
+
         print("✅ SQLAlchemy Lead model imported successfully")
 
         # Test Pydantic schema imports
-        from app.schemas.lead import LeadCreate, LeadUpdate, LeadResponse, LeadListFilters
+        from app.schemas.lead import LeadCreate, LeadListFilters, LeadResponse, LeadUpdate
+
         print("✅ Pydantic schemas imported successfully")
 
         # Test database imports
         from app.database import get_db_session, init_db
+
         print("✅ Database session manager imported successfully")
 
         # Test service import
         from app.services.lead_service import lead_service
+
         print("✅ Lead service imported successfully")
 
         return True
@@ -51,7 +61,7 @@ def test_model_creation():
     print("\nTesting model creation...")
 
     try:
-        from app.models.lead_sqlalchemy import Lead, LeadStatusEnum, LeadSourceEnum
+        from app.models.lead_sqlalchemy import Lead, LeadSourceEnum, LeadStatusEnum
 
         # Create a test lead instance
         lead = Lead(
@@ -66,7 +76,7 @@ def test_model_creation():
             state="MI",
             zip_code="48201",
             property_value=250000,
-            lead_score=75
+            lead_score=75,
         )
 
         print("✅ Lead model instance created successfully")
@@ -99,7 +109,7 @@ def test_schema_validation():
             "city": "Ann Arbor",
             "state": "MI",
             "zip_code": "48104",
-            "property_value": 300000
+            "property_value": 300000,
         }
 
         lead_create = LeadCreate(**valid_data)
@@ -113,7 +123,7 @@ def test_schema_validation():
             invalid_data = {
                 "first_name": "John",
                 # Missing last_name, phone, source
-                "email": "invalid@example.com"
+                "email": "invalid@example.com",
             }
             LeadCreate(**invalid_data)
             print("❌ Invalid data should have failed validation")

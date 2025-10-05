@@ -4,13 +4,15 @@ Base Model for SQLAlchemy
 Provides common fields and functionality for all models
 """
 
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, DateTime, Boolean, Text
-from datetime import datetime
 import uuid
+from datetime import datetime
+
+from sqlalchemy import Boolean, Column, DateTime, String, Text
+from sqlalchemy.ext.declarative import declarative_base
 
 # Create base class for declarative models
 Base = declarative_base()
+
 
 class BaseModel(Base):
     """
@@ -18,6 +20,7 @@ class BaseModel(Base):
 
     All models should inherit from this class
     """
+
     __abstract__ = True
 
     # Primary key - UUID as string for Supabase compatibility
@@ -52,6 +55,7 @@ class BaseModel(Base):
         """Mark record as deleted without removing from database"""
         self.is_deleted = True
         self.deleted_at = datetime.utcnow()
+
 
 # Alias for compatibility with existing imports
 BaseDBModel = BaseModel

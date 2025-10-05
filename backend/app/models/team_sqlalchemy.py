@@ -5,31 +5,44 @@ Version: 1.0.0
 Team member data model for managing staff, roles, performance, and assignments.
 """
 
-from sqlalchemy import Column, String, Integer, Boolean, Text, DateTime, Date, Float, Enum as SQLEnum
-from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
-from typing import Optional
-from uuid import UUID
-from datetime import datetime, date
+from datetime import date, datetime
 from enum import Enum
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Float,
+    Integer,
+    String,
+    Text,
+)
+from sqlalchemy import (
+    Enum as SQLEnum,
+)
 
 from app.models.base import BaseModel
 
 
 class TeamRole(str, Enum):
     """Team member role enumeration"""
-    ADMIN = "admin"                    # Full system access
-    OWNER = "owner"                    # Business owner
-    MANAGER = "manager"                # Operations manager
-    SALES_REP = "sales_rep"           # Sales representative
+
+    ADMIN = "admin"  # Full system access
+    OWNER = "owner"  # Business owner
+    MANAGER = "manager"  # Operations manager
+    SALES_REP = "sales_rep"  # Sales representative
     PROJECT_MANAGER = "project_manager"  # Project manager
-    INSTALLER = "installer"            # Field installer/technician
-    OFFICE_ADMIN = "office_admin"      # Office administrator
-    MARKETING = "marketing"            # Marketing specialist
+    INSTALLER = "installer"  # Field installer/technician
+    OFFICE_ADMIN = "office_admin"  # Office administrator
+    MARKETING = "marketing"  # Marketing specialist
     CUSTOMER_SERVICE = "customer_service"  # Customer service rep
 
 
 class TeamMemberStatus(str, Enum):
     """Team member status"""
+
     ACTIVE = "active"
     INACTIVE = "inactive"
     ON_LEAVE = "on_leave"
@@ -38,6 +51,7 @@ class TeamMemberStatus(str, Enum):
 
 class AvailabilityStatus(str, Enum):
     """Current availability status"""
+
     AVAILABLE = "available"
     BUSY = "busy"
     IN_FIELD = "in_field"
@@ -53,7 +67,8 @@ class TeamMember(BaseModel):
     Tracks employee information, roles, permissions, performance metrics,
     and availability for assignment and scheduling.
     """
-    __tablename__ = 'team_members'
+
+    __tablename__ = "team_members"
 
     # Basic Information (Required)
     first_name = Column(String(100), nullable=False)
@@ -112,8 +127,8 @@ class TeamMember(BaseModel):
 
     # Availability & Scheduling
     work_hours_start = Column(String(5), nullable=True)  # HH:MM format
-    work_hours_end = Column(String(5), nullable=True)    # HH:MM format
-    work_days = Column(String(50), nullable=True)        # Comma-separated days
+    work_hours_end = Column(String(5), nullable=True)  # HH:MM format
+    work_days = Column(String(50), nullable=True)  # Comma-separated days
     timezone = Column(String(50), default="America/Detroit")
 
     # Calendar Integration
@@ -160,7 +175,7 @@ class TeamMember(BaseModel):
         return self.role in [TeamRole.INSTALLER, TeamRole.PROJECT_MANAGER]
 
     @property
-    def monthly_sales_progress(self) -> Optional[float]:
+    def monthly_sales_progress(self) -> float | None:
         """Calculate monthly sales progress percentage"""
         if self.monthly_sales_target and self.monthly_sales_target > 0:
             return (self.monthly_sales_actual / self.monthly_sales_target) * 100
@@ -176,6 +191,7 @@ class TeamMember(BaseModel):
 # Pydantic schemas for API validation
 class TeamMemberCreateSchema(BaseModel):
     """Schema for creating a new team member"""
+
     model_config = ConfigDict(from_attributes=True)
 
     first_name: str = Field(..., min_length=1, max_length=100)
@@ -185,75 +201,77 @@ class TeamMemberCreateSchema(BaseModel):
     role: TeamRole
 
     # Optional fields
-    employee_id: Optional[str] = None
-    hire_date: Optional[date] = None
-    department: Optional[str] = None
-    personal_email: Optional[EmailStr] = None
-    personal_phone: Optional[str] = None
-    work_hours_start: Optional[str] = None
-    work_hours_end: Optional[str] = None
-    work_days: Optional[str] = None
-    can_view_all_leads: Optional[bool] = False
-    can_manage_team: Optional[bool] = False
-    can_access_reports: Optional[bool] = False
-    monthly_sales_target: Optional[int] = None
-    notes: Optional[str] = None
+    employee_id: str | None = None
+    hire_date: date | None = None
+    department: str | None = None
+    personal_email: EmailStr | None = None
+    personal_phone: str | None = None
+    work_hours_start: str | None = None
+    work_hours_end: str | None = None
+    work_days: str | None = None
+    can_view_all_leads: bool | None = False
+    can_manage_team: bool | None = False
+    can_access_reports: bool | None = False
+    monthly_sales_target: int | None = None
+    notes: str | None = None
 
-    @field_validator('phone', 'personal_phone')
+    @field_validator("phone", "personal_phone")
     @classmethod
-    def validate_phone_format(cls, v: Optional[str]) -> Optional[str]:
+    def validate_phone_format(cls, v: str | None) -> str | None:
         """Validate phone number format"""
         if not v:
             return v
 
-        cleaned = ''.join(filter(str.isdigit, v.lstrip('+')))
+        cleaned = "".join(filter(str.isdigit, v.lstrip("+")))
 
         if len(cleaned) < 10:
-            raise ValueError('Phone must have at least 10 digits')
+            raise ValueError("Phone must have at least 10 digits")
 
         if len(cleaned) > 15:
-            raise ValueError('Phone cannot exceed 15 digits')
+            raise ValueError("Phone cannot exceed 15 digits")
 
         return v
 
-    @field_validator('state')
+    @field_validator("state")
     @classmethod
-    def validate_state(cls, v: Optional[str]) -> Optional[str]:
+    def validate_state(cls, v: str | None) -> str | None:
         """Validate state code"""
         if v is None:
             return v
 
         if len(v) != 2:
-            raise ValueError('State must be 2-letter code')
+            raise ValueError("State must be 2-letter code")
 
         return v.upper()
 
 
 class TeamMemberUpdateSchema(BaseModel):
     """Schema for updating a team member"""
+
     model_config = ConfigDict(from_attributes=True)
 
-    first_name: Optional[str] = Field(None, min_length=1, max_length=100)
-    last_name: Optional[str] = Field(None, min_length=1, max_length=100)
-    email: Optional[EmailStr] = None
-    phone: Optional[str] = None
-    role: Optional[TeamRole] = None
-    status: Optional[TeamMemberStatus] = None
-    availability_status: Optional[AvailabilityStatus] = None
-    department: Optional[str] = None
-    work_hours_start: Optional[str] = None
-    work_hours_end: Optional[str] = None
-    work_days: Optional[str] = None
-    can_view_all_leads: Optional[bool] = None
-    can_manage_team: Optional[bool] = None
-    can_access_reports: Optional[bool] = None
-    monthly_sales_target: Optional[int] = None
-    quarterly_sales_target: Optional[int] = None
-    notes: Optional[str] = None
+    first_name: str | None = Field(None, min_length=1, max_length=100)
+    last_name: str | None = Field(None, min_length=1, max_length=100)
+    email: EmailStr | None = None
+    phone: str | None = None
+    role: TeamRole | None = None
+    status: TeamMemberStatus | None = None
+    availability_status: AvailabilityStatus | None = None
+    department: str | None = None
+    work_hours_start: str | None = None
+    work_hours_end: str | None = None
+    work_days: str | None = None
+    can_view_all_leads: bool | None = None
+    can_manage_team: bool | None = None
+    can_access_reports: bool | None = None
+    monthly_sales_target: int | None = None
+    quarterly_sales_target: int | None = None
+    notes: str | None = None
 
 
 class TeamMemberResponseSchema(BaseModel):
     """Schema for team member API response"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -264,7 +282,7 @@ class TeamMemberResponseSchema(BaseModel):
     role: TeamRole
     status: TeamMemberStatus
     availability_status: AvailabilityStatus
-    department: Optional[str] = None
+    department: str | None = None
     active_leads_count: int = 0
     active_projects_count: int = 0
     created_at: datetime
@@ -273,9 +291,14 @@ class TeamMemberResponseSchema(BaseModel):
 
 class TeamMemberListFiltersSchema(BaseModel):
     """Filter parameters for team member list endpoint"""
-    role: Optional[str] = Field(None, description="Comma-separated roles")
-    status: Optional[TeamMemberStatus] = Field(None, description="Filter by status")
-    availability_status: Optional[AvailabilityStatus] = Field(None, description="Filter by availability")
-    department: Optional[str] = Field(None, description="Filter by department")
-    can_view_all_leads: Optional[bool] = Field(None, description="Filter by permission")
-    has_active_assignments: Optional[bool] = Field(None, description="Filter members with assignments")
+
+    role: str | None = Field(None, description="Comma-separated roles")
+    status: TeamMemberStatus | None = Field(None, description="Filter by status")
+    availability_status: AvailabilityStatus | None = Field(
+        None, description="Filter by availability"
+    )
+    department: str | None = Field(None, description="Filter by department")
+    can_view_all_leads: bool | None = Field(None, description="Filter by permission")
+    has_active_assignments: bool | None = Field(
+        None, description="Filter members with assignments"
+    )

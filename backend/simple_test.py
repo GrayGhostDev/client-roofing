@@ -3,11 +3,12 @@
 Simple test script to validate Lead model imports.
 """
 
-import sys
 import os
+import sys
 
 # Add the backend directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
+
 
 def test_basic_imports():
     """Test basic model imports without Flask app context."""
@@ -15,11 +16,17 @@ def test_basic_imports():
 
     try:
         # Test SQLAlchemy model import
-        from app.models.lead_sqlalchemy import Lead, LeadStatusEnum, LeadTemperatureEnum, LeadSourceEnum
+        from app.models.lead_sqlalchemy import (
+            Lead,
+            LeadSourceEnum,
+            LeadStatusEnum,
+        )
+
         print("✅ SQLAlchemy Lead model imported successfully")
 
         # Test Pydantic schema imports
-        from app.schemas.lead import LeadCreate, LeadUpdate, LeadResponse
+        from app.schemas.lead import LeadCreate
+
         print("✅ Pydantic schemas imported successfully")
 
         # Test model creation
@@ -29,7 +36,7 @@ def test_basic_imports():
             phone="2485551234",
             email="john@example.com",
             source=LeadSourceEnum.WEBSITE_FORM,
-            status=LeadStatusEnum.NEW
+            status=LeadStatusEnum.NEW,
         )
 
         print(f"✅ Lead model created: {lead.full_name}")
@@ -42,7 +49,7 @@ def test_basic_imports():
             "last_name": "Smith",
             "phone": "3135551234",
             "email": "jane@example.com",
-            "source": "website_form"
+            "source": "website_form",
         }
 
         lead_schema = LeadCreate(**lead_data)
@@ -53,6 +60,7 @@ def test_basic_imports():
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 

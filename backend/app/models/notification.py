@@ -5,17 +5,19 @@ Version: 1.0.0
 Data models for notification system including templates, logs, and preferences.
 """
 
-from pydantic import BaseModel, Field, EmailStr, field_validator
-from typing import Optional, List, Dict, Any
 from datetime import datetime
-from uuid import UUID
 from enum import Enum
+from typing import Any
+from uuid import UUID
+
+from pydantic import EmailStr, Field, field_validator
 
 from app.models.base import BaseDBModel
 
 
 class NotificationChannel(str, Enum):
     """Notification delivery channels."""
+
     EMAIL = "email"
     SMS = "sms"
     PUSH = "push"
@@ -25,14 +27,16 @@ class NotificationChannel(str, Enum):
 
 class NotificationPriority(str, Enum):
     """Notification priority levels."""
-    URGENT = "urgent"      # Immediate delivery
-    HIGH = "high"          # Within 5 minutes
-    NORMAL = "normal"      # Within 30 minutes
-    LOW = "low"            # Batched delivery
+
+    URGENT = "urgent"  # Immediate delivery
+    HIGH = "high"  # Within 5 minutes
+    NORMAL = "normal"  # Within 30 minutes
+    LOW = "low"  # Batched delivery
 
 
 class NotificationStatus(str, Enum):
     """Notification delivery status."""
+
     PENDING = "pending"
     QUEUED = "queued"
     SENDING = "sending"
@@ -47,6 +51,7 @@ class NotificationStatus(str, Enum):
 
 class NotificationType(str, Enum):
     """Types of notifications."""
+
     # Lead notifications
     LEAD_CREATED = "lead_created"
     LEAD_HOT = "lead_hot"
@@ -100,72 +105,70 @@ class Notification(BaseDBModel):
     type: NotificationType = Field(..., description="Type of notification")
     channel: NotificationChannel = Field(..., description="Delivery channel")
     priority: NotificationPriority = Field(
-        default=NotificationPriority.NORMAL,
-        description="Notification priority"
+        default=NotificationPriority.NORMAL, description="Notification priority"
     )
 
     # Recipients
-    recipient_id: Optional[UUID] = Field(None, description="User ID of recipient")
-    recipient_email: Optional[EmailStr] = Field(None, description="Email address")
-    recipient_phone: Optional[str] = Field(None, description="Phone number")
-    recipient_name: Optional[str] = Field(None, description="Recipient name")
+    recipient_id: UUID | None = Field(None, description="User ID of recipient")
+    recipient_email: EmailStr | None = Field(None, description="Email address")
+    recipient_phone: str | None = Field(None, description="Phone number")
+    recipient_name: str | None = Field(None, description="Recipient name")
 
     # Content
-    subject: Optional[str] = Field(None, max_length=200, description="Email subject or SMS preview")
+    subject: str | None = Field(None, max_length=200, description="Email subject or SMS preview")
     content: str = Field(..., description="Notification content (HTML or plain text)")
-    content_plain: Optional[str] = Field(None, description="Plain text version")
-    template_id: Optional[UUID] = Field(None, description="Template used")
-    template_variables: Optional[Dict[str, Any]] = Field(None, description="Template variables")
+    content_plain: str | None = Field(None, description="Plain text version")
+    template_id: UUID | None = Field(None, description="Template used")
+    template_variables: dict[str, Any] | None = Field(None, description="Template variables")
 
     # Delivery Information
     status: NotificationStatus = Field(
-        default=NotificationStatus.PENDING,
-        description="Current delivery status"
+        default=NotificationStatus.PENDING, description="Current delivery status"
     )
-    scheduled_for: Optional[datetime] = Field(None, description="Scheduled delivery time")
-    sent_at: Optional[datetime] = Field(None, description="Actual sent timestamp")
-    delivered_at: Optional[datetime] = Field(None, description="Delivery confirmation timestamp")
-    opened_at: Optional[datetime] = Field(None, description="First opened timestamp")
-    clicked_at: Optional[datetime] = Field(None, description="First click timestamp")
+    scheduled_for: datetime | None = Field(None, description="Scheduled delivery time")
+    sent_at: datetime | None = Field(None, description="Actual sent timestamp")
+    delivered_at: datetime | None = Field(None, description="Delivery confirmation timestamp")
+    opened_at: datetime | None = Field(None, description="First opened timestamp")
+    clicked_at: datetime | None = Field(None, description="First click timestamp")
 
     # Tracking
-    external_id: Optional[str] = Field(None, description="External service message ID")
+    external_id: str | None = Field(None, description="External service message ID")
     open_count: int = Field(default=0, ge=0, description="Number of opens")
     click_count: int = Field(default=0, ge=0, description="Number of clicks")
-    bounce_reason: Optional[str] = Field(None, description="Reason for bounce/failure")
+    bounce_reason: str | None = Field(None, description="Reason for bounce/failure")
 
     # Retry Information
     retry_count: int = Field(default=0, ge=0, description="Number of retry attempts")
     max_retries: int = Field(default=3, ge=0, description="Maximum retry attempts")
-    next_retry_at: Optional[datetime] = Field(None, description="Next retry timestamp")
+    next_retry_at: datetime | None = Field(None, description="Next retry timestamp")
 
     # Related Entities
-    related_lead_id: Optional[UUID] = Field(None, description="Related lead ID")
-    related_customer_id: Optional[UUID] = Field(None, description="Related customer ID")
-    related_project_id: Optional[UUID] = Field(None, description="Related project ID")
-    related_appointment_id: Optional[UUID] = Field(None, description="Related appointment ID")
+    related_lead_id: UUID | None = Field(None, description="Related lead ID")
+    related_customer_id: UUID | None = Field(None, description="Related customer ID")
+    related_project_id: UUID | None = Field(None, description="Related project ID")
+    related_appointment_id: UUID | None = Field(None, description="Related appointment ID")
 
     # Metadata
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional metadata")
-    tags: Optional[List[str]] = Field(None, description="Notification tags")
+    metadata: dict[str, Any] | None = Field(None, description="Additional metadata")
+    tags: list[str] | None = Field(None, description="Notification tags")
 
-    @field_validator('recipient_phone')
+    @field_validator("recipient_phone")
     @classmethod
-    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
+    def validate_phone(cls, v: str | None) -> str | None:
         """Validate phone number format."""
         if not v:
             return v
 
         # Remove non-digits except +
-        cleaned = ''.join(c for c in v if c.isdigit() or c == '+')
+        cleaned = "".join(c for c in v if c.isdigit() or c == "+")
 
         # Ensure it starts with + for international format
-        if not cleaned.startswith('+'):
+        if not cleaned.startswith("+"):
             # Assume US number if no country code
             if len(cleaned) == 10:
-                cleaned = '+1' + cleaned
-            elif len(cleaned) == 11 and cleaned.startswith('1'):
-                cleaned = '+' + cleaned
+                cleaned = "+1" + cleaned
+            elif len(cleaned) == 11 and cleaned.startswith("1"):
+                cleaned = "+" + cleaned
 
         return cleaned
 
@@ -180,14 +183,18 @@ class NotificationTemplate(BaseDBModel):
     channel: NotificationChannel = Field(..., description="Target channel")
 
     # Content
-    subject: Optional[str] = Field(None, max_length=200, description="Email subject template")
-    content_html: Optional[str] = Field(None, description="HTML content template")
+    subject: str | None = Field(None, max_length=200, description="Email subject template")
+    content_html: str | None = Field(None, description="HTML content template")
     content_plain: str = Field(..., description="Plain text content template")
 
     # Variables
-    required_variables: List[str] = Field(default_factory=list, description="Required template variables")
-    optional_variables: List[str] = Field(default_factory=list, description="Optional template variables")
-    default_values: Optional[Dict[str, Any]] = Field(None, description="Default variable values")
+    required_variables: list[str] = Field(
+        default_factory=list, description="Required template variables"
+    )
+    optional_variables: list[str] = Field(
+        default_factory=list, description="Optional template variables"
+    )
+    default_values: dict[str, Any] | None = Field(None, description="Default variable values")
 
     # Settings
     is_active: bool = Field(default=True, description="Template active status")
@@ -195,16 +202,20 @@ class NotificationTemplate(BaseDBModel):
 
     # Usage
     use_count: int = Field(default=0, ge=0, description="Number of times used")
-    last_used_at: Optional[datetime] = Field(None, description="Last usage timestamp")
+    last_used_at: datetime | None = Field(None, description="Last usage timestamp")
 
     # Performance
-    avg_open_rate: Optional[float] = Field(None, ge=0.0, le=100.0, description="Average open rate %")
-    avg_click_rate: Optional[float] = Field(None, ge=0.0, le=100.0, description="Average click rate %")
+    avg_open_rate: float | None = Field(
+        None, ge=0.0, le=100.0, description="Average open rate %"
+    )
+    avg_click_rate: float | None = Field(
+        None, ge=0.0, le=100.0, description="Average click rate %"
+    )
 
     # Metadata
-    description: Optional[str] = Field(None, description="Template description")
-    category: Optional[str] = Field(None, max_length=50, description="Template category")
-    tags: Optional[List[str]] = Field(None, description="Template tags")
+    description: str | None = Field(None, description="Template description")
+    category: str | None = Field(None, max_length=50, description="Template category")
+    tags: list[str] | None = Field(None, description="Template tags")
 
 
 class NotificationPreferences(BaseDBModel):
@@ -214,7 +225,7 @@ class NotificationPreferences(BaseDBModel):
 
     user_id: UUID = Field(..., description="User ID")
     user_email: EmailStr = Field(..., description="User email")
-    user_phone: Optional[str] = Field(None, description="User phone")
+    user_phone: str | None = Field(None, description="User phone")
 
     # Channel Preferences
     email_enabled: bool = Field(default=True, description="Email notifications enabled")
@@ -223,29 +234,27 @@ class NotificationPreferences(BaseDBModel):
     in_app_enabled: bool = Field(default=True, description="In-app notifications enabled")
 
     # Type Preferences (by notification type)
-    enabled_types: List[NotificationType] = Field(
-        default_factory=lambda: list(NotificationType),
-        description="Enabled notification types"
+    enabled_types: list[NotificationType] = Field(
+        default_factory=lambda: list(NotificationType), description="Enabled notification types"
     )
-    disabled_types: List[NotificationType] = Field(
-        default_factory=list,
-        description="Explicitly disabled types"
+    disabled_types: list[NotificationType] = Field(
+        default_factory=list, description="Explicitly disabled types"
     )
 
     # Delivery Preferences
     quiet_hours_enabled: bool = Field(default=False, description="Enable quiet hours")
-    quiet_hours_start: Optional[str] = Field(None, description="Quiet hours start (HH:MM)")
-    quiet_hours_end: Optional[str] = Field(None, description="Quiet hours end (HH:MM)")
+    quiet_hours_start: str | None = Field(None, description="Quiet hours start (HH:MM)")
+    quiet_hours_end: str | None = Field(None, description="Quiet hours end (HH:MM)")
     timezone: str = Field(default="America/Detroit", description="User timezone")
 
     # Frequency Limits
-    daily_email_limit: Optional[int] = Field(None, ge=0, description="Max emails per day")
-    daily_sms_limit: Optional[int] = Field(None, ge=0, description="Max SMS per day")
+    daily_email_limit: int | None = Field(None, ge=0, description="Max emails per day")
+    daily_sms_limit: int | None = Field(None, ge=0, description="Max SMS per day")
 
     # Batching Preferences
     batch_emails: bool = Field(default=False, description="Batch non-urgent emails")
-    batch_frequency: Optional[str] = Field(None, description="Batch frequency (daily, weekly)")
-    batch_time: Optional[str] = Field(None, description="Preferred batch time (HH:MM)")
+    batch_frequency: str | None = Field(None, description="Batch frequency (daily, weekly)")
+    batch_time: str | None = Field(None, description="Preferred batch time (HH:MM)")
 
     # Marketing Preferences
     marketing_emails: bool = Field(default=True, description="Marketing emails opt-in")
@@ -254,18 +263,18 @@ class NotificationPreferences(BaseDBModel):
 
     # Unsubscribe
     unsubscribed_all: bool = Field(default=False, description="Unsubscribed from all")
-    unsubscribe_token: Optional[str] = Field(None, description="Unsubscribe token")
-    unsubscribed_at: Optional[datetime] = Field(None, description="Unsubscribe timestamp")
+    unsubscribe_token: str | None = Field(None, description="Unsubscribe token")
+    unsubscribed_at: datetime | None = Field(None, description="Unsubscribe timestamp")
 
-    @field_validator('quiet_hours_start', 'quiet_hours_end', 'batch_time')
+    @field_validator("quiet_hours_start", "quiet_hours_end", "batch_time")
     @classmethod
-    def validate_time_format(cls, v: Optional[str]) -> Optional[str]:
+    def validate_time_format(cls, v: str | None) -> str | None:
         """Validate time format (HH:MM)."""
         if not v:
             return v
 
         try:
-            parts = v.split(':')
+            parts = v.split(":")
             if len(parts) != 2:
                 raise ValueError
 
@@ -287,20 +296,19 @@ class NotificationLog(BaseDBModel):
 
     notification_id: UUID = Field(..., description="Parent notification ID")
     event_type: str = Field(..., max_length=50, description="Event type")
-    event_data: Optional[Dict[str, Any]] = Field(None, description="Event data")
+    event_data: dict[str, Any] | None = Field(None, description="Event data")
 
     # Tracking
-    ip_address: Optional[str] = Field(None, description="IP address of event")
-    user_agent: Optional[str] = Field(None, description="User agent string")
+    ip_address: str | None = Field(None, description="IP address of event")
+    user_agent: str | None = Field(None, description="User agent string")
 
     # Metadata
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Event timestamp")
 
     class Config:
         """Pydantic configuration."""
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
+
+        json_encoders = {datetime: lambda v: v.isoformat()}
 
 
 class NotificationBatch(BaseDBModel):
@@ -314,18 +322,18 @@ class NotificationBatch(BaseDBModel):
 
     # Recipients
     recipient_count: int = Field(default=0, ge=0, description="Total recipients")
-    recipient_list: Optional[List[Dict[str, Any]]] = Field(None, description="Recipient list")
+    recipient_list: list[dict[str, Any]] | None = Field(None, description="Recipient list")
 
     # Content
-    template_id: Optional[UUID] = Field(None, description="Template to use")
-    subject: Optional[str] = Field(None, description="Batch subject")
-    content: Optional[str] = Field(None, description="Batch content")
+    template_id: UUID | None = Field(None, description="Template to use")
+    subject: str | None = Field(None, description="Batch subject")
+    content: str | None = Field(None, description="Batch content")
 
     # Status
     status: NotificationStatus = Field(default=NotificationStatus.PENDING)
-    scheduled_for: Optional[datetime] = Field(None, description="Scheduled send time")
-    started_at: Optional[datetime] = Field(None, description="Processing start time")
-    completed_at: Optional[datetime] = Field(None, description="Processing end time")
+    scheduled_for: datetime | None = Field(None, description="Scheduled send time")
+    started_at: datetime | None = Field(None, description="Processing start time")
+    completed_at: datetime | None = Field(None, description="Processing end time")
 
     # Statistics
     sent_count: int = Field(default=0, ge=0, description="Successfully sent")
@@ -338,5 +346,5 @@ class NotificationBatch(BaseDBModel):
     unsubscribe_count: int = Field(default=0, ge=0, description="Unsubscribes")
 
     # Metadata
-    tags: Optional[List[str]] = Field(None, description="Batch tags")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional metadata")
+    tags: list[str] | None = Field(None, description="Batch tags")
+    metadata: dict[str, Any] | None = Field(None, description="Additional metadata")

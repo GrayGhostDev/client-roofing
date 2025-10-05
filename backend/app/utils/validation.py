@@ -5,16 +5,17 @@ Version: 1.0.0
 Request validation utilities for API endpoints.
 """
 
-from functools import wraps
-from flask import request, jsonify
-from pydantic import ValidationError
-from typing import Type, Any
 import logging
+from functools import wraps
+from typing import Any
+
+from flask import jsonify, request
+from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
 
 
-def validate_request(model: Type[Any]):
+def validate_request(model: type[Any]):
     """
     Decorator to validate request data against a Pydantic model.
 
@@ -24,6 +25,7 @@ def validate_request(model: Type[Any]):
     Returns:
         Decorator function
     """
+
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
@@ -31,9 +33,9 @@ def validate_request(model: Type[Any]):
             try:
                 data = request.get_json()
                 if not data:
-                    return jsonify({'error': 'No data provided'}), 400
+                    return jsonify({"error": "No data provided"}), 400
             except Exception:
-                return jsonify({'error': 'Invalid JSON data'}), 400
+                return jsonify({"error": "Invalid JSON data"}), 400
 
             # Validate against model
             try:
@@ -43,14 +45,11 @@ def validate_request(model: Type[Any]):
             except ValidationError as e:
                 errors = []
                 for error in e.errors():
-                    field = '.'.join(str(loc) for loc in error['loc'])
-                    message = error['msg']
+                    field = ".".join(str(loc) for loc in error["loc"])
+                    message = error["msg"]
                     errors.append(f"{field}: {message}")
 
-                return jsonify({
-                    'error': 'Validation failed',
-                    'details': errors
-                }), 400
+                return jsonify({"error": "Validation failed", "details": errors}), 400
 
             return f(*args, **kwargs)
 
@@ -70,9 +69,9 @@ def validate_uuid(uuid_string: str) -> bool:
         True if valid UUID
     """
     import re
+
     uuid_pattern = re.compile(
-        r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
-        re.IGNORECASE
+        r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE
     )
     return bool(uuid_pattern.match(uuid_string))
 
@@ -88,9 +87,8 @@ def validate_email(email: str) -> bool:
         True if valid email
     """
     import re
-    email_pattern = re.compile(
-        r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    )
+
+    email_pattern = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
     return bool(email_pattern.match(email))
 
 
@@ -105,16 +103,17 @@ def validate_phone(phone: str) -> bool:
         True if valid phone
     """
     import re
+
     # Remove non-digits except +
-    cleaned = re.sub(r'[^\d+]', '', phone)
+    cleaned = re.sub(r"[^\d+]", "", phone)
 
     # Check if it's a valid format
-    if cleaned.startswith('+'):
+    if cleaned.startswith("+"):
         # International format
         return len(cleaned) >= 10 and len(cleaned) <= 16
     else:
         # Assume US format
-        return len(cleaned) == 10 or (len(cleaned) == 11 and cleaned.startswith('1'))
+        return len(cleaned) == 10 or (len(cleaned) == 11 and cleaned.startswith("1"))
 
 
 def sanitize_input(text: str) -> str:
@@ -128,6 +127,7 @@ def sanitize_input(text: str) -> str:
         Sanitized text
     """
     import html
+
     if not text:
         return text
 
@@ -136,14 +136,14 @@ def sanitize_input(text: str) -> str:
 
     # Remove any script tags (extra safety)
     import re
-    sanitized = re.sub(r'<script[^>]*>.*?</script>', '', sanitized, flags=re.IGNORECASE | re.DOTALL)
-    sanitized = re.sub(r'javascript:', '', sanitized, flags=re.IGNORECASE)
+
+    sanitized = re.sub(r"<script[^>]*>.*?</script>", "", sanitized, flags=re.IGNORECASE | re.DOTALL)
+    sanitized = re.sub(r"javascript:", "", sanitized, flags=re.IGNORECASE)
 
     return sanitized.strip()
 
 
-def validate_pagination_params(page: int = 1, per_page: int = 50,
-                              max_per_page: int = 100) -> tuple:
+def validate_pagination_params(page: int = 1, per_page: int = 50, max_per_page: int = 100) -> tuple:
     """
     Validate and normalize pagination parameters.
 
@@ -177,17 +177,17 @@ def validate_sort_params(sort: str, allowed_fields: list) -> tuple:
         return None, None
 
     try:
-        parts = sort.split(':')
+        parts = sort.split(":")
         field = parts[0]
-        direction = parts[1] if len(parts) > 1 else 'asc'
+        direction = parts[1] if len(parts) > 1 else "asc"
 
         # Validate field
         if field not in allowed_fields:
             return None, None
 
         # Validate direction
-        if direction not in ['asc', 'desc']:
-            direction = 'asc'
+        if direction not in ["asc", "desc"]:
+            direction = "asc"
 
         return field, direction
 

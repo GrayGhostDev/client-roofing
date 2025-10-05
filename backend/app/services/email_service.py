@@ -5,24 +5,32 @@ Version: 1.0.0
 Handles email delivery through SendGrid API with templates, tracking, and analytics.
 """
 
-import os
-import logging
-from typing import Optional, List, Dict, Any, Tuple
-from datetime import datetime, timedelta
 import json
+import logging
+import os
+from datetime import datetime
+from typing import Any
 
+from python_http_client.exceptions import HTTPError
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import (
-    Mail, Email, To, Content, Attachment, FileContent, FileName,
-    FileType, Disposition, ContentId, Personalization,
-    TrackingSettings, ClickTracking, OpenTracking, SubscriptionTracking,
-    Ganalytics, MailSettings, SandBoxMode
+    Attachment,
+    ClickTracking,
+    Content,
+    ContentId,
+    Disposition,
+    Email,
+    FileContent,
+    FileName,
+    FileType,
+    Mail,
+    MailSettings,
+    OpenTracking,
+    Personalization,
+    SandBoxMode,
+    To,
+    TrackingSettings,
 )
-from python_http_client.exceptions import HTTPError
-
-from app.models.notification import NotificationStatus, NotificationPriority
-from app.config import Config
-
 
 logger = logging.getLogger(__name__)
 
@@ -30,14 +38,14 @@ logger = logging.getLogger(__name__)
 class EmailService:
     """Service for sending emails via SendGrid."""
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: str | None = None):
         """
         Initialize Email Service.
 
         Args:
             api_key: SendGrid API key (defaults to environment variable)
         """
-        self.api_key = api_key or os.environ.get('SENDGRID_API_KEY')
+        self.api_key = api_key or os.environ.get("SENDGRID_API_KEY")
         if not self.api_key:
             logger.warning("SendGrid API key not configured")
             self.client = None
@@ -45,25 +53,27 @@ class EmailService:
             self.client = SendGridAPIClient(self.api_key)
 
         # Default settings
-        self.from_email = os.environ.get('FROM_EMAIL', 'noreply@iswitchroofs.com')
-        self.from_name = os.environ.get('COMPANY_NAME', 'iSwitch Roofs')
-        self.sandbox_mode = os.environ.get('SENDGRID_SANDBOX_MODE', 'false').lower() == 'true'
+        self.from_email = os.environ.get("FROM_EMAIL", "noreply@iswitchroofs.com")
+        self.from_name = os.environ.get("COMPANY_NAME", "iSwitch Roofs")
+        self.sandbox_mode = os.environ.get("SENDGRID_SANDBOX_MODE", "false").lower() == "true"
 
-    def send_email(self,
-                   to_email: str,
-                   subject: str,
-                   html_content: str,
-                   plain_content: Optional[str] = None,
-                   from_email: Optional[str] = None,
-                   from_name: Optional[str] = None,
-                   reply_to: Optional[str] = None,
-                   cc_emails: Optional[List[str]] = None,
-                   bcc_emails: Optional[List[str]] = None,
-                   attachments: Optional[List[Dict[str, Any]]] = None,
-                   custom_args: Optional[Dict[str, str]] = None,
-                   send_at: Optional[int] = None,
-                   categories: Optional[List[str]] = None,
-                   enable_tracking: bool = True) -> Tuple[bool, Optional[str], Optional[Dict]]:
+    def send_email(
+        self,
+        to_email: str,
+        subject: str,
+        html_content: str,
+        plain_content: str | None = None,
+        from_email: str | None = None,
+        from_name: str | None = None,
+        reply_to: str | None = None,
+        cc_emails: list[str] | None = None,
+        bcc_emails: list[str] | None = None,
+        attachments: list[dict[str, Any]] | None = None,
+        custom_args: dict[str, str] | None = None,
+        send_at: int | None = None,
+        categories: list[str] | None = None,
+        enable_tracking: bool = True,
+    ) -> tuple[bool, str | None, dict | None]:
         """
         Send an email via SendGrid.
 
@@ -95,10 +105,7 @@ class EmailService:
             message = Mail()
 
             # Set from
-            message.from_email = Email(
-                from_email or self.from_email,
-                from_name or self.from_name
-            )
+            message.from_email = Email(from_email or self.from_email, from_name or self.from_name)
 
             # Set to
             message.add_to(To(to_email))
@@ -127,13 +134,13 @@ class EmailService:
             if attachments:
                 for att in attachments:
                     attachment = Attachment()
-                    attachment.file_content = FileContent(att['content'])
-                    attachment.file_name = FileName(att['filename'])
-                    attachment.file_type = FileType(att.get('type', 'application/octet-stream'))
-                    attachment.disposition = Disposition('attachment')
+                    attachment.file_content = FileContent(att["content"])
+                    attachment.file_name = FileName(att["filename"])
+                    attachment.file_type = FileType(att.get("type", "application/octet-stream"))
+                    attachment.disposition = Disposition("attachment")
 
-                    if 'content_id' in att:
-                        attachment.content_id = ContentId(att['content_id'])
+                    if "content_id" in att:
+                        attachment.content_id = ContentId(att["content_id"])
 
                     message.add_attachment(attachment)
 
@@ -155,54 +162,48 @@ class EmailService:
             if enable_tracking:
                 message.tracking_settings = TrackingSettings(
                     click_tracking=ClickTracking(enable=True),
-                    open_tracking=OpenTracking(enable=True)
+                    open_tracking=OpenTracking(enable=True),
                 )
 
             # Mail settings
             if self.sandbox_mode:
-                message.mail_settings = MailSettings(
-                    sandbox_mode=SandBoxMode(enable=True)
-                )
+                message.mail_settings = MailSettings(sandbox_mode=SandBoxMode(enable=True))
 
             # Send email
             response = self.client.send(message)
 
             # Extract message ID from response
             message_id = None
-            if hasattr(response, 'headers') and 'X-Message-Id' in response.headers:
-                message_id = response.headers['X-Message-Id']
+            if hasattr(response, "headers") and "X-Message-Id" in response.headers:
+                message_id = response.headers["X-Message-Id"]
 
             logger.info(f"Email sent successfully to {to_email} (ID: {message_id})")
-            return True, message_id, {
-                "status_code": response.status_code,
-                "message_id": message_id
-            }
+            return True, message_id, {"status_code": response.status_code, "message_id": message_id}
 
         except HTTPError as e:
             error_message = str(e)
             try:
-                error_data = json.loads(e.body) if hasattr(e, 'body') else {}
+                error_data = json.loads(e.body) if hasattr(e, "body") else {}
             except:
                 error_data = {}
 
             logger.error(f"SendGrid API error: {error_message}")
-            return False, None, {
-                "error": error_message,
-                "details": error_data
-            }
+            return False, None, {"error": error_message, "details": error_data}
 
         except Exception as e:
             logger.error(f"Failed to send email: {str(e)}")
             return False, None, {"error": str(e)}
 
-    def send_template_email(self,
-                           to_email: str,
-                           template_id: str,
-                           template_data: Optional[Dict[str, Any]] = None,
-                           from_email: Optional[str] = None,
-                           from_name: Optional[str] = None,
-                           custom_args: Optional[Dict[str, str]] = None,
-                           send_at: Optional[int] = None) -> Tuple[bool, Optional[str], Optional[Dict]]:
+    def send_template_email(
+        self,
+        to_email: str,
+        template_id: str,
+        template_data: dict[str, Any] | None = None,
+        from_email: str | None = None,
+        from_name: str | None = None,
+        custom_args: dict[str, str] | None = None,
+        send_at: int | None = None,
+    ) -> tuple[bool, str | None, dict | None]:
         """
         Send an email using a SendGrid dynamic template.
 
@@ -224,7 +225,7 @@ class EmailService:
         try:
             message = Mail(
                 from_email=Email(from_email or self.from_email, from_name or self.from_name),
-                to_emails=to_email
+                to_emails=to_email,
             )
 
             # Set template ID and data
@@ -245,8 +246,8 @@ class EmailService:
             response = self.client.send(message)
 
             message_id = None
-            if hasattr(response, 'headers') and 'X-Message-Id' in response.headers:
-                message_id = response.headers['X-Message-Id']
+            if hasattr(response, "headers") and "X-Message-Id" in response.headers:
+                message_id = response.headers["X-Message-Id"]
 
             logger.info(f"Template email sent to {to_email} (Template: {template_id})")
             return True, message_id, {"status_code": response.status_code}
@@ -255,14 +256,16 @@ class EmailService:
             logger.error(f"Failed to send template email: {str(e)}")
             return False, None, {"error": str(e)}
 
-    def send_bulk_emails(self,
-                        recipients: List[Dict[str, Any]],
-                        subject: str,
-                        html_content: str,
-                        plain_content: Optional[str] = None,
-                        from_email: Optional[str] = None,
-                        from_name: Optional[str] = None,
-                        categories: Optional[List[str]] = None) -> Dict[str, Any]:
+    def send_bulk_emails(
+        self,
+        recipients: list[dict[str, Any]],
+        subject: str,
+        html_content: str,
+        plain_content: str | None = None,
+        from_email: str | None = None,
+        from_name: str | None = None,
+        categories: list[str] | None = None,
+    ) -> dict[str, Any]:
         """
         Send bulk emails to multiple recipients.
 
@@ -281,21 +284,13 @@ class EmailService:
         if not self.client:
             return {"success": False, "error": "Email service not configured"}
 
-        results = {
-            "total": len(recipients),
-            "sent": 0,
-            "failed": 0,
-            "errors": []
-        }
+        results = {"total": len(recipients), "sent": 0, "failed": 0, "errors": []}
 
         try:
             message = Mail()
 
             # Set from
-            message.from_email = Email(
-                from_email or self.from_email,
-                from_name or self.from_name
-            )
+            message.from_email = Email(from_email or self.from_email, from_name or self.from_name)
 
             # Set subject
             message.subject = subject
@@ -308,16 +303,16 @@ class EmailService:
             # Add personalizations for each recipient
             for recipient in recipients:
                 personalization = Personalization()
-                personalization.add_to(Email(recipient['email']))
+                personalization.add_to(Email(recipient["email"]))
 
                 # Add substitutions if provided
-                if 'substitutions' in recipient:
-                    for key, value in recipient['substitutions'].items():
+                if "substitutions" in recipient:
+                    for key, value in recipient["substitutions"].items():
                         personalization.add_substitution(key, value)
 
                 # Add custom args if provided
-                if 'custom_args' in recipient:
-                    for key, value in recipient['custom_args'].items():
+                if "custom_args" in recipient:
+                    for key, value in recipient["custom_args"].items():
                         personalization.add_custom_arg(key, value)
 
                 message.add_personalization(personalization)
@@ -357,7 +352,8 @@ class EmailService:
         """
         # Basic format validation
         import re
-        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+
+        email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
 
         if not re.match(email_pattern, email):
             return False
@@ -382,9 +378,7 @@ class EmailService:
             return False
 
         try:
-            data = {
-                "recipient_emails": [email]
-            }
+            data = {"recipient_emails": [email]}
 
             response = self.client.client.suppression.group(group_id).suppressions.post(
                 request_body=data
@@ -418,7 +412,7 @@ class EmailService:
             logger.error(f"Failed to remove from suppression list: {str(e)}")
             return False
 
-    def get_email_activity(self, message_id: str) -> Optional[Dict[str, Any]]:
+    def get_email_activity(self, message_id: str) -> dict[str, Any] | None:
         """
         Get activity/status for a sent email.
 
@@ -434,17 +428,14 @@ class EmailService:
         try:
             # Query email activity
             # Note: This requires Email Activity Feed to be enabled in SendGrid
-            query_params = {
-                "query": f"msg_id={message_id}",
-                "limit": 1
-            }
+            query_params = {"query": f"msg_id={message_id}", "limit": 1}
 
             response = self.client.client.messages.get(query_params=query_params)
 
             if response.status_code == 200:
                 data = json.loads(response.body)
-                if data.get('messages'):
-                    return data['messages'][0]
+                if data.get("messages"):
+                    return data["messages"][0]
 
             return None
 
@@ -452,12 +443,9 @@ class EmailService:
             logger.error(f"Failed to get email activity: {str(e)}")
             return None
 
-    def schedule_email(self,
-                      to_email: str,
-                      subject: str,
-                      html_content: str,
-                      send_at: datetime,
-                      **kwargs) -> Tuple[bool, Optional[str], Optional[Dict]]:
+    def schedule_email(
+        self, to_email: str, subject: str, html_content: str, send_at: datetime, **kwargs
+    ) -> tuple[bool, str | None, dict | None]:
         """
         Schedule an email to be sent later.
 
@@ -479,7 +467,7 @@ class EmailService:
             subject=subject,
             html_content=html_content,
             send_at=send_at_timestamp,
-            **kwargs
+            **kwargs,
         )
 
     def cancel_scheduled_email(self, batch_id: str) -> bool:
@@ -497,10 +485,7 @@ class EmailService:
 
         try:
             response = self.client.client.user.scheduled_sends.post(
-                request_body={
-                    "batch_id": batch_id,
-                    "status": "cancel"
-                }
+                request_body={"batch_id": batch_id, "status": "cancel"}
             )
 
             return response.status_code in [200, 201]

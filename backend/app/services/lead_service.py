@@ -5,15 +5,14 @@ Version: 1.0.0
 Service layer for Lead operations using SQLAlchemy ORM.
 """
 
-from typing import List, Optional, Dict, Any
-from uuid import UUID
 from datetime import datetime
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, desc, asc, func
+from typing import Any
 
-from app.models.lead_sqlalchemy import Lead, LeadStatusEnum, LeadTemperatureEnum, LeadSourceEnum
-from app.schemas.lead import LeadCreate, LeadUpdate, LeadResponse, LeadListFilters
+from sqlalchemy import asc, desc
+
 from app.database import get_db_session
+from app.models.lead_sqlalchemy import Lead, LeadStatusEnum, LeadTemperatureEnum
+from app.schemas.lead import LeadCreate, LeadListFilters, LeadUpdate
 from app.services.lead_scoring import lead_scoring_engine
 
 
@@ -33,7 +32,7 @@ class LeadService:
         """
         with get_db_session() as db:
             # Create Lead object for scoring
-            lead_dict = lead_data.model_dump(exclude={'budget_confirmed', 'is_decision_maker'})
+            lead_dict = lead_data.model_dump(exclude={"budget_confirmed", "is_decision_maker"})
             lead = Lead(**lead_dict)
 
             # Calculate lead score
@@ -42,7 +41,7 @@ class LeadService:
                 interaction_count=0,
                 response_time_minutes=None,
                 budget_confirmed=lead_data.budget_confirmed,
-                is_decision_maker=lead_data.is_decision_maker
+                is_decision_maker=lead_data.is_decision_maker,
             )
 
             # Update lead with score and temperature
@@ -57,7 +56,7 @@ class LeadService:
             return lead
 
     @staticmethod
-    def get_lead_by_id(lead_id: str) -> Optional[Lead]:
+    def get_lead_by_id(lead_id: str) -> Lead | None:
         """
         Get a lead by ID.
 
@@ -68,18 +67,12 @@ class LeadService:
             Optional[Lead]: Lead object if found
         """
         with get_db_session() as db:
-            return db.query(Lead).filter(
-                Lead.id == lead_id,
-                Lead.is_deleted == False
-            ).first()
+            return db.query(Lead).filter(Lead.id == lead_id, Lead.is_deleted == False).first()
 
     @staticmethod
     def get_leads_with_filters(
-        filters: LeadListFilters,
-        page: int = 1,
-        per_page: int = 50,
-        sort: str = "created_at:desc"
-    ) -> tuple[List[Lead], int]:
+        filters: LeadListFilters, page: int = 1, per_page: int = 50, sort: str = "created_at:desc"
+    ) -> tuple[list[Lead], int]:
         """
         Get leads with filtering, pagination, and sorting.
 
@@ -97,15 +90,15 @@ class LeadService:
 
             # Apply filters
             if filters.status:
-                statuses = filters.status.split(',')
+                statuses = filters.status.split(",")
                 query = query.filter(Lead.status.in_(statuses))
 
             if filters.temperature:
-                temps = filters.temperature.split(',')
+                temps = filters.temperature.split(",")
                 query = query.filter(Lead.temperature.in_(temps))
 
             if filters.source:
-                sources = filters.source.split(',')
+                sources = filters.source.split(",")
                 query = query.filter(Lead.source.in_(sources))
 
             if filters.assigned_to:
@@ -130,9 +123,9 @@ class LeadService:
             total = query.count()
 
             # Apply sorting
-            if ':' in sort:
-                field, direction = sort.split(':')
-                if direction.lower() == 'desc':
+            if ":" in sort:
+                field, direction = sort.split(":")
+                if direction.lower() == "desc":
                     query = query.order_by(desc(getattr(Lead, field, Lead.created_at)))
                 else:
                     query = query.order_by(asc(getattr(Lead, field, Lead.created_at)))
@@ -146,7 +139,7 @@ class LeadService:
             return leads, total
 
     @staticmethod
-    def update_lead(lead_id: str, update_data: LeadUpdate) -> Optional[Lead]:
+    def update_lead(lead_id: str, update_data: LeadUpdate) -> Lead | None:
         """
         Update a lead and recalculate score.
 
@@ -158,10 +151,7 @@ class LeadService:
             Optional[Lead]: Updated lead object if found
         """
         with get_db_session() as db:
-            lead = db.query(Lead).filter(
-                Lead.id == lead_id,
-                Lead.is_deleted == False
-            ).first()
+            lead = db.query(Lead).filter(Lead.id == lead_id, Lead.is_deleted == False).first()
 
             if not lead:
                 return None
@@ -176,13 +166,16 @@ class LeadService:
 
             # Recalculate score if relevant fields changed
             scoring_fields = [
-                'property_value', 'zip_code', 'urgency', 'budget_range_min',
-                'budget_range_max', 'insurance_claim'
+                "property_value",
+                "zip_code",
+                "urgency",
+                "budget_range_min",
+                "budget_range_max",
+                "insurance_claim",
             ]
             if any(field in update_dict for field in scoring_fields):
                 score_breakdown = lead_scoring_engine.recalculate_lead_score(
-                    lead,
-                    interaction_count=lead.interaction_count
+                    lead, interaction_count=lead.interaction_count
                 )
                 lead.lead_score = score_breakdown.total_score
                 lead.temperature = score_breakdown.temperature
@@ -204,10 +197,7 @@ class LeadService:
             bool: True if deleted successfully
         """
         with get_db_session() as db:
-            lead = db.query(Lead).filter(
-                Lead.id == lead_id,
-                Lead.is_deleted == False
-            ).first()
+            lead = db.query(Lead).filter(Lead.id == lead_id, Lead.is_deleted == False).first()
 
             if not lead:
                 return False
@@ -218,7 +208,7 @@ class LeadService:
             return True
 
     @staticmethod
-    def get_hot_leads() -> List[Lead]:
+    def get_hot_leads() -> list[Lead]:
         """
         Get all hot leads (score >= 80).
 
@@ -226,14 +216,19 @@ class LeadService:
             List[Lead]: List of hot leads
         """
         with get_db_session() as db:
-            return db.query(Lead).filter(
-                Lead.is_deleted == False,
-                Lead.lead_score >= 80,
-                Lead.temperature == LeadTemperatureEnum.HOT
-            ).order_by(desc(Lead.lead_score)).all()
+            return (
+                db.query(Lead)
+                .filter(
+                    Lead.is_deleted == False,
+                    Lead.lead_score >= 80,
+                    Lead.temperature == LeadTemperatureEnum.HOT,
+                )
+                .order_by(desc(Lead.lead_score))
+                .all()
+            )
 
     @staticmethod
-    def convert_lead_to_customer(lead_id: str, customer_id: Optional[str] = None) -> Optional[Lead]:
+    def convert_lead_to_customer(lead_id: str, customer_id: str | None = None) -> Lead | None:
         """
         Convert a lead to a customer.
 
@@ -245,10 +240,7 @@ class LeadService:
             Optional[Lead]: Updated lead if found
         """
         with get_db_session() as db:
-            lead = db.query(Lead).filter(
-                Lead.id == lead_id,
-                Lead.is_deleted == False
-            ).first()
+            lead = db.query(Lead).filter(Lead.id == lead_id, Lead.is_deleted == False).first()
 
             if not lead:
                 return None
@@ -264,7 +256,9 @@ class LeadService:
             return lead
 
     @staticmethod
-    def assign_lead(lead_id: str, team_member_id: str, notes: Optional[str] = None) -> Optional[Lead]:
+    def assign_lead(
+        lead_id: str, team_member_id: str, notes: str | None = None
+    ) -> Lead | None:
         """
         Assign a lead to a team member.
 
@@ -277,10 +271,7 @@ class LeadService:
             Optional[Lead]: Updated lead if found
         """
         with get_db_session() as db:
-            lead = db.query(Lead).filter(
-                Lead.id == lead_id,
-                Lead.is_deleted == False
-            ).first()
+            lead = db.query(Lead).filter(Lead.id == lead_id, Lead.is_deleted == False).first()
 
             if not lead:
                 return None
@@ -295,7 +286,11 @@ class LeadService:
             # Add notes if provided
             if notes:
                 existing_notes = lead.notes or ""
-                lead.notes = f"{existing_notes}\n[Assignment] {notes}" if existing_notes else f"[Assignment] {notes}"
+                lead.notes = (
+                    f"{existing_notes}\n[Assignment] {notes}"
+                    if existing_notes
+                    else f"[Assignment] {notes}"
+                )
 
             db.commit()
             db.refresh(lead)
@@ -303,7 +298,7 @@ class LeadService:
             return lead
 
     @staticmethod
-    def get_lead_stats() -> Dict[str, Any]:
+    def get_lead_stats() -> dict[str, Any]:
         """
         Get lead statistics and KPIs.
 
@@ -312,43 +307,50 @@ class LeadService:
         """
         with get_db_session() as db:
             # Temperature counts
-            hot_count = db.query(Lead).filter(
-                Lead.is_deleted == False,
-                Lead.temperature == LeadTemperatureEnum.HOT
-            ).count()
+            hot_count = (
+                db.query(Lead)
+                .filter(Lead.is_deleted == False, Lead.temperature == LeadTemperatureEnum.HOT)
+                .count()
+            )
 
-            warm_count = db.query(Lead).filter(
-                Lead.is_deleted == False,
-                Lead.temperature == LeadTemperatureEnum.WARM
-            ).count()
+            warm_count = (
+                db.query(Lead)
+                .filter(Lead.is_deleted == False, Lead.temperature == LeadTemperatureEnum.WARM)
+                .count()
+            )
 
-            cool_count = db.query(Lead).filter(
-                Lead.is_deleted == False,
-                Lead.temperature == LeadTemperatureEnum.COOL
-            ).count()
+            cool_count = (
+                db.query(Lead)
+                .filter(Lead.is_deleted == False, Lead.temperature == LeadTemperatureEnum.COOL)
+                .count()
+            )
 
-            cold_count = db.query(Lead).filter(
-                Lead.is_deleted == False,
-                Lead.temperature == LeadTemperatureEnum.COLD
-            ).count()
+            cold_count = (
+                db.query(Lead)
+                .filter(Lead.is_deleted == False, Lead.temperature == LeadTemperatureEnum.COLD)
+                .count()
+            )
 
             # Status counts
-            new_count = db.query(Lead).filter(
-                Lead.is_deleted == False,
-                Lead.status == LeadStatusEnum.NEW
-            ).count()
+            new_count = (
+                db.query(Lead)
+                .filter(Lead.is_deleted == False, Lead.status == LeadStatusEnum.NEW)
+                .count()
+            )
 
-            qualified_count = db.query(Lead).filter(
-                Lead.is_deleted == False,
-                Lead.status == LeadStatusEnum.QUALIFIED
-            ).count()
+            qualified_count = (
+                db.query(Lead)
+                .filter(Lead.is_deleted == False, Lead.status == LeadStatusEnum.QUALIFIED)
+                .count()
+            )
 
             # Total and conversion metrics
             total_leads = db.query(Lead).filter(Lead.is_deleted == False).count()
-            converted_count = db.query(Lead).filter(
-                Lead.is_deleted == False,
-                Lead.converted_to_customer == True
-            ).count()
+            converted_count = (
+                db.query(Lead)
+                .filter(Lead.is_deleted == False, Lead.converted_to_customer == True)
+                .count()
+            )
 
             conversion_rate = (converted_count / total_leads * 100) if total_leads > 0 else 0
 
@@ -358,20 +360,17 @@ class LeadService:
                     "hot": hot_count,
                     "warm": warm_count,
                     "cool": cool_count,
-                    "cold": cold_count
+                    "cold": cold_count,
                 },
-                "by_status": {
-                    "new": new_count,
-                    "qualified": qualified_count
-                },
+                "by_status": {"new": new_count, "qualified": qualified_count},
                 "conversion": {
                     "converted_count": converted_count,
-                    "conversion_rate": round(conversion_rate, 2)
-                }
+                    "conversion_rate": round(conversion_rate, 2),
+                },
             }
 
     @staticmethod
-    def recalculate_lead_score(lead_id: str, **kwargs) -> Optional[tuple[Lead, Dict[str, Any]]]:
+    def recalculate_lead_score(lead_id: str, **kwargs) -> tuple[Lead, dict[str, Any]] | None:
         """
         Manually recalculate lead score.
 
@@ -383,19 +382,16 @@ class LeadService:
             Optional[tuple]: (lead, score_breakdown) if found
         """
         with get_db_session() as db:
-            lead = db.query(Lead).filter(
-                Lead.id == lead_id,
-                Lead.is_deleted == False
-            ).first()
+            lead = db.query(Lead).filter(Lead.id == lead_id, Lead.is_deleted == False).first()
 
             if not lead:
                 return None
 
             # Get scoring parameters
-            interaction_count = kwargs.get('interaction_count', lead.interaction_count)
-            response_time_minutes = kwargs.get('response_time_minutes', lead.response_time_minutes)
-            budget_confirmed = kwargs.get('budget_confirmed', False)
-            is_decision_maker = kwargs.get('is_decision_maker', False)
+            interaction_count = kwargs.get("interaction_count", lead.interaction_count)
+            response_time_minutes = kwargs.get("response_time_minutes", lead.response_time_minutes)
+            budget_confirmed = kwargs.get("budget_confirmed", False)
+            is_decision_maker = kwargs.get("is_decision_maker", False)
 
             # Recalculate score
             score_breakdown = lead_scoring_engine.calculate_score(
@@ -403,7 +399,7 @@ class LeadService:
                 interaction_count=interaction_count,
                 response_time_minutes=response_time_minutes,
                 budget_confirmed=budget_confirmed,
-                is_decision_maker=is_decision_maker
+                is_decision_maker=is_decision_maker,
             )
 
             # Update lead
