@@ -37,11 +37,21 @@ jobs:
           pip install --upgrade pip
           pip install black==25.9.0 ruff==0.13.3 mypy==1.18.2 bandit==1.8.6 safety==3.6.2
 
+      - name: Show tool versions
+        run: |
+          python --version
+          pip --version
+          black --version
+          ruff --version
+          mypy --version
+          bandit --version
+          safety --version
+
       - name: Run Black formatter check
-        run: black --check backend/
+        run: black --check --diff --color backend/
 
       - name: Run Ruff linter
-        run: ruff check --config pyproject.toml backend/
+        run: ruff check --config pyproject.toml -v backend/
 
       - name: Run MyPy type checker
         run: mypy backend/app --ignore-missing-imports || true
