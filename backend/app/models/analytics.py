@@ -206,9 +206,7 @@ class RevenueAnalytics(BaseDBModel):
 
     # Breakdown by categories
     revenue_by_type: dict[str, float] | None = Field(None, description="Revenue by project type")
-    revenue_by_source: dict[str, float] | None = Field(
-        None, description="Revenue by lead source"
-    )
+    revenue_by_source: dict[str, float] | None = Field(None, description="Revenue by lead source")
     revenue_by_team: dict[str, float] | None = Field(None, description="Revenue by team member")
 
 

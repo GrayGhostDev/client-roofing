@@ -77,9 +77,7 @@ class Review(BaseDBModel):
     is_featured: bool = Field(default=False, description="Feature on website/marketing?")
 
     # Platform-Specific IDs
-    platform_review_id: str | None = Field(
-        None, max_length=255, description="Platform's review ID"
-    )
+    platform_review_id: str | None = Field(None, max_length=255, description="Platform's review ID")
     platform_url: str | None = Field(None, description="Direct URL to review")
     birdeye_review_id: str | None = Field(None, max_length=255, description="BirdEye review ID")
 

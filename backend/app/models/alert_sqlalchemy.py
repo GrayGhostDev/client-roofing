@@ -289,9 +289,7 @@ class AlertListFiltersSchema(BaseModel):
     related_lead_id: UUID | None = Field(None, description="Filter by related lead")
     related_customer_id: UUID | None = Field(None, description="Filter by related customer")
     related_project_id: UUID | None = Field(None, description="Filter by related project")
-    related_appointment_id: UUID | None = Field(
-        None, description="Filter by related appointment"
-    )
+    related_appointment_id: UUID | None = Field(None, description="Filter by related appointment")
 
     # Date filters
     date_from: datetime | None = Field(None, description="Filter from date")

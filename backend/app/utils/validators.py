@@ -190,9 +190,7 @@ def validate_lead_score(score: int) -> tuple[bool, str | None]:
     return True, None
 
 
-def validate_date_format(
-    date_str: str, format: str = "%Y-%m-%d"
-) -> tuple[bool, datetime | None]:
+def validate_date_format(date_str: str, format: str = "%Y-%m-%d") -> tuple[bool, datetime | None]:
     """
     Validate date string format.
 

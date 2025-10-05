@@ -20,16 +20,13 @@ def test_model_imports():
 
         print("✅ Lead model imported successfully")
 
-
         print("✅ Customer model imported successfully")
 
         print("\nTesting business process models...")
 
         print("✅ Project model imported successfully")
 
-
         print("✅ Appointment model imported successfully")
-
 
         print("✅ Interaction model imported successfully")
 
@@ -37,16 +34,13 @@ def test_model_imports():
 
         print("✅ Team model imported successfully")
 
-
         print("✅ Review model imported successfully")
-
 
         print("✅ Partnership model imported successfully")
 
         print("\nTesting system models...")
 
         print("✅ Notification models imported successfully")
-
 
         print("✅ Alert model imported successfully")
 
@@ -75,12 +69,9 @@ def test_model_schemas():
     try:
         print("\nTesting Pydantic schemas...")
 
-
         print("✅ Project schemas imported successfully")
 
-
         print("✅ Appointment schemas imported successfully")
-
 
         print("✅ Interaction schemas imported successfully")
 

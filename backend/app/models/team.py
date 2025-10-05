@@ -113,9 +113,7 @@ class TeamMember(BaseDBModel):
         default=0, ge=0, description="Total leads converted to customers"
     )
     total_revenue_generated: int = Field(default=0, ge=0, description="Total revenue generated USD")
-    avg_response_time_minutes: int | None = Field(
-        None, ge=0, description="Average response time"
-    )
+    avg_response_time_minutes: int | None = Field(None, ge=0, description="Average response time")
     conversion_rate: float | None = Field(
         None, ge=0.0, le=100.0, description="Lead conversion rate %"
     )
@@ -123,9 +121,7 @@ class TeamMember(BaseDBModel):
     # Sales Performance (for sales roles)
     monthly_sales_target: int | None = Field(None, ge=0, description="Monthly sales target USD")
     monthly_sales_actual: int = Field(default=0, ge=0, description="Current month sales USD")
-    quarterly_sales_target: int | None = Field(
-        None, ge=0, description="Quarterly sales target USD"
-    )
+    quarterly_sales_target: int | None = Field(None, ge=0, description="Quarterly sales target USD")
     quarterly_sales_actual: int = Field(default=0, ge=0, description="Current quarter sales USD")
 
     # Customer Satisfaction
@@ -293,6 +289,4 @@ class TeamMemberListFilters(BaseModel):
     )
     department: str | None = Field(None, description="Filter by department")
     can_view_all_leads: bool | None = Field(None, description="Filter by permission")
-    has_active_assignments: bool | None = Field(
-        None, description="Filter members with assignments"
-    )
+    has_active_assignments: bool | None = Field(None, description="Filter members with assignments")

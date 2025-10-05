@@ -179,7 +179,11 @@ def login():
         if not success:
             if "too many" in str(error).lower():
                 return jsonify({"error": error}), 429
-            elif "locked" in str(error).lower() or "inactive" in str(error).lower() or "not verified" in str(error).lower():
+            elif (
+                "locked" in str(error).lower()
+                or "inactive" in str(error).lower()
+                or "not verified" in str(error).lower()
+            ):
                 return jsonify({"error": error}), 403
             else:
                 return jsonify({"error": error}), 400

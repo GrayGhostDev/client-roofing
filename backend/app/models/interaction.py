@@ -80,9 +80,7 @@ class Interaction(BaseDBModel):
     )
 
     # Content
-    description: str | None = Field(
-        None, max_length=5000, description="Detailed description/notes"
-    )
+    description: str | None = Field(None, max_length=5000, description="Detailed description/notes")
     outcome: InteractionOutcome | None = Field(None, description="Outcome of the interaction")
 
     # Metadata

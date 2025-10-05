@@ -89,9 +89,7 @@ class Appointment(BaseDBModel):
     preparation_notes: str | None = Field(
         None, max_length=1000, description="Preparation requirements"
     )
-    outcome_notes: str | None = Field(
-        None, max_length=2000, description="Notes after completion"
-    )
+    outcome_notes: str | None = Field(None, max_length=2000, description="Notes after completion")
 
     # Reminders
     send_reminder: bool = Field(default=True, description="Send reminder notifications")

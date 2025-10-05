@@ -307,9 +307,7 @@ class AuthService:
             logger.error(f"Error during login: {str(e)}")
             return False, None, "An error occurred during login"
 
-    def refresh_token(
-        self, refresh_token: str
-    ) -> tuple[bool, dict[str, Any] | None, str | None]:
+    def refresh_token(self, refresh_token: str) -> tuple[bool, dict[str, Any] | None, str | None]:
         """
         Generate new access token using refresh token
 

@@ -891,9 +891,7 @@ class PartnershipsService:
             logger.error(f"Authenticate partner error: {e}")
             return False, None, str(e)
 
-    def validate_partner_session(
-        self, session_token: str
-    ) -> tuple[bool, dict | None, str | None]:
+    def validate_partner_session(self, session_token: str) -> tuple[bool, dict | None, str | None]:
         """Validate partner portal session"""
         try:
             session = (

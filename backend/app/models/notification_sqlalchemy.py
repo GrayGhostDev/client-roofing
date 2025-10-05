@@ -317,6 +317,4 @@ class NotificationListFiltersSchema(BaseModel):
     recipient_id: UUID | None = Field(None, description="Filter by recipient")
     date_from: datetime | None = Field(None, description="Filter from date")
     date_to: datetime | None = Field(None, description="Filter to date")
-    needs_retry: bool | None = Field(
-        None, description="Filter failed notifications needing retry"
-    )
+    needs_retry: bool | None = Field(None, description="Filter failed notifications needing retry")

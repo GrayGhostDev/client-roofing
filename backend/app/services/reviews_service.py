@@ -421,9 +421,7 @@ class ReviewsService:
 
     # Aggregation Methods
 
-    def fetch_all_reviews(
-        self, refresh: bool = False
-    ) -> tuple[bool, dict | None, str | None]:
+    def fetch_all_reviews(self, refresh: bool = False) -> tuple[bool, dict | None, str | None]:
         """Fetch and aggregate reviews from all platforms"""
         try:
             cache_key = "reviews:all"
@@ -704,9 +702,7 @@ class ReviewsService:
 
     # Response Management
 
-    def generate_response_suggestion(
-        self, review: dict
-    ) -> tuple[bool, str | None, str | None]:
+    def generate_response_suggestion(self, review: dict) -> tuple[bool, str | None, str | None]:
         """Generate AI-suggested response to a review"""
         try:
             rating = review.get("rating", 0)
@@ -785,9 +781,7 @@ class ReviewsService:
             logger.error(f"Post response error: {e}")
             return False, str(e)
 
-    def _post_gmb_response(
-        self, review_name: str, response_text: str
-    ) -> tuple[bool, str | None]:
+    def _post_gmb_response(self, review_name: str, response_text: str) -> tuple[bool, str | None]:
         """Post response to Google My Business review"""
         try:
             if not self.gmb_credentials:
@@ -845,9 +839,7 @@ class ReviewsService:
             logger.error(f"Facebook response error: {e}")
             return False, str(e)
 
-    def _post_birdeye_response(
-        self, review_id: str, response_text: str
-    ) -> tuple[bool, str | None]:
+    def _post_birdeye_response(self, review_id: str, response_text: str) -> tuple[bool, str | None]:
         """Post response to BirdEye review"""
         try:
             if not self.birdeye_api_key:

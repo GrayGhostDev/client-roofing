@@ -101,9 +101,7 @@ class Partnership(BaseDBModel):
         None, max_length=1000, description="Commission terms details"
     )
     payment_method: str | None = Field(None, max_length=50, description="check, ach, wire, etc.")
-    payment_terms: str | None = Field(
-        None, max_length=500, description="Payment terms description"
-    )
+    payment_terms: str | None = Field(None, max_length=500, description="Payment terms description")
 
     # Tax Information
     tax_id: str | None = Field(None, max_length=50, description="Tax ID/EIN")
@@ -129,9 +127,7 @@ class Partnership(BaseDBModel):
     avg_project_value: int | None = Field(
         None, ge=0, description="Average project value from referrals"
     )
-    avg_days_to_close: int | None = Field(
-        None, ge=0, description="Average days to close referral"
-    )
+    avg_days_to_close: int | None = Field(None, ge=0, description="Average days to close referral")
 
     # Engagement
     last_referral_date: date | None = Field(None, description="Date of last referral")
@@ -160,18 +156,14 @@ class Partnership(BaseDBModel):
     service_areas: str | None = Field(
         None, description="ZIP codes or cities served (comma-separated)"
     )
-    specialization: str | None = Field(
-        None, max_length=500, description="Specialization or niche"
-    )
+    specialization: str | None = Field(None, max_length=500, description="Specialization or niche")
 
     # Quality & Ratings
     partner_rating: float | None = Field(
         None, ge=0, le=5, description="Internal partner rating (1-5)"
     )
     quality_score: int | None = Field(None, ge=0, le=100, description="Quality score (0-100)")
-    satisfaction_score: int | None = Field(
-        None, ge=0, le=10, description="NPS-style score (0-10)"
-    )
+    satisfaction_score: int | None = Field(None, ge=0, le=10, description="NPS-style score (0-10)")
 
     # Communication Preferences
     preferred_contact_method: str | None = Field(
@@ -188,9 +180,7 @@ class Partnership(BaseDBModel):
     concerns: str | None = Field(None, max_length=1000, description="Concerns or issues")
 
     # Termination
-    termination_reason: str | None = Field(
-        None, max_length=500, description="Reason if terminated"
-    )
+    termination_reason: str | None = Field(None, max_length=500, description="Reason if terminated")
     termination_date: date | None = Field(None, description="Date terminated")
 
     @field_validator("phone", "secondary_contact_phone")

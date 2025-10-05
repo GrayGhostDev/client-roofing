@@ -205,12 +205,8 @@ class NotificationTemplate(BaseDBModel):
     last_used_at: datetime | None = Field(None, description="Last usage timestamp")
 
     # Performance
-    avg_open_rate: float | None = Field(
-        None, ge=0.0, le=100.0, description="Average open rate %"
-    )
-    avg_click_rate: float | None = Field(
-        None, ge=0.0, le=100.0, description="Average click rate %"
-    )
+    avg_open_rate: float | None = Field(None, ge=0.0, le=100.0, description="Average open rate %")
+    avg_click_rate: float | None = Field(None, ge=0.0, le=100.0, description="Average click rate %")
 
     # Metadata
     description: str | None = Field(None, description="Template description")

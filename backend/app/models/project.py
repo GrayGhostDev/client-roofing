@@ -89,9 +89,7 @@ class Project(BaseDBModel):
     claim_number: str | None = Field(None, max_length=100, description="Insurance claim number")
 
     # Property/Project Details
-    property_address: str | None = Field(
-        None, max_length=255, description="Project site address"
-    )
+    property_address: str | None = Field(None, max_length=255, description="Project site address")
     city: str | None = Field(None, max_length=100, description="City")
     state: str | None = Field(None, max_length=2, description="State code")
     zip_code: str | None = Field(None, description="ZIP code")
@@ -99,9 +97,7 @@ class Project(BaseDBModel):
     roof_size_sqft: int | None = Field(None, ge=0, description="Roof size in square feet")
     roof_material: RoofMaterial | None = Field(None, description="Roofing material to be used")
     roof_pitch: str | None = Field(None, max_length=20, description="Roof pitch (e.g., 6/12)")
-    num_layers: int | None = Field(
-        None, ge=1, le=5, description="Number of existing roof layers"
-    )
+    num_layers: int | None = Field(None, ge=1, le=5, description="Number of existing roof layers")
 
     # Project Scope
     description: str | None = Field(
@@ -158,9 +154,7 @@ class Project(BaseDBModel):
     customer_notes: str | None = Field(None, description="Notes visible to customer")
 
     # Cancellation
-    cancellation_reason: str | None = Field(
-        None, max_length=500, description="Reason if cancelled"
-    )
+    cancellation_reason: str | None = Field(None, max_length=500, description="Reason if cancelled")
     cancelled_date: date | None = Field(None, description="Date cancelled")
 
     @field_validator("zip_code")

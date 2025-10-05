@@ -256,9 +256,7 @@ class LeadService:
             return lead
 
     @staticmethod
-    def assign_lead(
-        lead_id: str, team_member_id: str, notes: str | None = None
-    ) -> Lead | None:
+    def assign_lead(lead_id: str, team_member_id: str, notes: str | None = None) -> Lead | None:
         """
         Assign a lead to a team member.
 

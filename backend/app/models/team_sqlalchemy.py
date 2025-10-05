@@ -299,6 +299,4 @@ class TeamMemberListFiltersSchema(BaseModel):
     )
     department: str | None = Field(None, description="Filter by department")
     can_view_all_leads: bool | None = Field(None, description="Filter by permission")
-    has_active_assignments: bool | None = Field(
-        None, description="Filter members with assignments"
-    )
+    has_active_assignments: bool | None = Field(None, description="Filter members with assignments")
