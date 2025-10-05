@@ -47,17 +47,45 @@ jobs:
           bandit --version
           safety --version
 
-      - name: Run Black formatter check
-        run: black --check --diff --color backend/
+      - name: Run Black formatter check (capture logs)
+        run: |
+          set -o pipefail
+          black --check backend/ 2>&1 | tee black_check.log || {
+            echo "BLACK_FAILED=true" >> $GITHUB_ENV
+            black --diff backend/ > lint_black.diff || true
+          }
 
-      - name: Run Ruff linter
-        run: ruff check --config pyproject.toml -v backend/
+      - name: Run Ruff linter (capture logs)
+        run: |
+          set -o pipefail
+          ruff check --config pyproject.toml -v backend/ 2>&1 | tee ruff_check.log || {
+            echo "RUFF_FAILED=true" >> $GITHUB_ENV
+            ruff check --config pyproject.toml -v backend/ > lint_ruff.txt || true
+          }
 
       - name: Run MyPy type checker
         run: mypy backend/app --ignore-missing-imports || true
 
       - name: Run Bandit security linter
         run: bandit -r backend/ -ll -q || true
+
+      - name: Upload lint logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: lint-logs
+          path: |
+            black_check.log
+            lint_black.diff
+            ruff_check.log
+            lint_ruff.txt
+          if-no-files-found: ignore
+
+      - name: Fail if lint found issues
+        if: ${{ env.BLACK_FAILED == 'true' || env.RUFF_FAILED == 'true' }}
+        run: |
+          echo "Linting failed. See uploaded artifacts for details."
+          exit 1
 
       - name: Check for security vulnerabilities
         run: safety check -r backend/requirements.txt
