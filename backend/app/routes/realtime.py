@@ -5,15 +5,17 @@ Version: 1.0.0
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, g
 
 from app.services.realtime_service import realtime_service
+from app.utils.auth import require_auth
 
 bp = Blueprint("realtime", __name__)
 logger = logging.getLogger(__name__)
 
 
 @bp.route("/auth", methods=["POST"])
+@require_auth
 def pusher_auth():
     """
     Authenticate Pusher private/presence channel subscriptions.
@@ -32,15 +34,12 @@ def pusher_auth():
         if not socket_id or not channel_name:
             return jsonify({"error": "Missing socket_id or channel_name"}), 400
 
-        # TODO: Get authenticated user ID from session/JWT
-        # For now, using a placeholder
-        user_id = request.headers.get("X-User-ID", "anonymous")
-
-        # Build user data for presence channels
+        # Build user data from authenticated context
+        user_ctx = getattr(g, "user", {}) or {}
         user_data = {
-            "id": user_id,
-            "name": request.headers.get("X-User-Name", "Anonymous"),
-            "email": request.headers.get("X-User-Email", ""),
+            "id": user_ctx.get("user_id"),
+            "name": user_ctx.get("name") or user_ctx.get("email"),
+            "email": user_ctx.get("email"),
         }
 
         # Authenticate the channel subscription
@@ -57,6 +56,7 @@ def pusher_auth():
 
 
 @bp.route("/trigger", methods=["POST"])
+@require_auth
 def trigger_event():
     """
     Manually trigger a real-time event.
@@ -72,6 +72,11 @@ def trigger_event():
 
         if not data or not all(k in data for k in ["channel", "event", "data"]):
             return jsonify({"error": "Missing required fields: channel, event, data"}), 400
+
+        # Authorize only admin/manager for manual triggers
+        user_role = getattr(g, "user_role", None)
+        if user_role not in ("admin", "manager"):
+            return jsonify({"error": "Insufficient permissions"}), 403
 
         # Trigger the event
         success = realtime_service.trigger_event(

@@ -608,6 +608,114 @@ def validate_token():
         return jsonify({"error": "Failed to validate token"}), 500
 
 
+@bp.route("/2fa/enroll", methods=["POST"])
+@require_auth
+def two_factor_enroll():
+    """
+    Begin 2FA enrollment for the authenticated user. Returns TOTP secret and otpauth URI.
+    """
+    try:
+        user = g.get("user")
+        if not user:
+            return jsonify({"error": "User not found in context"}), 401
+        ok, data, err = auth_service.generate_two_factor_secret(user["user_id"])
+        if not ok:
+            return jsonify({"error": err or "Failed to start 2FA enrollment"}), 400
+        return jsonify({"success": True, **data}), 200
+    except Exception as e:
+        logger.error(f"2FA enroll error: {str(e)}")
+        return jsonify({"error": "Failed to enroll 2FA"}), 500
+
+
+@bp.route("/2fa/verify", methods=["POST"])
+@require_auth
+def two_factor_verify():
+    """
+    Verify 2FA TOTP code to complete enrollment. Returns backup codes.
+    """
+    try:
+        user = g.get("user")
+        if not user:
+            return jsonify({"error": "User not found in context"}), 401
+        data = request.get_json() or {}
+        code = data.get("code")
+        if not code:
+            return jsonify({"error": "code is required"}), 400
+        ok, err = auth_service.verify_two_factor_code(user["user_id"], code)
+        if not ok:
+            return jsonify({"error": err or "Invalid 2FA code"}), 400
+        backup_codes = auth_service.generate_backup_codes(user["user_id"])
+        return jsonify({"success": True, "backup_codes": backup_codes}), 200
+    except Exception as e:
+        logger.error(f"2FA verify error: {str(e)}")
+        return jsonify({"error": "Failed to verify 2FA"}), 500
+
+
+@bp.route("/2fa/disable", methods=["POST"])
+@require_auth
+def two_factor_disable():
+    """
+    Disable 2FA for the authenticated user after validating code or backup code.
+    """
+    try:
+        user = g.get("user")
+        if not user:
+            return jsonify({"error": "User not found in context"}), 401
+        data = request.get_json() or {}
+        code = data.get("code")
+        backup_code = data.get("backup_code")
+        ok = False
+        if code:
+            ok, err = auth_service.verify_two_factor_code(user["user_id"], code)
+            if not ok:
+                return jsonify({"error": err or "Invalid 2FA code"}), 400
+        elif backup_code:
+            ok = auth_service.verify_backup_code(user["user_id"], backup_code)
+            if not ok:
+                return jsonify({"error": "Invalid backup code"}), 400
+        else:
+            return jsonify({"error": "code or backup_code is required"}), 400
+        if not auth_service.disable_two_factor(user["user_id"]):
+            return jsonify({"error": "Failed to disable 2FA"}), 500
+        return jsonify({"success": True, "message": "2FA disabled"}), 200
+    except Exception as e:
+        logger.error(f"2FA disable error: {str(e)}")
+        return jsonify({"error": "Failed to disable 2FA"}), 500
+
+
+@bp.route("/2fa/complete", methods=["POST"])
+def two_factor_complete():
+    """
+    Complete 2FA login using a two_factor_token from /login and a valid TOTP/backup code.
+
+    Request Body:
+      - two_factor_token: str (required)
+      - code: str (optional)
+      - backup_code: str (optional)
+      - device_info: dict (optional)
+    """
+    try:
+        data = request.get_json() or {}
+        two_factor_token = data.get("two_factor_token")
+        code = data.get("code")
+        backup_code = data.get("backup_code")
+        device_info = data.get("device_info")
+        if not two_factor_token:
+            return jsonify({"error": "two_factor_token is required"}), 400
+        ok, token_data, err = auth_service.complete_two_factor_login(
+            two_factor_token=two_factor_token,
+            code=code,
+            backup_code=backup_code,
+            device_info=device_info,
+        )
+        if not ok:
+            return jsonify({"error": err or "Failed to complete 2FA login"}), 400
+        return jsonify({"success": True, "message": "Login successful", **token_data}), 200
+    except Exception as e:
+        logger.error(f"2FA complete error: {str(e)}")
+        return jsonify({"error": "Failed to complete 2FA login"}), 500
+
+
 @bp.route("/permissions/<permission>", methods=["GET"])
 @require_auth
 def check_permission(permission: str):
