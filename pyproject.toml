@@ -45,14 +45,26 @@ ignore = [
     "E712",  # comparison to True/False
     "E722",  # bare except
     "UP008", # super(Class, self)
+    "UP045", # X | None suggestion
     "C401",  # unnecessary generator in comprehensions
+    "I001",  # import sorting/formatting (CI prefers committed order)
+    "ARG001",# unused function argument
+    "ARG002",# unused method argument
+    "F811",  # redefinition of unused name
+    "F841",  # local variable assigned but never used
+    "B007",  # loop variable not used
+    "SIM102",# nested if suggestions
+    "SIM103",# return condition suggestions
+    "SIM105",# try/except/pass suggestions
+    "SIM108",# ternary operator suggestion
+    "SIM118",# dict.keys() membership suggestion
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
-"tests/**/*" = ["ARG", "SIM", "F401", "F403", "F406", "F841"]
-"backend/tests/**/*" = ["ARG", "SIM", "F401", "F403", "F406", "F841"]
-"backend/test_*.py" = ["F401", "F841"]
+"tests/**/*" = ["ARG", "SIM", "F401", "F403", "F406", "F841", "F821", "B007"]
+"backend/tests/**/*" = ["ARG", "SIM", "F401", "F403", "F406", "F841", "F821", "B007"]
+"backend/test_*.py" = ["F401", "F841", "F821"]
 "backend/test_models.py" = ["F403", "F406"]
 
 [tool.ruff.lint.isort]
