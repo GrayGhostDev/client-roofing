@@ -10,11 +10,9 @@ import logging
 from datetime import datetime, timedelta
 from uuid import uuid4
 
-from app.models.interaction import (
-    InteractionCreate,
+from app.models.interaction_sqlalchemy import (
     InteractionDirection,
-    InteractionStatus,
-    InteractionUpdate,
+    InteractionOutcome,
 )
 from app.services.notification import notification_service
 from app.utils.supabase_client import get_supabase_client
@@ -36,7 +34,7 @@ class InteractionService:
         return self.supabase
 
     def create_interaction(
-        self, interaction_data: InteractionCreate, created_by: str
+        self, interaction_data: dict, created_by: str
     ) -> tuple[bool, dict | None, str | None]:
         """
         Create a new interaction.
@@ -60,7 +58,7 @@ class InteractionService:
 
             # Set default status if not provided
             if "status" not in interaction_dict:
-                interaction_dict["status"] = InteractionStatus.COMPLETED.value
+                interaction_dict["status"] = InteractionOutcome.SUCCESSFUL.value
 
             # Calculate duration if end_time provided
             if interaction_dict.get("start_time") and interaction_dict.get("end_time"):
@@ -108,7 +106,7 @@ class InteractionService:
             return False, None, str(e)
 
     def update_interaction(
-        self, interaction_id: str, update_data: InteractionUpdate, updated_by: str
+        self, interaction_id: str, update_data: dict, updated_by: str
     ) -> tuple[bool, dict | None, str | None]:
         """
         Update an existing interaction.
@@ -602,18 +600,18 @@ class InteractionService:
         """
         try:
             # Prepare interaction data
-            interaction_data = InteractionCreate(
-                customer_id=entity_id if entity_type == "customer" else None,
-                lead_id=entity_id if entity_type == "lead" else None,
-                interaction_type=interaction_type,
-                direction=InteractionDirection.OUTBOUND.value,
-                status=InteractionStatus.COMPLETED.value,
-                interaction_time=datetime.utcnow().isoformat(),
-                summary=details.get("summary", f"Auto-logged {interaction_type}"),
-                notes=details.get("notes"),
-                assigned_to=details.get("assigned_to"),
-                metadata=details.get("metadata", {}),
-            )
+            interaction_data = {
+                "customer_id": entity_id if entity_type == "customer" else None,
+                "lead_id": entity_id if entity_type == "lead" else None,
+                "interaction_type": interaction_type,
+                "direction": InteractionDirection.OUTBOUND.value,
+                "status": InteractionOutcome.SUCCESSFUL.value,
+                "interaction_time": datetime.utcnow().isoformat(),
+                "summary": details.get("summary", f"Auto-logged {interaction_type}"),
+                "notes": details.get("notes"),
+                "assigned_to": details.get("assigned_to"),
+                "metadata": details.get("metadata", {}),
+            }
 
             return self.create_interaction(interaction_data, "system")
 

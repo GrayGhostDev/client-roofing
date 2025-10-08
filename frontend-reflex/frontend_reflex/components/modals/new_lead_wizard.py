@@ -402,7 +402,7 @@ def step_indicator() -> rx.Component:
                                 rx.text(
                                     str(step["number"]),
                                     size="2",
-                                    weight="normal",
+                                    weight="regular",
                                     color="gray.600"
                                 ),
                                 width="32px",
@@ -961,7 +961,7 @@ def step_5_review_submit() -> rx.Component:
                     NewLeadWizardState.form_data.get("property_value", "") != "",
                     rx.hstack(
                         rx.text("Property Value:", weight="medium"),
-                        rx.text(f"${int(NewLeadWizardState.form_data.get('property_value', 0)):,}" if NewLeadWizardState.form_data.get("property_value") else ""),
+                        rx.text("$" + NewLeadWizardState.form_data.get("property_value", "0")),
                         spacing="2"
                     ),
                     rx.box()

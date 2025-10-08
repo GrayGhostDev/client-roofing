@@ -77,6 +77,35 @@ def validate_phone_number(phone: str, region: str = "US") -> tuple[bool, str | N
         return False, str(e)
 
 
+def validate_email_format(email: str) -> bool:
+    """
+    Simple email format validation (returns boolean only).
+    
+    Args:
+        email (str): Email address to validate
+    
+    Returns:
+        bool: True if valid email format, False otherwise
+    """
+    is_valid, _ = validate_email_address(email)
+    return is_valid
+
+
+def validate_phone_format(phone: str, region: str = "US") -> bool:
+    """
+    Simple phone format validation (returns boolean only).
+    
+    Args:
+        phone (str): Phone number to validate
+        region (str): Country code (default: "US")
+    
+    Returns:
+        bool: True if valid phone format, False otherwise
+    """
+    is_valid, _ = validate_phone_number(phone, region)
+    return is_valid
+
+
 def validate_zip_code(zip_code: str) -> tuple[bool, str | None]:
     """
     Validate US ZIP code format (5 digits or 5+4 digits).
@@ -356,3 +385,38 @@ def validate_currency_amount(amount: float) -> tuple[bool, str | None]:
         return False, "Amount cannot be negative"
 
     return True, None
+
+
+def validate_request(schema_class):
+    """
+    Decorator to validate request data against a Pydantic schema
+    
+    Args:
+        schema_class: Pydantic model class to validate against
+    
+    Returns:
+        Decorated function that validates request data
+    """
+    from functools import wraps
+    from flask import request, jsonify
+    
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            try:
+                # Get JSON data from request
+                data = request.get_json()
+                if data is None:
+                    return jsonify({'error': 'Request body must be JSON'}), 400
+                
+                # Validate using Pydantic schema
+                validated_data = schema_class(**data)
+                
+                # Add validated data to kwargs
+                kwargs['validated_data'] = validated_data
+                
+                return f(*args, **kwargs)
+            except Exception as e:
+                return jsonify({'error': f'Validation error: {str(e)}'}), 400
+        return decorated_function
+    return decorator

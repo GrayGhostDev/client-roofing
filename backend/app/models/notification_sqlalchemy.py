@@ -9,7 +9,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel as PydanticBaseModel, ConfigDict, EmailStr, Field, field_validator
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
 from sqlalchemy import Enum as SQLEnum
 
@@ -103,6 +103,7 @@ class Notification(BaseModel):
     """
 
     __tablename__ = "notifications"
+    __table_args__ = {'extend_existing': True}
 
     # Basic Information
     type = Column(SQLEnum(NotificationType), nullable=False, index=True)
@@ -156,6 +157,7 @@ class NotificationTemplate(BaseModel):
     """
 
     __tablename__ = "notification_templates"
+    __table_args__ = {'extend_existing': True}
 
     name = Column(String(100), nullable=False)
     type = Column(SQLEnum(NotificationType), nullable=False)
@@ -184,7 +186,7 @@ class NotificationTemplate(BaseModel):
 
 
 # Pydantic schemas for API validation
-class NotificationCreateSchema(BaseModel):
+class NotificationCreateSchema(PydanticBaseModel):
     """Schema for creating a new notification"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -235,7 +237,7 @@ class NotificationCreateSchema(BaseModel):
         return cleaned
 
 
-class NotificationUpdateSchema(BaseModel):
+class NotificationUpdateSchema(PydanticBaseModel):
     """Schema for updating a notification"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -251,7 +253,7 @@ class NotificationUpdateSchema(BaseModel):
     click_count: int | None = None
 
 
-class NotificationResponseSchema(BaseModel):
+class NotificationResponseSchema(PydanticBaseModel):
     """Schema for notification API response"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -272,7 +274,7 @@ class NotificationResponseSchema(BaseModel):
     updated_at: datetime
 
 
-class NotificationTemplateCreateSchema(BaseModel):
+class NotificationTemplateCreateSchema(PydanticBaseModel):
     """Schema for creating a notification template"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -289,7 +291,7 @@ class NotificationTemplateCreateSchema(BaseModel):
     is_default: bool | None = False
 
 
-class NotificationTemplateResponseSchema(BaseModel):
+class NotificationTemplateResponseSchema(PydanticBaseModel):
     """Schema for notification template API response"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -307,7 +309,7 @@ class NotificationTemplateResponseSchema(BaseModel):
     updated_at: datetime
 
 
-class NotificationListFiltersSchema(BaseModel):
+class NotificationListFiltersSchema(PydanticBaseModel):
     """Filter parameters for notification list endpoint"""
 
     type: str | None = Field(None, description="Comma-separated types")

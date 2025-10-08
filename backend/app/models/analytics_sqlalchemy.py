@@ -12,7 +12,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel as PydanticBaseModel, ConfigDict, Field
 from sqlalchemy import (
     Boolean,
     Column,
@@ -92,6 +92,7 @@ class KPIDefinition(BaseModel):
     """
 
     __tablename__ = "kpi_definitions"
+    __table_args__ = {'extend_existing': True}
 
     name = Column(String(100), nullable=False, unique=True)
     display_name = Column(String(150), nullable=False)
@@ -128,6 +129,7 @@ class MetricValue(BaseModel):
     """
 
     __tablename__ = "metric_values"
+    __table_args__ = {'extend_existing': True}
 
     kpi_id = Column(String(36), nullable=False, index=True)
     date = Column(Date, nullable=False, index=True)
@@ -153,6 +155,7 @@ class ConversionFunnel(BaseModel):
     """
 
     __tablename__ = "conversion_funnels"
+    __table_args__ = {'extend_existing': True}
 
     name = Column(String(100), nullable=False)
     timeframe = Column(SQLEnum(AnalyticsTimeframe), nullable=False)
@@ -191,6 +194,7 @@ class RevenueAnalytics(BaseModel):
     """
 
     __tablename__ = "revenue_analytics"
+    __table_args__ = {'extend_existing': True}
 
     period_name = Column(String(50), nullable=False)
     timeframe = Column(SQLEnum(AnalyticsTimeframe), nullable=False)
@@ -266,6 +270,7 @@ class TeamPerformance(BaseModel):
     """
 
     __tablename__ = "team_performance"
+    __table_args__ = {'extend_existing': True}
 
     team_member_id = Column(String(36), nullable=False, index=True)
     period_name = Column(String(50), nullable=False)
@@ -387,7 +392,7 @@ class BusinessAlert(BaseModel):
 
 
 # Pydantic schemas for API validation
-class KPIDefinitionCreateSchema(BaseModel):
+class KPIDefinitionCreateSchema(PydanticBaseModel):
     """Schema for creating a KPI definition"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -408,7 +413,7 @@ class KPIDefinitionCreateSchema(BaseModel):
     chart_type: ChartType | None = None
 
 
-class KPIDefinitionResponseSchema(BaseModel):
+class KPIDefinitionResponseSchema(PydanticBaseModel):
     """Schema for KPI definition API response"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -426,7 +431,7 @@ class KPIDefinitionResponseSchema(BaseModel):
     updated_at: datetime
 
 
-class MetricValueCreateSchema(BaseModel):
+class MetricValueCreateSchema(PydanticBaseModel):
     """Schema for creating a metric value"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -441,7 +446,7 @@ class MetricValueCreateSchema(BaseModel):
     confidence_score: float | None = None
 
 
-class MetricValueResponseSchema(BaseModel):
+class MetricValueResponseSchema(PydanticBaseModel):
     """Schema for metric value API response"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -456,7 +461,7 @@ class MetricValueResponseSchema(BaseModel):
     calculated_at: datetime
 
 
-class RevenueAnalyticsResponseSchema(BaseModel):
+class RevenueAnalyticsResponseSchema(PydanticBaseModel):
     """Schema for revenue analytics API response"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -478,7 +483,7 @@ class RevenueAnalyticsResponseSchema(BaseModel):
     target_achievement_pct: float
 
 
-class TeamPerformanceResponseSchema(BaseModel):
+class TeamPerformanceResponseSchema(PydanticBaseModel):
     """Schema for team performance API response"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -499,7 +504,7 @@ class TeamPerformanceResponseSchema(BaseModel):
 
 
 # Request Models
-class AnalyticsRequest(BaseModel):
+class AnalyticsRequest(PydanticBaseModel):
     """Base analytics request model"""
 
     timeframe: AnalyticsTimeframe = AnalyticsTimeframe.MTD

@@ -1,0 +1,112 @@
+# Render.com Deployment Configuration
+# https://render.com
+
+services:
+  # Backend API Service
+  - type: web
+    name: iswitch-roofs-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        sync: false  # Use Render secret management
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: iswitch-roofs-redis
+          property: connectionString
+      - key: PUSHER_APP_ID
+        sync: false
+      - key: PUSHER_KEY
+        sync: false
+      - key: PUSHER_SECRET
+        sync: false
+      - key: PUSHER_CLUSTER
+        value: us2
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: CALLRAIL_API_KEY
+        sync: false
+      - key: CALLRAIL_ACCOUNT_ID
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11
+    healthCheckPath: /health
+    plan: standard  # or starter for lower cost
+    region: oregon  # or closest to your users
+    branch: main
+    autoDeploy: true
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 4 --timeout 120 run:app
+
+  # Redis Cache Service
+  - type: redis
+    name: iswitch-roofs-redis
+    plan: starter  # Free tier available
+    region: oregon
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []  # Empty allows internal services only
+
+# Background Workers (Optional - for async tasks)
+#  - type: worker
+#    name: iswitch-roofs-worker
+#    runtime: docker
+#    dockerfilePath: ./backend/Dockerfile
+#    dockerContext: ./backend
+#    envVars:
+#      # Same as backend service
+#    startCommand: celery -A app.celery worker --loglevel=info
+
+# Cron Jobs (Optional - for scheduled tasks)
+#  - type: cron
+#    name: iswitch-roofs-backup
+#    schedule: "0 2 * * *"  # Daily at 2 AM
+#    command: python backend/backup_database.py
+#    branch: main
+
+# Static Site (Optional - for frontend)
+#  - type: web
+#    name: iswitch-roofs-frontend
+#    runtime: static
+#    buildCommand: cd frontend-reflex && npm install && npm run build
+#    staticPublishPath: frontend-reflex/dist
+#    routes:
+#      - type: rewrite
+#        source: /*
+#        destination: /index.html
+#    headers:
+#      - path: /*
+#        name: X-Frame-Options
+#        value: DENY
+#      - path: /*
+#        name: X-Content-Type-Options
+#        value: nosniff
+
+databases: []  # Using external Supabase
+
+# Custom domains (configure after deployment)
+# domains:
+#   - name: api.iswitchroofs.com
+#     type: apex
+#   - name: www.iswitchroofs.com
+#     type: redirect
+#     redirect: https://iswitchroofs.com

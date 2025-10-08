@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 # Create blueprint
 partnerships_bp = Blueprint("partnerships", __name__, url_prefix="/api/partnerships")
+bp = partnerships_bp  # Alias for compatibility
 
 
 @partnerships_bp.route("/", methods=["GET"])

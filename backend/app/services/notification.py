@@ -11,9 +11,8 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from app.config import get_supabase_client
-from app.models.notification import (
+from app.models.notification_sqlalchemy import (
     NotificationChannel,
-    NotificationPreferences,
     NotificationStatus,
     NotificationType,
 )
@@ -362,7 +361,7 @@ class NotificationService:
 
         return recipient
 
-    def _get_user_preferences(self, user_id: str | None) -> NotificationPreferences | None:
+    def _get_user_preferences(self, user_id: str | None) -> dict | None:
         """Get user notification preferences."""
         if not user_id or not self.supabase:
             return None
@@ -377,7 +376,7 @@ class NotificationService:
             )
 
             if result.data:
-                return NotificationPreferences(**result.data)
+                return dict(result.data)
 
         except:
             pass
@@ -387,7 +386,7 @@ class NotificationService:
     def _determine_channels(
         self,
         type: str | NotificationType,
-        preferences: NotificationPreferences | None,
+        preferences: dict | None,
         priority: str,
     ) -> list[str]:
         """Determine which channels to use for notification."""
@@ -421,7 +420,7 @@ class NotificationService:
 
         return channels
 
-    def _is_quiet_hours(self, preferences: NotificationPreferences | None) -> bool:
+    def _is_quiet_hours(self, preferences: dict | None) -> bool:
         """Check if current time is within user's quiet hours."""
         if not preferences or not preferences.quiet_hours_enabled:
             return False

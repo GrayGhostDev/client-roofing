@@ -232,6 +232,36 @@ def mock_datetime(mocker):
     return mock_dt
 
 
+@pytest.fixture
+def performance_timer():
+    """
+    Timer for performance testing.
+
+    Returns:
+        Timer: Object with start(), stop(), and elapsed properties
+    """
+    import time
+
+    class Timer:
+        def __init__(self):
+            self.start_time = None
+            self.end_time = None
+
+        def start(self):
+            self.start_time = time.time()
+
+        def stop(self):
+            self.end_time = time.time()
+
+        @property
+        def elapsed(self):
+            if self.start_time and self.end_time:
+                return self.end_time - self.start_time
+            return None
+
+    return Timer()
+
+
 # Markers for categorizing tests
 def pytest_configure(config):
     """Configure pytest with custom markers."""

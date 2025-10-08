@@ -22,6 +22,7 @@ class BaseModel(Base):
     """
 
     __abstract__ = True
+    __allow_unmapped__ = True
 
     # Primary key - UUID as string for Supabase compatibility
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))

@@ -10,7 +10,7 @@ from datetime import date, datetime
 from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel as PydanticBaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import (
     Boolean,
     Column,
@@ -86,6 +86,7 @@ class Project(BaseModel):
     """
 
     __tablename__ = "projects"
+    __table_args__ = {'extend_existing': True}
 
     # Basic Information (Required)
     customer_id = Column(String(36), nullable=False, index=True)
@@ -221,7 +222,7 @@ class Project(BaseModel):
 
 
 # Pydantic schemas for API validation
-class ProjectCreateSchema(BaseModel):
+class ProjectCreateSchema(PydanticBaseModel):
     """Schema for creating a new project"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -275,7 +276,7 @@ class ProjectCreateSchema(BaseModel):
         return v.upper()
 
 
-class ProjectUpdateSchema(BaseModel):
+class ProjectUpdateSchema(PydanticBaseModel):
     """Schema for updating a project"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -302,7 +303,7 @@ class ProjectUpdateSchema(BaseModel):
     cancellation_reason: str | None = None
 
 
-class ProjectResponseSchema(BaseModel):
+class ProjectResponseSchema(PydanticBaseModel):
     """Schema for project API response"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -328,7 +329,7 @@ class ProjectResponseSchema(BaseModel):
     updated_at: datetime
 
 
-class ProjectListFiltersSchema(BaseModel):
+class ProjectListFiltersSchema(PydanticBaseModel):
     """Filter parameters for project list endpoint"""
 
     status: str | None = Field(None, description="Comma-separated status values")

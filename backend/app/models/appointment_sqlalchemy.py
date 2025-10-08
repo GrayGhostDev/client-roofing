@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel as PydanticBaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
 from sqlalchemy import Enum as SQLEnum
 
@@ -59,6 +59,7 @@ class Appointment(BaseModel):
     """
 
     __tablename__ = "appointments"
+    __table_args__ = {'extend_existing': True}
 
     # Association (Required)
     entity_type = Column(String(50), nullable=False)
@@ -166,7 +167,7 @@ class Appointment(BaseModel):
 
 
 # Pydantic schemas for API validation
-class AppointmentCreateSchema(BaseModel):
+class AppointmentCreateSchema(PydanticBaseModel):
     """Schema for creating a new appointment"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -209,7 +210,7 @@ class AppointmentCreateSchema(BaseModel):
         return v
 
 
-class AppointmentUpdateSchema(BaseModel):
+class AppointmentUpdateSchema(PydanticBaseModel):
     """Schema for updating an appointment"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -231,7 +232,7 @@ class AppointmentUpdateSchema(BaseModel):
     follow_up_required: bool | None = None
 
 
-class AppointmentRescheduleSchema(BaseModel):
+class AppointmentRescheduleSchema(PydanticBaseModel):
     """Schema for rescheduling an appointment"""
 
     new_scheduled_date: datetime
@@ -239,7 +240,7 @@ class AppointmentRescheduleSchema(BaseModel):
     send_notification: bool = Field(default=True)
 
 
-class AppointmentResponseSchema(BaseModel):
+class AppointmentResponseSchema(PydanticBaseModel):
     """Schema for appointment API response"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -260,7 +261,7 @@ class AppointmentResponseSchema(BaseModel):
     updated_at: datetime
 
 
-class AppointmentListFiltersSchema(BaseModel):
+class AppointmentListFiltersSchema(PydanticBaseModel):
     """Filter parameters for appointment list endpoint"""
 
     entity_type: str | None = Field(None, description="Filter by entity type")

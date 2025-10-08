@@ -360,3 +360,8 @@ class PusherService:
 def get_pusher_service() -> PusherService:
     """Get PusherService instance."""
     return PusherService()
+
+
+# Compatibility alias for imports expecting PusherClient
+# Routes can use get_pusher_client() function or PusherService class
+PusherClient = PusherService

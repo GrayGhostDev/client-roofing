@@ -11,7 +11,11 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
-from app.models.customer import Customer, CustomerSegment, CustomerStatus
+from app.models.customer_sqlalchemy import (
+    Customer,
+    CustomerSegmentEnum as CustomerSegment,
+    CustomerStatusEnum as CustomerStatus,
+)
 
 logger = logging.getLogger(__name__)
 

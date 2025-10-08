@@ -1032,33 +1032,32 @@ def projects_list_page() -> rx.Component:
 
         # View toggle
         rx.hstack(
-            rx.button_group(
-                rx.button(
-                    rx.icon("columns", size=16),
-                    "Pipeline",
-                    variant=rx.cond(
-                        ProjectState.current_view == "pipeline",
-                        "solid",
-                        "outline"
-                    ),
-                    size="2",
-                    on_click=lambda: ProjectState.toggle_view("pipeline")
+            rx.button(
+                rx.icon("columns", size=16),
+                "Pipeline",
+                variant=rx.cond(
+                    ProjectState.current_view == "pipeline",
+                    "solid",
+                    "outline"
                 ),
-                rx.button(
-                    rx.icon("calendar", size=16),
-                    "Timeline",
-                    variant=rx.cond(
-                        ProjectState.current_view == "timeline",
-                        "solid",
-                        "outline"
-                    ),
-                    size="2",
-                    on_click=lambda: ProjectState.toggle_view("timeline")
-                )
+                size="2",
+                on_click=lambda: ProjectState.toggle_view("pipeline")
+            ),
+            rx.button(
+                rx.icon("calendar", size=16),
+                "Timeline",
+                variant=rx.cond(
+                    ProjectState.current_view == "timeline",
+                    "solid",
+                    "outline"
+                ),
+                size="2",
+                on_click=lambda: ProjectState.toggle_view("timeline")
             ),
             justify="center",
             width="100%",
-            margin_bottom="4"
+            margin_bottom="4",
+            spacing="2"
         ),
 
         # Filters

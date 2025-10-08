@@ -9,7 +9,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel as PydanticBaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, Text
 from sqlalchemy import Enum as SQLEnum
 
@@ -57,6 +57,7 @@ class Review(BaseModel):
     """
 
     __tablename__ = "reviews"
+    __table_args__ = {'extend_existing': True}
 
     # Association (Required)
     customer_id = Column(String(36), nullable=False, index=True)
@@ -160,7 +161,7 @@ class Review(BaseModel):
 
 
 # Pydantic schemas for API validation
-class ReviewCreateSchema(BaseModel):
+class ReviewCreateSchema(PydanticBaseModel):
     """Schema for creating a new review"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -195,7 +196,7 @@ class ReviewCreateSchema(BaseModel):
         return v
 
 
-class ReviewUpdateSchema(BaseModel):
+class ReviewUpdateSchema(PydanticBaseModel):
     """Schema for updating a review"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -212,7 +213,7 @@ class ReviewUpdateSchema(BaseModel):
     tags: str | None = None
 
 
-class ReviewResponseSchema(BaseModel):
+class ReviewResponseSchema(PydanticBaseModel):
     """Schema for review API response"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -235,7 +236,7 @@ class ReviewResponseSchema(BaseModel):
     updated_at: datetime
 
 
-class ReviewRequestCreateSchema(BaseModel):
+class ReviewRequestCreateSchema(PydanticBaseModel):
     """Schema for requesting a review from customer"""
 
     customer_id: UUID
@@ -245,7 +246,7 @@ class ReviewRequestCreateSchema(BaseModel):
     delay_days: int | None = Field(None, ge=0, description="Days to wait before sending")
 
 
-class ReviewListFiltersSchema(BaseModel):
+class ReviewListFiltersSchema(PydanticBaseModel):
     """Filter parameters for review list endpoint"""
 
     platform: str | None = Field(None, description="Comma-separated platforms")

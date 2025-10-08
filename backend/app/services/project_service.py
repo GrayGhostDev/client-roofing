@@ -10,11 +10,9 @@ import logging
 from datetime import datetime, timedelta
 from uuid import uuid4
 
-from app.models.project import (
-    ProjectCreate,
+from app.models.project_sqlalchemy import (
     ProjectStatus,
     ProjectType,
-    ProjectUpdate,
 )
 from app.services.notification import notification_service
 from app.utils.supabase_client import get_supabase_client
@@ -36,7 +34,7 @@ class ProjectService:
         return self.supabase
 
     def create_project(
-        self, project_data: ProjectCreate, created_by: str
+        self, project_data: dict, created_by: str
     ) -> tuple[bool, dict | None, str | None]:
         """
         Create a new project.
@@ -96,7 +94,7 @@ class ProjectService:
             return False, None, str(e)
 
     def update_project(
-        self, project_id: str, update_data: ProjectUpdate, updated_by: str
+        self, project_id: str, update_data: dict, updated_by: str
     ) -> tuple[bool, dict | None, str | None]:
         """
         Update an existing project.

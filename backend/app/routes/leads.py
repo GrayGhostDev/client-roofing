@@ -21,7 +21,7 @@ from app.config import get_supabase_client
 # Database session and services
 # SQLAlchemy model
 from app.models.lead_sqlalchemy import Lead
-from app.models.lead import LeadStatus
+from app.models.lead_sqlalchemy import LeadStatusEnum as LeadStatus
 
 # Pydantic schemas
 from app.schemas.lead import (

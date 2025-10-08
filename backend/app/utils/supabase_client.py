@@ -331,3 +331,8 @@ def init_storage_buckets():
 
     except Exception as e:
         logger.error(f"Error initializing storage buckets: {str(e)}")
+
+
+# Compatibility alias for imports expecting SupabaseClient
+# Routes can use get_supabase_client() function instead
+SupabaseClient = get_supabase_client

@@ -6,19 +6,9 @@ Date: 2025-10-01
 
 import logging
 import os
-from logging.handlers import RotatingFileHandler
 
 from flask import Flask
 from flask_cors import CORS
-
-# Optional Sentry integration
-try:
-    import sentry_sdk
-    from sentry_sdk.integrations.flask import FlaskIntegration
-
-    SENTRY_AVAILABLE = True
-except ImportError:
-    SENTRY_AVAILABLE = False
 
 from app.config import get_config
 
@@ -55,28 +45,25 @@ def create_app(config_name: str | None = None):
     app.config.from_object(config)
     app.config["ACTIVE_CONFIG"] = resolved_config_name
 
-    # Initialize Sentry for error tracking (production only)
-    if resolved_config_name == "production" and app.config.get("SENTRY_DSN") and SENTRY_AVAILABLE:
-        sentry_sdk.init(
-            dsn=app.config["SENTRY_DSN"],
-            integrations=[FlaskIntegration()],
-            traces_sample_rate=1.0,
-            environment=app.config.get("SENTRY_ENVIRONMENT", "production"),
-        )
-
     # Setup CORS - Allow all routes including health endpoints
     CORS(
         app,
         resources={
             r"/api/*": {"origins": app.config.get("CORS_ORIGINS", "*")},
-            r"/health": {"origins": app.config.get("CORS_ORIGINS", "*")},
+            r"/health/*": {"origins": app.config.get("CORS_ORIGINS", "*")},
+            r"/metrics": {"origins": app.config.get("CORS_ORIGINS", "*")},
             r"/": {"origins": app.config.get("CORS_ORIGINS", "*")},
         },
         supports_credentials=True,
     )
 
-    # Setup logging
+    # Setup logging first
+    from app.logging_config import setup_logging
     setup_logging(app)
+
+    # Initialize monitoring and observability
+    from app.monitoring import init_monitoring
+    init_monitoring(app)
 
     # Register blueprints
     register_blueprints(app)
@@ -86,12 +73,6 @@ def create_app(config_name: str | None = None):
 
     # Register CLI commands
     register_commands(app)
-
-    # Health check endpoint
-    @app.route("/health")
-    def health_check():
-        """Health check endpoint for monitoring."""
-        return {"status": "healthy", "service": "iswitch-roofs-crm-api"}, 200
 
     @app.route("/")
     def index():
@@ -104,32 +85,6 @@ def create_app(config_name: str | None = None):
         }, 200
 
     return app
-
-
-def setup_logging(app):
-    """
-    Configure application logging.
-
-    Args:
-        app (Flask): Flask application instance
-    """
-    if not app.debug and not app.testing:
-        # Create logs directory if it doesn't exist
-        if not os.path.exists("logs"):
-            os.mkdir("logs")
-
-        # Setup file handler
-        file_handler = RotatingFileHandler(
-            "logs/iswitch_roofs_crm.log", maxBytes=10240000, backupCount=10
-        )
-        file_handler.setFormatter(
-            logging.Formatter("%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]")
-        )
-        file_handler.setLevel(logging.INFO)
-        app.logger.addHandler(file_handler)
-
-        app.logger.setLevel(logging.INFO)
-        app.logger.info("iSwitch Roofs CRM startup")
 
 
 def register_blueprints(app):
@@ -243,6 +198,24 @@ def register_blueprints(app):
         app.logger.info("Alert routes registered successfully")
     except Exception as e:
         app.logger.warning(f"Failed to register alert routes: {e}")
+
+    # Register CallRail integration routes
+    try:
+        from app.routes import callrail_routes
+
+        app.register_blueprint(callrail_routes.callrail_bp)
+        app.logger.info("CallRail integration routes registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Failed to register CallRail routes: {e}")
+
+    # Register webhook routes
+    try:
+        from app.routes import webhooks
+
+        app.register_blueprint(webhooks.webhooks_bp)
+        app.logger.info("Webhook routes registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Failed to register webhook routes: {e}")
 
 
 def register_error_handlers(app):

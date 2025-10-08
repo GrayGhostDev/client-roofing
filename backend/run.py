@@ -60,7 +60,8 @@ def main():
 
     try:
         # Run the Flask development server
-        app.run(host=host, port=port, debug=debug, threaded=True, use_reloader=debug)
+        # Disabled threaded mode and reloader for local Supabase compatibility
+        app.run(host=host, port=port, debug=False, threaded=False, use_reloader=False)
     except KeyboardInterrupt:
         print("\n👋 Server stopped gracefully")
     except Exception as e:

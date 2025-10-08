@@ -30,13 +30,12 @@ Temperature Classification:
 
 import logging
 
-from app.models.lead import (
+from app.models.lead_sqlalchemy import (
     Lead,
-    LeadScoreBreakdown,
-    LeadSource,
-    LeadStatus,
-    LeadTemperature,
-    UrgencyLevel,
+    LeadSourceEnum as LeadSource,
+    LeadStatusEnum as LeadStatus,
+    LeadTemperatureEnum as LeadTemperature,
+    UrgencyLevelEnum as UrgencyLevel,
 )
 
 logger = logging.getLogger(__name__)
@@ -89,7 +88,7 @@ class LeadScoringEngine:
         response_time_minutes: int | None = None,
         budget_confirmed: bool = False,
         is_decision_maker: bool = False,
-    ) -> LeadScoreBreakdown:
+    ) -> dict:
         """
         Calculate comprehensive lead score with detailed breakdown.
 
@@ -136,23 +135,23 @@ class LeadScoringEngine:
                 f"Behavior: {behavioral_total}, BANT: {bant_total}) -> {temperature.value}"
             )
 
-            return LeadScoreBreakdown(
-                total_score=total,
-                temperature=temperature,
-                demographics_score=demographics_total,
-                property_value_points=property_value_pts,
-                location_points=location_pts,
-                income_estimate_points=income_pts,
-                behavioral_score=behavioral_total,
-                engagement_points=engagement_pts,
-                response_time_points=response_pts,
-                interaction_count_points=interaction_pts,
-                bant_score=bant_total,
-                budget_points=budget_pts,
-                authority_points=authority_pts,
-                need_points=need_pts,
-                timeline_points=timeline_pts,
-            )
+            return {
+                "total_score": total,
+                "temperature": temperature,
+                "demographics_score": demographics_total,
+                "property_value_points": property_value_pts,
+                "location_points": location_pts,
+                "income_estimate_points": income_pts,
+                "behavioral_score": behavioral_total,
+                "engagement_points": engagement_pts,
+                "response_time_points": response_pts,
+                "interaction_count_points": interaction_pts,
+                "bant_score": bant_total,
+                "budget_points": budget_pts,
+                "authority_points": authority_pts,
+                "need_points": need_pts,
+                "timeline_points": timeline_pts,
+            }
 
         except Exception as e:
             logger.error(f"Error calculating lead score: {str(e)}", exc_info=True)
@@ -368,27 +367,27 @@ class LeadScoringEngine:
         else:
             return LeadTemperature.COLD
 
-    def _get_default_score(self) -> LeadScoreBreakdown:
+    def _get_default_score(self) -> dict:
         """Return default/minimum score breakdown on error"""
-        return LeadScoreBreakdown(
-            total_score=0,
-            temperature=LeadTemperature.COLD,
-            demographics_score=0,
-            property_value_points=0,
-            location_points=0,
-            income_estimate_points=0,
-            behavioral_score=0,
-            engagement_points=0,
-            response_time_points=0,
-            interaction_count_points=0,
-            bant_score=0,
-            budget_points=0,
-            authority_points=0,
-            need_points=0,
-            timeline_points=0,
-        )
+        return {
+            "total_score": 0,
+            "temperature": LeadTemperature.COLD,
+            "demographics_score": 0,
+            "property_value_points": 0,
+            "location_points": 0,
+            "income_estimate_points": 0,
+            "behavioral_score": 0,
+            "engagement_points": 0,
+            "response_time_points": 0,
+            "interaction_count_points": 0,
+            "bant_score": 0,
+            "budget_points": 0,
+            "authority_points": 0,
+            "need_points": 0,
+            "timeline_points": 0,
+        }
 
-    def recalculate_lead_score(self, lead: Lead, interaction_count: int) -> LeadScoreBreakdown:
+    def recalculate_lead_score(self, lead: Lead, interaction_count: int) -> dict:
         """
         Recalculate lead score with current data.
 

@@ -1,7 +1,7 @@
 """Lead components for dashboard and management - Static components with JavaScript functionality."""
 
 import reflex as rx
-from .modals.new_lead_wizard import new_lead_wizard
+# from .modals.new_lead_wizard import new_lead_wizard  # Temporarily disabled
 
 
 def lead_status_badge(status) -> rx.Component:
@@ -86,7 +86,13 @@ def leads_table_static() -> rx.Component:
                     size="2",
                     id="search-input"
                 ),
-                new_lead_wizard(),
+                # new_lead_wizard(),  # TODO: Temporarily disabled due to Reflex Var compatibility issues
+                rx.button(
+                    "➕ Add Lead",
+                    size="3",
+                    color_scheme="blue",
+                    on_click=lambda: rx.window_alert("Wizard temporarily disabled - under refactoring for Reflex 0.8.13 compatibility")
+                ),
                 spacing="2"
             ),
             justify="between",

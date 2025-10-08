@@ -22,10 +22,25 @@ def require_auth(f):
     Decorator to require authentication for an endpoint.
 
     Checks for Bearer token in Authorization header and validates it.
+    Can be bypassed in development with SKIP_AUTH=true environment variable.
     """
 
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # Development bypass for local testing
+        if os.getenv("SKIP_AUTH", "false").lower() == "true":
+            # Set default user for development
+            g.user = {
+                "user_id": "dev_user",
+                "email": "dev@localhost",
+                "role": "admin"
+            }
+            g.user_id = "dev_user"
+            g.user_email = "dev@localhost"
+            g.user_role = "admin"
+            logger.debug("Authentication bypassed for development")
+            return f(*args, **kwargs)
+        
         # Get token from Authorization header
         auth_header = request.headers.get("Authorization")
 
@@ -195,3 +210,13 @@ def verify_password(password: str, hashed: str) -> bool:
         import hashlib
 
         return hashlib.sha256(password.encode()).hexdigest() == hashed
+
+
+def get_current_user():
+    """
+    Get the current authenticated user from Flask g object.
+    
+    Returns:
+        dict: User information from g.user, or None if not authenticated
+    """
+    return g.get("user")

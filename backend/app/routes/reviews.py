@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 # Create blueprint
 reviews_bp = Blueprint("reviews", __name__, url_prefix="/api/reviews")
+bp = reviews_bp  # Alias for compatibility
 
 
 @reviews_bp.route("/platforms/gmb/auth/init", methods=["POST"])

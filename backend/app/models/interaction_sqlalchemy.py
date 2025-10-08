@@ -10,7 +10,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel as PydanticBaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
 from sqlalchemy import Enum as SQLEnum
 
@@ -71,6 +71,7 @@ class Interaction(BaseModel):
     """
 
     __tablename__ = "interactions"
+    __table_args__ = {'extend_existing': True}
 
     # Association (Required)
     entity_type = Column(SQLEnum(EntityType), nullable=False, index=True)
@@ -145,7 +146,7 @@ class Interaction(BaseModel):
 
 
 # Pydantic schemas for API validation
-class InteractionCreateSchema(BaseModel):
+class InteractionCreateSchema(PydanticBaseModel):
     """Schema for creating a new interaction"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -194,7 +195,7 @@ class InteractionCreateSchema(BaseModel):
         return v.lower()
 
 
-class InteractionUpdateSchema(BaseModel):
+class InteractionUpdateSchema(PydanticBaseModel):
     """Schema for updating an interaction"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -226,7 +227,7 @@ class InteractionUpdateSchema(BaseModel):
         return v.lower()
 
 
-class InteractionResponseSchema(BaseModel):
+class InteractionResponseSchema(PydanticBaseModel):
     """Schema for interaction API response"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -249,7 +250,7 @@ class InteractionResponseSchema(BaseModel):
     updated_at: datetime
 
 
-class InteractionListFiltersSchema(BaseModel):
+class InteractionListFiltersSchema(PydanticBaseModel):
     """Filter parameters for interaction list endpoint"""
 
     entity_type: EntityType | None = Field(None, description="Filter by entity type")
