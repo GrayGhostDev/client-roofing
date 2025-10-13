@@ -1,0 +1,66 @@
+{
+  "version": 2,
+  "name": "iswitch-roofs-backend",
+  "builds": [
+    {
+      "src": "backend/api/index.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/health",
+      "dest": "backend/api/index.py"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "backend/api/index.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "backend/api/index.py"
+    }
+  ],
+  "env": {
+    "FLASK_ENV": "production",
+    "ENVIRONMENT": "production",
+    "PYTHONUNBUFFERED": "1"
+  },
+  "regions": ["iad1"],
+  "functions": {
+    "backend/api/index.py": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "s-maxage=0, stale-while-revalidate=60"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "https://iswitchroofs.streamlit.app"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization, X-Requested-With"
+        },
+        {
+          "key": "Access-Control-Allow-Credentials",
+          "value": "true"
+        }
+      ]
+    }
+  ]
+}
