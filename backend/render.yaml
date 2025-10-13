@@ -1,15 +1,18 @@
 services:
   - type: web
     name: iswitch-roofs-api
+    runtime: python
     env: python
     region: oregon
     plan: free
+    rootDir: backend
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     startCommand: gunicorn -w 2 -k gevent --bind 0.0.0.0:$PORT --timeout 120 --access-logfile - --error-logfile - 'app:create_app()'
     healthCheckPath: /health
+    autoDeploy: true
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.0
+        value: "3.11.0"
       - key: FLASK_APP
         value: app
       - key: FLASK_ENV
@@ -17,17 +20,31 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: DEBUG
-        value: false
+        value: "false"
+      - key: FLASK_DEBUG
+        value: "0"
       - key: DATABASE_URL
         sync: false
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_KEY
         sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
       - key: SECRET_KEY
         generateValue: true
       - key: JWT_SECRET_KEY
         generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_ACCESS_TOKEN_EXPIRES
+        value: "3600"
+      - key: SKIP_AUTH
+        value: "true"
+      - key: ENABLE_LEAD_SCORING
+        value: "true"
+      - key: CORS_SUPPORTS_CREDENTIALS
+        value: "true"
       - key: PUSHER_APP_ID
         sync: false
       - key: PUSHER_KEY
@@ -36,9 +53,13 @@ services:
         sync: false
       - key: PUSHER_CLUSTER
         value: us2
+      - key: PUSHER_SSL
+        value: "true"
       - key: REDIS_HOST
         sync: false
       - key: REDIS_PORT
-        value: 6379
+        value: "6379"
+      - key: REDIS_URL
+        sync: false
       - key: BACKEND_CORS_ORIGINS
-        value: '["https://iswitchroofs.streamlit.app","http://localhost:8501"]'
+        value: https://iswitchroofs.streamlit.app,http://localhost:8501
