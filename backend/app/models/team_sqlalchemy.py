@@ -8,7 +8,7 @@ Team member data model for managing staff, roles, performance, and assignments.
 from datetime import date, datetime
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel as PydanticBaseModel, ConfigDict, EmailStr, Field, field_validator
 from sqlalchemy import (
     Boolean,
     Column,
@@ -69,6 +69,7 @@ class TeamMember(BaseModel):
     """
 
     __tablename__ = "team_members"
+    __table_args__ = {"extend_existing": True}
 
     # Basic Information (Required)
     first_name = Column(String(100), nullable=False)
@@ -189,7 +190,7 @@ class TeamMember(BaseModel):
 
 
 # Pydantic schemas for API validation
-class TeamMemberCreateSchema(BaseModel):
+class TeamMemberCreateSchema(PydanticBaseModel):
     """Schema for creating a new team member"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -232,10 +233,10 @@ class TeamMemberCreateSchema(BaseModel):
 
         return v
 
-    @field_validator("state")
+    @field_validator("state", check_fields=False)
     @classmethod
     def validate_state(cls, v: str | None) -> str | None:
-        """Validate state code"""
+        """Validate state code (optional field validation)"""
         if v is None:
             return v
 
@@ -245,7 +246,7 @@ class TeamMemberCreateSchema(BaseModel):
         return v.upper()
 
 
-class TeamMemberUpdateSchema(BaseModel):
+class TeamMemberUpdateSchema(PydanticBaseModel):
     """Schema for updating a team member"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -269,7 +270,7 @@ class TeamMemberUpdateSchema(BaseModel):
     notes: str | None = None
 
 
-class TeamMemberResponseSchema(BaseModel):
+class TeamMemberResponseSchema(PydanticBaseModel):
     """Schema for team member API response"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -289,7 +290,7 @@ class TeamMemberResponseSchema(BaseModel):
     updated_at: datetime
 
 
-class TeamMemberListFiltersSchema(BaseModel):
+class TeamMemberListFiltersSchema(PydanticBaseModel):
     """Filter parameters for team member list endpoint"""
 
     role: str | None = Field(None, description="Comma-separated roles")

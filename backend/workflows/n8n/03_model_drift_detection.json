@@ -1,0 +1,176 @@
+{
+  "name": "Model Drift Detection",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 * * * *"
+            }
+          ]
+        }
+      },
+      "name": "Schedule: Every Hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  p.lead_id,\n  p.predicted_action,\n  p.confidence_score,\n  p.predicted_at,\n  l.actual_outcome,\n  l.outcome_date,\n  CASE \n    WHEN p.predicted_action = l.actual_outcome THEN 1\n    ELSE 0\n  END as is_correct\nFROM ml_predictions p\nLEFT JOIN leads l ON p.lead_id = l.id\nWHERE p.predicted_at >= NOW() - INTERVAL '1 hour'\n  AND l.actual_outcome IS NOT NULL\nORDER BY p.predicted_at DESC",
+        "additionalFields": {}
+      },
+      "name": "Fetch Recent Predictions",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [450, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_production",
+          "name": "Supabase Production DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Calculate accuracy drift\nconst items = $input.all();\n\nif (items.length === 0) {\n  return [{ json: { \n    drift: 0, \n    accuracy: null, \n    sample_size: 0,\n    alert: false,\n    message: 'No predictions with outcomes in the past hour'\n  }}];\n}\n\nconst correctPredictions = items.filter(item => item.json.is_correct === 1).length;\nconst totalPredictions = items.length;\nconst currentAccuracy = correctPredictions / totalPredictions;\n\n// Get baseline accuracy from model metrics\nconst baselineAccuracy = 0.87; // From model training\n\nconst driftPercentage = Math.abs(currentAccuracy - baselineAccuracy) * 100;\nconst alertThreshold = 5.0; // 5% drift triggers alert\n\nconst shouldAlert = driftPercentage >= alertThreshold;\n\n// Calculate per-action accuracy\nconst actionAccuracy = {};\nitems.forEach(item => {\n  const action = item.json.predicted_action;\n  if (!actionAccuracy[action]) {\n    actionAccuracy[action] = { correct: 0, total: 0 };\n  }\n  actionAccuracy[action].total++;\n  if (item.json.is_correct === 1) {\n    actionAccuracy[action].correct++;\n  }\n});\n\nconst actionStats = Object.entries(actionAccuracy).map(([action, stats]) => ({\n  action,\n  accuracy: stats.correct / stats.total,\n  sample_size: stats.total\n}));\n\nreturn [{\n  json: {\n    current_accuracy: currentAccuracy,\n    baseline_accuracy: baselineAccuracy,\n    drift_percentage: driftPercentage,\n    alert: shouldAlert,\n    sample_size: totalPredictions,\n    correct_predictions: correctPredictions,\n    action_stats: actionStats,\n    timestamp: new Date().toISOString(),\n    alert_level: shouldAlert ? 'HIGH' : 'NORMAL'\n  }\n}];"
+      },
+      "name": "Calculate Drift",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.alert}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Drift Alert Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": "C05DATA001",
+        "text": "=🚨 MODEL DRIFT ALERT\n\n📊 Current Accuracy: {{Math.round($json.current_accuracy * 100)}}%\n📈 Baseline Accuracy: {{Math.round($json.baseline_accuracy * 100)}}%\n⚠️ Drift: {{$json.drift_percentage.toFixed(2)}}%\n\n📉 Per-Action Performance:\n{{$json.action_stats.map(a => `• ${a.action}: ${Math.round(a.accuracy * 100)}% (n=${a.sample_size})`).join('\\n')}}\n\n🔬 Sample Size: {{$json.sample_size}} predictions\n⏰ Time Window: Past 1 hour\n\n⚡ Action Required: Review model performance and consider retraining.\n\n🔗 Dashboard: https://ml.iswitch-roofs.com/dashboard",
+        "otherOptions": {}
+      },
+      "name": "Alert Data Team (Slack)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [1050, 200],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "slack_oauth",
+          "name": "Slack OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/api/v1/ml/trigger-retraining",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={{ JSON.stringify({ reason: 'drift_detected', drift_percentage: $json.drift_percentage }) }}"
+      },
+      "name": "Trigger Retraining",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "ml_drift_logs",
+        "columns": "timestamp, current_accuracy, baseline_accuracy, drift_percentage, sample_size, alert_triggered, action_stats",
+        "additionalFields": {}
+      },
+      "name": "Log Drift Metrics (Alert)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [1450, 200],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_production",
+          "name": "Supabase Production DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "ml_drift_logs",
+        "columns": "timestamp, current_accuracy, baseline_accuracy, drift_percentage, sample_size, alert_triggered",
+        "additionalFields": {}
+      },
+      "name": "Log Drift Metrics (Normal)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [1050, 400],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_production",
+          "name": "Supabase Production DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Prepare weekly drift report data\nconst driftLog = $json;\n\nreturn [{\n  json: {\n    ...driftLog,\n    report_type: 'hourly_drift_check',\n    status: driftLog.alert ? 'ACTION_REQUIRED' : 'HEALTHY'\n  }\n}];"
+      },
+      "name": "Update Dashboard Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "Schedule: Every Hour": {
+      "main": [[{ "node": "Fetch Recent Predictions", "type": "main", "index": 0 }]]
+    },
+    "Fetch Recent Predictions": {
+      "main": [[{ "node": "Calculate Drift", "type": "main", "index": 0 }]]
+    },
+    "Calculate Drift": {
+      "main": [[{ "node": "Drift Alert Check", "type": "main", "index": 0 }]]
+    },
+    "Drift Alert Check": {
+      "main": [
+        [{ "node": "Alert Data Team (Slack)", "type": "main", "index": 0 }],
+        [{ "node": "Log Drift Metrics (Normal)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Alert Data Team (Slack)": {
+      "main": [[{ "node": "Trigger Retraining", "type": "main", "index": 0 }]]
+    },
+    "Trigger Retraining": {
+      "main": [[{ "node": "Log Drift Metrics (Alert)", "type": "main", "index": 0 }]]
+    },
+    "Log Drift Metrics (Alert)": {
+      "main": [[{ "node": "Update Dashboard Data", "type": "main", "index": 0 }]]
+    },
+    "Log Drift Metrics (Normal)": {
+      "main": [[{ "node": "Update Dashboard Data", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["ml", "monitoring", "drift-detection"],
+  "createdAt": "2025-10-11T18:00:00.000Z",
+  "updatedAt": "2025-10-11T18:00:00.000Z"
+}

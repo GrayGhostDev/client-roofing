@@ -46,44 +46,56 @@ def list_interactions():
         JSON response with interactions list and pagination
     """
     try:
-        supabase = get_supabase_client()
+        from app.utils.database import get_db_session
+        from app.utils.pagination import paginate_query, create_pagination_response
+        from sqlalchemy import and_
+        from sqlalchemy.orm import joinedload
+        from app.models.interaction_sqlalchemy import Interaction
+        from app.models.customer_sqlalchemy import Customer
+        from app.models.lead_sqlalchemy import Lead
 
         # Pagination
         page = int(request.args.get("page", 1))
-        per_page = min(int(request.args.get("per_page", 50)), 100)
-        offset = (page - 1) * per_page
+        limit = min(int(request.args.get("limit", 50)), 100)
+        per_page = limit  # For compatibility
 
-        # Build query
-        query = supabase.from_("interactions").select("*")
+        # Build SQLAlchemy query with eager loading
+        db = get_db_session()
+        query = db.query(Interaction).filter(Interaction.is_deleted == False)
 
         # Apply filters
+        filters = []
+
         if customer_id := request.args.get("customer_id"):
-            query = query.eq("customer_id", customer_id)
+            filters.append(Interaction.customer_id == customer_id)
 
         if lead_id := request.args.get("lead_id"):
-            query = query.eq("lead_id", lead_id)
+            filters.append(Interaction.lead_id == lead_id)
 
         if interaction_type := request.args.get("interaction_type"):
-            query = query.eq("interaction_type", interaction_type)
+            filters.append(Interaction.interaction_type == interaction_type)
 
         if direction := request.args.get("direction"):
-            query = query.eq("direction", direction)
+            filters.append(Interaction.direction == direction)
 
         if status := request.args.get("status"):
-            query = query.eq("status", status)
+            filters.append(Interaction.outcome == status)
 
         if assigned_to := request.args.get("assigned_to"):
-            query = query.eq("assigned_to", assigned_to)
+            filters.append(Interaction.assigned_to == assigned_to)
 
         if follow_up := request.args.get("follow_up_required"):
-            query = query.eq("follow_up_required", follow_up.lower() == "true")
+            filters.append(Interaction.follow_up_required == (follow_up.lower() == "true"))
 
         # Date range filters
         if start_date := request.args.get("start_date"):
-            query = query.gte("interaction_time", start_date)
+            filters.append(Interaction.interaction_time >= start_date)
 
         if end_date := request.args.get("end_date"):
-            query = query.lte("interaction_time", end_date)
+            filters.append(Interaction.interaction_time <= end_date)
+
+        if filters:
+            query = query.filter(and_(*filters))
 
         # Sorting
         sort_field = "interaction_time"
@@ -93,57 +105,63 @@ def list_interactions():
             sort_field = parts[0]
             sort_dir = parts[1] if len(parts) > 1 else "asc"
 
-        query = query.order(sort_field, desc=(sort_dir == "desc"))
+        if hasattr(Interaction, sort_field):
+            order_column = getattr(Interaction, sort_field)
+            if sort_dir == "desc":
+                query = query.order_by(order_column.desc())
+            else:
+                query = query.order_by(order_column.asc())
 
-        # Execute query with pagination
-        result = query.range(offset, offset + per_page - 1).execute()
-        interactions = result.data
+        # Get paginated results
+        interactions, total = paginate_query(query, page=page, per_page=per_page)
 
-        # Get total count
-        count_result = supabase.from_("interactions").select("*", count="exact").execute()
-        total = count_result.count if hasattr(count_result, "count") else len(interactions)
-
-        # Enrich with customer/lead names
+        # Convert to dicts and enrich with customer/lead names
+        interactions_data = []
         for interaction in interactions:
-            if interaction.get("customer_id"):
-                customer_result = (
-                    supabase.from_("customers")
-                    .select("first_name, last_name")
-                    .eq("id", interaction["customer_id"])
-                    .execute()
-                )
-                if customer_result.data:
-                    customer = customer_result.data[0]
-                    interaction["entity_name"] = f"{customer['first_name']} {customer['last_name']}"
-                    interaction["entity_type"] = "customer"
-            elif interaction.get("lead_id"):
-                lead_result = (
-                    supabase.from_("leads")
-                    .select("first_name, last_name")
-                    .eq("id", interaction["lead_id"])
-                    .execute()
-                )
-                if lead_result.data:
-                    lead = lead_result.data[0]
-                    interaction["entity_name"] = f"{lead['first_name']} {lead['last_name']}"
-                    interaction["entity_type"] = "lead"
+            interaction_dict = {
+                "id": str(interaction.id),
+                "customer_id": str(interaction.customer_id) if interaction.customer_id else None,
+                "lead_id": str(interaction.lead_id) if interaction.lead_id else None,
+                "interaction_type": interaction.interaction_type.value if interaction.interaction_type else None,
+                "direction": interaction.direction.value if interaction.direction else None,
+                "outcome": interaction.outcome.value if interaction.outcome else None,
+                "subject": interaction.subject,
+                "notes": interaction.notes,
+                "interaction_time": interaction.interaction_time.isoformat() if interaction.interaction_time else None,
+                "duration_minutes": interaction.duration_minutes,
+                "follow_up_required": interaction.follow_up_required,
+                "follow_up_date": interaction.follow_up_date.isoformat() if interaction.follow_up_date else None,
+                "assigned_to": str(interaction.assigned_to) if interaction.assigned_to else None,
+                "created_at": interaction.created_at.isoformat() if interaction.created_at else None,
+                "updated_at": interaction.updated_at.isoformat() if interaction.updated_at else None,
+            }
 
-        response = {
-            "data": interactions,
-            "pagination": {
-                "page": page,
-                "per_page": per_page,
-                "total": total,
-                "total_pages": (total + per_page - 1) // per_page,
-                "has_next": page * per_page < total,
-                "has_prev": page > 1,
-            },
-        }
+            # Enrich with customer/lead names
+            if interaction.customer_id:
+                customer = db.query(Customer).filter(Customer.id == interaction.customer_id).first()
+                if customer:
+                    interaction_dict["entity_name"] = f"{customer.first_name} {customer.last_name}"
+                    interaction_dict["entity_type"] = "customer"
+            elif interaction.lead_id:
+                lead = db.query(Lead).filter(Lead.id == interaction.lead_id).first()
+                if lead:
+                    interaction_dict["entity_name"] = f"{lead.first_name} {lead.last_name}"
+                    interaction_dict["entity_type"] = "lead"
+
+            interactions_data.append(interaction_dict)
+
+        # Create pagination response
+        response = create_pagination_response(
+            items=interactions_data,
+            total=total,
+            page=page,
+            per_page=per_page
+        )
 
         return jsonify(response), 200
 
     except Exception as e:
-        logger.error(f"Error listing interactions: {str(e)}")
+        logger.error(f"Error listing interactions: {str(e)}", exc_info=True)
         return jsonify({"error": "Failed to list interactions"}), 500
 
 
@@ -163,48 +181,68 @@ def get_interaction(interaction_id: str):
         if not validate_uuid(interaction_id):
             return jsonify({"error": "Invalid interaction ID format"}), 400
 
-        supabase = get_supabase_client()
+        from app.utils.database import get_db_session
+        from app.models.interaction_sqlalchemy import Interaction
+        from app.models.customer_sqlalchemy import Customer
+        from app.models.lead_sqlalchemy import Lead
+
+        db = get_db_session()
 
         # Get interaction
-        result = supabase.from_("interactions").select("*").eq("id", interaction_id).execute()
+        interaction = db.query(Interaction).filter(
+            Interaction.id == interaction_id,
+            Interaction.is_deleted == False
+        ).first()
 
-        if not result.data:
+        if not interaction:
             return jsonify({"error": "Interaction not found"}), 404
 
-        interaction = result.data[0]
+        # Convert to dict
+        interaction_dict = {
+            "id": str(interaction.id),
+            "customer_id": str(interaction.customer_id) if interaction.customer_id else None,
+            "lead_id": str(interaction.lead_id) if interaction.lead_id else None,
+            "interaction_type": interaction.interaction_type.value if interaction.interaction_type else None,
+            "direction": interaction.direction.value if interaction.direction else None,
+            "outcome": interaction.outcome.value if interaction.outcome else None,
+            "subject": interaction.subject,
+            "notes": interaction.notes,
+            "interaction_time": interaction.interaction_time.isoformat() if interaction.interaction_time else None,
+            "duration_minutes": interaction.duration_minutes,
+            "follow_up_required": interaction.follow_up_required,
+            "follow_up_date": interaction.follow_up_date.isoformat() if interaction.follow_up_date else None,
+            "assigned_to": str(interaction.assigned_to) if interaction.assigned_to else None,
+            "created_by": str(interaction.created_by) if interaction.created_by else None,
+            "created_at": interaction.created_at.isoformat() if interaction.created_at else None,
+            "updated_at": interaction.updated_at.isoformat() if interaction.updated_at else None,
+        }
 
         # Get related entity details
-        if interaction.get("customer_id"):
-            customer_result = (
-                supabase.from_("customers")
-                .select("*")
-                .eq("id", interaction["customer_id"])
-                .execute()
-            )
-            if customer_result.data:
-                interaction["customer"] = customer_result.data[0]
-        elif interaction.get("lead_id"):
-            lead_result = (
-                supabase.from_("leads").select("*").eq("id", interaction["lead_id"]).execute()
-            )
-            if lead_result.data:
-                interaction["lead"] = lead_result.data[0]
+        if interaction.customer_id:
+            customer = db.query(Customer).filter(Customer.id == interaction.customer_id).first()
+            if customer:
+                interaction_dict["customer"] = {
+                    "id": str(customer.id),
+                    "first_name": customer.first_name,
+                    "last_name": customer.last_name,
+                    "email": customer.email,
+                    "phone": customer.phone,
+                }
+        elif interaction.lead_id:
+            lead = db.query(Lead).filter(Lead.id == interaction.lead_id).first()
+            if lead:
+                interaction_dict["lead"] = {
+                    "id": str(lead.id),
+                    "first_name": lead.first_name,
+                    "last_name": lead.last_name,
+                    "email": lead.email,
+                    "phone": lead.phone,
+                }
 
-        # Get user details
-        if interaction.get("created_by"):
-            user_result = (
-                supabase.from_("team_members")
-                .select("first_name, last_name, email")
-                .eq("id", interaction["created_by"])
-                .execute()
-            )
-            if user_result.data:
-                interaction["created_by_user"] = user_result.data[0]
-
-        return jsonify(interaction), 200
+        return jsonify(interaction_dict), 200
 
     except Exception as e:
-        logger.error(f"Error getting interaction: {str(e)}")
+        logger.error(f"Error getting interaction: {str(e)}", exc_info=True)
         return jsonify({"error": "Failed to get interaction"}), 500
 
 

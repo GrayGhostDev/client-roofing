@@ -160,11 +160,19 @@ class AuditMiddleware:
 
     def before_request(self):
         """Process request before it reaches the route handler."""
-        # Extract and store current user
-        user = get_current_user()
-        if user:
-            g.current_user = user
-            logger.debug(f"Request from user: {user.get('email')}")
+        # Skip middleware for health checks and static files
+        if request.path in ['/health', '/'] or request.path.startswith('/static'):
+            return
+
+        # Extract and store current user (lightweight operation)
+        try:
+            user = get_current_user()
+            if user:
+                g.current_user = user
+                logger.debug(f"Request from user: {user.get('email')}")
+        except Exception as e:
+            # Don't block requests if user extraction fails
+            logger.warning(f"Failed to extract user in before_request: {e}")
 
 
 def setup_audit_middleware(app):

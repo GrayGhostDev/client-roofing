@@ -6,10 +6,12 @@ Date: 2025-10-01
 
 import logging
 import os
+from datetime import datetime
 from logging.handlers import RotatingFileHandler
 
 from flask import Flask
 from flask_cors import CORS
+from flask_compress import Compress
 
 # Optional Sentry integration
 try:
@@ -75,6 +77,10 @@ def create_app(config_name: str | None = None):
         supports_credentials=True,
     )
 
+    # Enable response compression (gzip) for all responses
+    # Reduces JSON payload size by 60-80%
+    Compress(app)
+
     # Setup logging
     setup_logging(app)
 
@@ -90,8 +96,35 @@ def create_app(config_name: str | None = None):
     # Health check endpoint
     @app.route("/health")
     def health_check():
-        """Health check endpoint for monitoring."""
-        return {"status": "healthy", "service": "iswitch-roofs-crm-api"}, 200
+        """
+        Enhanced health check endpoint with database status.
+
+        Returns:
+            dict: Health status including database connectivity
+            int: HTTP status code (200 if healthy, 503 if degraded)
+        """
+        from app.utils.database import check_database_health
+
+        # Get database health status
+        db_health = check_database_health()
+
+        response = {
+            "status": "healthy" if db_health["healthy"] else "degraded",
+            "service": "iswitch-roofs-crm-api",
+            "version": "1.0.0",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database": db_health.get("database", {}),
+            "pool": db_health.get("pool", {}),
+            "checks": {
+                "database_connected": db_health.get("database", {}).get("connected", False),
+                "pool_available": db_health.get("pool", {}).get("size", 0) > 0
+            }
+        }
+
+        # Return 503 if database is not connected (degraded state)
+        status_code = 200 if db_health["healthy"] else 503
+
+        return response, status_code
 
     @app.route("/")
     def index():
@@ -243,6 +276,102 @@ def register_blueprints(app):
         app.logger.info("Alert routes registered successfully")
     except Exception as e:
         app.logger.warning(f"Failed to register alert routes: {e}")
+
+    try:
+        from app.routes import business_metrics
+
+        app.register_blueprint(business_metrics.bp, url_prefix="/api/business-metrics")
+        app.logger.info("Business metrics routes registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Failed to register business metrics routes: {e}")
+
+    # Stats API Routes (Dashboard Summary Statistics with REAL DATA)
+    try:
+        from app.routes import stats
+
+        app.register_blueprint(stats.stats_bp)
+        app.logger.info("Stats routes registered successfully (REAL DATA)")
+    except Exception as e:
+        app.logger.warning(f"Failed to register stats routes: {e}")
+
+    try:
+        from app.routes import cache_monitor
+
+        app.register_blueprint(cache_monitor.cache_monitor_bp, url_prefix="/api/cache")
+        app.logger.info("Cache monitor routes registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Failed to register cache monitor routes: {e}")
+
+    try:
+        from app.routes import advanced_analytics_flask
+
+        app.register_blueprint(advanced_analytics_flask.bp, url_prefix="/api/advanced-analytics")
+        app.logger.info("Advanced analytics routes registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Failed to register advanced analytics routes: {e}")
+
+    # Week 10: Conversational AI Routes (Synchronous with REAL data)
+    try:
+        from app.routes import conversation_sync
+
+        app.register_blueprint(conversation_sync.bp, url_prefix="/api/conversation")
+        app.logger.info("Conversation routes registered successfully (Week 10 - REAL DATA)")
+    except Exception as e:
+        app.logger.warning(f"Failed to register conversation routes: {e}")
+
+    # Week 10: Call Transcription Routes (GPT-4o + Whisper API - REAL AI)
+    try:
+        from app.routes import transcription_sync
+
+        app.register_blueprint(transcription_sync.bp, url_prefix="/api/transcription")
+        app.logger.info("Transcription routes registered successfully (GPT-4o + Whisper - REAL AI)")
+    except Exception as e:
+        app.logger.warning(f"Failed to register transcription routes: {e}")
+
+    # AI-Powered Search Routes (GPT-4o Natural Language Search)
+    try:
+        from app.routes import ai_search
+
+        app.register_blueprint(ai_search.bp, url_prefix="/api/ai-search")
+        app.logger.info("AI-powered search routes registered successfully (GPT-4o)")
+    except Exception as e:
+        app.logger.warning(f"Failed to register AI search routes: {e}")
+
+    # Data Pipeline Routes (Automated Lead Discovery)
+    try:
+        from app.routes import data_pipeline
+
+        app.register_blueprint(data_pipeline.bp, url_prefix="/api/data-pipeline")
+        app.logger.info("Data pipeline routes registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Failed to register data pipeline routes: {e}")
+
+    # Live Data Collection Routes (Real-time Lead Generation)
+    try:
+        from app.routes import live_data
+
+        app.register_blueprint(live_data.bp, url_prefix="/api/live-data")
+        app.logger.info("Live data collection routes registered successfully")
+    except Exception as e:
+        app.logger.warning(f"Failed to register live data routes: {e}")
+
+    # Sales Automation Routes (Placeholder endpoints for development)
+    try:
+        from app.routes import sales_automation_flask
+
+        app.register_blueprint(sales_automation_flask.bp, url_prefix="/api/sales-automation")
+        app.logger.info("Sales automation routes registered successfully (development mode)")
+    except Exception as e:
+        app.logger.warning(f"Failed to register sales automation routes: {e}")
+
+    # CRM Assistant Routes (Intelligent chatbot for dashboard)
+    try:
+        from app.routes import crm_assistant
+
+        app.register_blueprint(crm_assistant.bp, url_prefix="/api/crm-assistant")
+        app.logger.info("CRM Assistant routes registered successfully (AI-powered chatbot)")
+    except Exception as e:
+        app.logger.warning(f"Failed to register CRM assistant routes: {e}")
 
 
 def register_error_handlers(app):

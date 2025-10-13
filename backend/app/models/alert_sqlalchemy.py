@@ -9,7 +9,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel as PydanticBaseModel, ConfigDict, Field
 from sqlalchemy import Boolean, Column, DateTime, String, Text
 from sqlalchemy import Enum as SQLEnum
 
@@ -85,6 +85,7 @@ class Alert(BaseModel):
     """
 
     __tablename__ = "alerts"
+    __table_args__ = {"extend_existing": True}
 
     # Basic Information
     type = Column(SQLEnum(AlertType), nullable=False, index=True)
@@ -180,7 +181,7 @@ class Alert(BaseModel):
 
 
 # Pydantic schemas for API validation
-class AlertCreateSchema(BaseModel):
+class AlertCreateSchema(PydanticBaseModel):
     """Schema for creating a new alert"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -217,7 +218,7 @@ class AlertCreateSchema(BaseModel):
     category: str | None = None
 
 
-class AlertUpdateSchema(BaseModel):
+class AlertUpdateSchema(PydanticBaseModel):
     """Schema for updating an alert"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -230,19 +231,19 @@ class AlertUpdateSchema(BaseModel):
     tags: str | None = None
 
 
-class AlertAcknowledgeSchema(BaseModel):
+class AlertAcknowledgeSchema(PydanticBaseModel):
     """Schema for acknowledging an alert"""
 
     notes: str | None = None
 
 
-class AlertResolveSchema(BaseModel):
+class AlertResolveSchema(PydanticBaseModel):
     """Schema for resolving an alert"""
 
     resolution_notes: str | None = None
 
 
-class AlertResponseSchema(BaseModel):
+class AlertResponseSchema(PydanticBaseModel):
     """Schema for alert API response"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -275,7 +276,7 @@ class AlertResponseSchema(BaseModel):
     updated_at: datetime
 
 
-class AlertListFiltersSchema(BaseModel):
+class AlertListFiltersSchema(PydanticBaseModel):
     """Filter parameters for alert list endpoint"""
 
     type: str | None = Field(None, description="Comma-separated alert types")

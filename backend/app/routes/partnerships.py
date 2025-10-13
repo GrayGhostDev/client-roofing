@@ -15,14 +15,15 @@ from flask import Blueprint, jsonify, request
 
 # Local imports
 from app.services.partnerships_service import partnerships_service
-from app.utils.decorators import require_auth, require_roles
-from app.utils.validators import validate_request
+from app.utils.auth import require_auth, require_roles
+# from app.utils.validators import validate_request
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 # Create blueprint
 partnerships_bp = Blueprint("partnerships", __name__, url_prefix="/api/partnerships")
+bp = partnerships_bp  # Export as 'bp' for Flask registration
 
 
 @partnerships_bp.route("/", methods=["GET"])

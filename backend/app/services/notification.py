@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from app.config import get_supabase_client
-from app.models.notification import (
+from app.models.notification_schemas import (
     NotificationChannel,
     NotificationPreferences,
     NotificationStatus,

@@ -23,10 +23,10 @@ import redis
 # Third-party imports
 from cachetools import TTLCache
 
-from app.utils.pusher_client import PusherClient
+from app.utils.pusher_client import get_pusher_client
 
 # Local imports
-from app.utils.supabase_client import SupabaseClient
+from app.utils.supabase_client import get_supabase_client
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -105,14 +105,14 @@ class PartnershipsService:
     def supabase(self):
         """Lazy initialization of Supabase client"""
         if self._supabase is None:
-            self._supabase = SupabaseClient()
+            self._supabase = get_supabase_client()
         return self._supabase
 
     @property
     def pusher(self):
         """Lazy initialization of Pusher client"""
         if self._pusher is None:
-            self._pusher = PusherClient()
+            self._pusher = get_pusher_client()
         return self._pusher
 
     @property

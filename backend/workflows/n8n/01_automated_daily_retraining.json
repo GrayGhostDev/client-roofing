@@ -1,0 +1,191 @@
+{
+  "name": "Automated Daily Model Retraining",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 2 * * *"
+            }
+          ]
+        }
+      },
+      "name": "Schedule: 2 AM Daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM leads WHERE created_at >= NOW() - INTERVAL '24 hours' ORDER BY created_at DESC LIMIT 1000",
+        "additionalFields": {}
+      },
+      "name": "Fetch New CRM Data",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [450, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_production",
+          "name": "Supabase Production DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Validate data quality\nconst items = $input.all();\nconst validatedData = [];\nconst errors = [];\n\nfor (const item of items) {\n  const lead = item.json;\n  \n  // Check for required fields\n  if (!lead.lead_id || !lead.created_at || !lead.source) {\n    errors.push({ lead_id: lead.lead_id, error: 'Missing required fields' });\n    continue;\n  }\n  \n  // Check for nulls in critical fields\n  if (lead.email_open_rate === null || lead.response_rate === null) {\n    errors.push({ lead_id: lead.lead_id, error: 'Null values in critical fields' });\n    continue;\n  }\n  \n  // Check for outliers (email_open_rate should be 0-1)\n  if (lead.email_open_rate < 0 || lead.email_open_rate > 1) {\n    errors.push({ lead_id: lead.lead_id, error: 'Invalid email_open_rate' });\n    continue;\n  }\n  \n  validatedData.push(lead);\n}\n\nreturn [\n  { json: { validatedData, errorCount: errors.length, errors } }\n];"
+      },
+      "name": "Validate Data Quality",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/api/v1/ml/train",
+        "jsonParameters": true,
+        "options": {
+          "timeout": 300000
+        },
+        "bodyParametersJson": "={{ JSON.stringify({ training_data: $json.validatedData, version: 'auto' }) }}"
+      },
+      "name": "Retrain NBA Model",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Evaluate model performance\nconst response = $input.first().json;\nconst threshold = 0.30; // 30% minimum accuracy\n\nconst meetsThreshold = response.accuracy >= threshold;\nconst shouldDeploy = meetsThreshold && response.f1_score >= 0.28;\n\nreturn [\n  {\n    json: {\n      ...response,\n      meetsThreshold,\n      shouldDeploy,\n      deploymentDecision: shouldDeploy ? 'DEPLOY' : 'REJECT'\n    }\n  }\n];"
+      },
+      "name": "Evaluate Performance",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.shouldDeploy}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Performance Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/api/v1/ml/reload",
+        "options": {}
+      },
+      "name": "Hot Reload Model",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [1450, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "ml-automation@iswitch-roofs.com",
+        "toEmail": "data-team@iswitch-roofs.com",
+        "subject": "✅ ML Model Retrained Successfully",
+        "text": "=Model retraining completed successfully!\n\n📊 Performance Metrics:\n- Accuracy: {{$node['Evaluate Performance'].json.accuracy}}%\n- F1 Score: {{$node['Evaluate Performance'].json.f1_score}}\n- Training Samples: {{$node['Evaluate Performance'].json.training_samples}}\n- Model Version: {{$node['Evaluate Performance'].json.version}}\n\n✅ Model has been deployed to production.\n\nTimestamp: {{$now.format('YYYY-MM-DD HH:mm:ss')}}"
+      },
+      "name": "Success Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1650, 200],
+      "credentials": {
+        "smtp": {
+          "id": "company_smtp",
+          "name": "Company SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "ml-automation@iswitch-roofs.com",
+        "toEmail": "data-team@iswitch-roofs.com",
+        "subject": "⚠️ ML Model Retraining Failed Threshold",
+        "text": "=Model retraining completed but did NOT meet deployment threshold.\n\n📊 Performance Metrics:\n- Accuracy: {{$node['Evaluate Performance'].json.accuracy}}% (Threshold: 30%)\n- F1 Score: {{$node['Evaluate Performance'].json.f1_score}} (Threshold: 0.28)\n\n❌ Model was NOT deployed. Previous version remains active.\n\nAction Required: Review training data quality.\n\nTimestamp: {{$now.format('YYYY-MM-DD HH:mm:ss')}}"
+      },
+      "name": "Failure Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1450, 400],
+      "credentials": {
+        "smtp": {
+          "id": "company_smtp",
+          "name": "Company SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "ml_training_logs",
+        "columns": "timestamp, accuracy, f1_score, training_samples, version, deployed, error_count",
+        "additionalFields": {}
+      },
+      "name": "Log to Database",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [1650, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_production",
+          "name": "Supabase Production DB"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule: 2 AM Daily": {
+      "main": [[{ "node": "Fetch New CRM Data", "type": "main", "index": 0 }]]
+    },
+    "Fetch New CRM Data": {
+      "main": [[{ "node": "Validate Data Quality", "type": "main", "index": 0 }]]
+    },
+    "Validate Data Quality": {
+      "main": [[{ "node": "Retrain NBA Model", "type": "main", "index": 0 }]]
+    },
+    "Retrain NBA Model": {
+      "main": [[{ "node": "Evaluate Performance", "type": "main", "index": 0 }]]
+    },
+    "Evaluate Performance": {
+      "main": [[{ "node": "Performance Check", "type": "main", "index": 0 }]]
+    },
+    "Performance Check": {
+      "main": [
+        [{ "node": "Hot Reload Model", "type": "main", "index": 0 }],
+        [{ "node": "Failure Email", "type": "main", "index": 0 }]
+      ]
+    },
+    "Hot Reload Model": {
+      "main": [[{ "node": "Success Email", "type": "main", "index": 0 }]]
+    },
+    "Success Email": {
+      "main": [[{ "node": "Log to Database", "type": "main", "index": 0 }]]
+    },
+    "Failure Email": {
+      "main": [[{ "node": "Log to Database", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["ml", "automation", "retraining"],
+  "createdAt": "2025-10-11T18:00:00.000Z",
+  "updatedAt": "2025-10-11T18:00:00.000Z"
+}

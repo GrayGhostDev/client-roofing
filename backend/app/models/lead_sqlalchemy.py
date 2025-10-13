@@ -10,6 +10,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import Boolean, Column, DateTime, Enum, Integer, String, Text
+from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
 
@@ -84,9 +85,9 @@ class Lead(BaseModel):
     email = Column(String(255), nullable=True, index=True)
 
     # Lead Metadata
-    source = Column(Enum(LeadSourceEnum), nullable=False)
-    status = Column(Enum(LeadStatusEnum), default=LeadStatusEnum.NEW, nullable=False, index=True)
-    temperature = Column(Enum(LeadTemperatureEnum), nullable=True, index=True)
+    source = Column(Enum(LeadSourceEnum, values_callable=lambda x: [e.value for e in x]), nullable=False)
+    status = Column(Enum(LeadStatusEnum, values_callable=lambda x: [e.value for e in x]), default="new", nullable=False, index=True)
+    temperature = Column(Enum(LeadTemperatureEnum, values_callable=lambda x: [e.value for e in x]), nullable=True, index=True)
     lead_score = Column(Integer, default=0, nullable=False)
 
     # Address Information
@@ -100,7 +101,7 @@ class Lead(BaseModel):
     roof_age = Column(Integer)
     roof_type = Column(String(50))
     roof_size_sqft = Column(Integer)
-    urgency = Column(Enum(UrgencyLevelEnum))
+    urgency = Column(Enum(UrgencyLevelEnum, values_callable=lambda x: [e.value for e in x]))
 
     # Project Details
     project_description = Column(Text)
@@ -129,6 +130,10 @@ class Lead(BaseModel):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     is_deleted = Column(Boolean, default=False, nullable=False)
     deleted_at = Column(DateTime, nullable=True)
+
+    # Relationships (Week 10: Conversational AI integration)
+    voice_interactions = relationship("VoiceInteraction", back_populates="lead", foreign_keys="[VoiceInteraction.lead_id]")
+    chat_conversations = relationship("ChatConversation", back_populates="lead", foreign_keys="[ChatConversation.lead_id]")
 
     def __repr__(self):
         """String representation of lead"""
@@ -182,4 +187,11 @@ class Lead(BaseModel):
             elif isinstance(value, enum.Enum):
                 value = value.value
             result[column.name] = value
+
+        # Add computed properties
+        result['full_name'] = self.full_name
+        result['is_hot_lead'] = self.is_hot_lead
+        result['is_qualified'] = self.is_qualified
+        result['full_address'] = self.full_address
+
         return result

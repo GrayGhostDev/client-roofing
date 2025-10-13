@@ -10,6 +10,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import Boolean, Column, DateTime, Enum, Float, Integer, String, Text
+from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
 
@@ -115,6 +116,10 @@ class Customer(BaseModel):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     is_deleted = Column(Boolean, default=False, nullable=False)
     deleted_at = Column(DateTime, nullable=True)
+
+    # Relationships (Week 10: Conversational AI integration)
+    voice_interactions = relationship("VoiceInteraction", back_populates="customer", foreign_keys="[VoiceInteraction.customer_id]")
+    chat_conversations = relationship("ChatConversation", back_populates="customer", foreign_keys="[ChatConversation.customer_id]")
 
     def __repr__(self):
         """String representation of customer"""

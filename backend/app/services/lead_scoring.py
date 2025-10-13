@@ -30,8 +30,11 @@ Temperature Classification:
 
 import logging
 
-from app.models.lead import (
-    Lead,
+# Import SQLAlchemy ORM model
+from app.models.lead_sqlalchemy import Lead
+
+# Import Pydantic schemas and enums
+from app.models.lead_schemas import (
     LeadScoreBreakdown,
     LeadSource,
     LeadStatus,

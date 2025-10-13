@@ -14,6 +14,7 @@ from app.database import get_db_session
 from app.models.lead_sqlalchemy import Lead, LeadStatusEnum, LeadTemperatureEnum
 from app.schemas.lead import LeadCreate, LeadListFilters, LeadUpdate
 from app.services.lead_scoring import lead_scoring_engine
+from app.utils.cache import cache_result, cache_invalidate
 
 
 class LeadService:
@@ -31,8 +32,14 @@ class LeadService:
             Lead: Created lead object
         """
         with get_db_session() as db:
-            # Create Lead object for scoring
+            # Create Lead object - don't pass status if not provided
+            # Let SQLAlchemy handle the default value
             lead_dict = lead_data.model_dump(exclude={"budget_confirmed", "is_decision_maker"})
+
+            # Remove status if it's None - let SQLAlchemy use the column default
+            if 'status' not in lead_dict or lead_dict['status'] is None:
+                lead_dict.pop('status', None)
+
             lead = Lead(**lead_dict)
 
             # Calculate lead score
@@ -53,7 +60,13 @@ class LeadService:
             db.commit()
             db.refresh(lead)
 
-            return lead
+            # Convert to dict while still in session
+            lead_dict = lead.to_dict()
+
+            # Invalidate lead stats cache after creation
+            cache_invalidate("crm:leads:*")
+
+            return lead_dict
 
     @staticmethod
     def get_lead_by_id(lead_id: str) -> Lead | None:
@@ -136,7 +149,10 @@ class LeadService:
             offset = (page - 1) * per_page
             leads = query.offset(offset).limit(per_page).all()
 
-            return leads, total
+            # Convert to dictionaries while still in session to avoid detached instance errors
+            lead_dicts = [lead.to_dict() for lead in leads]
+
+            return lead_dicts, total
 
     @staticmethod
     def update_lead(lead_id: str, update_data: LeadUpdate) -> Lead | None:
@@ -183,6 +199,9 @@ class LeadService:
             db.commit()
             db.refresh(lead)
 
+            # Invalidate lead cache after update
+            cache_invalidate("crm:leads:*")
+
             return lead
 
     @staticmethod
@@ -208,9 +227,11 @@ class LeadService:
             return True
 
     @staticmethod
+    @cache_result(ttl=30, key_prefix="leads")
     def get_hot_leads() -> list[Lead]:
         """
         Get all hot leads (score >= 80).
+        Cached for 30s (real-time priority).
 
         Returns:
             List[Lead]: List of hot leads
@@ -296,9 +317,11 @@ class LeadService:
             return lead
 
     @staticmethod
+    @cache_result(ttl=300, key_prefix="leads")
     def get_lead_stats() -> dict[str, Any]:
         """
         Get lead statistics and KPIs.
+        Cached for 5min (standard dashboard data).
 
         Returns:
             Dict: Lead statistics

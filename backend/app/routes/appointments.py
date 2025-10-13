@@ -28,9 +28,13 @@ from app.services.appointments_service import (
     appointments_service,
 )
 from app.utils.auth import require_auth, require_role
+from app.utils.pusher_client import get_pusher_service
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("appointments", __name__)
+
+# Initialize Pusher service for real-time updates
+pusher_service = get_pusher_service()
 
 
 @bp.route("/", methods=["GET"])
@@ -47,7 +51,7 @@ def get_appointments():
         - start_date: Filter appointments after this date
         - end_date: Filter appointments before this date
         - page: Page number (default: 1)
-        - per_page: Items per page (default: 20)
+        - limit: Items per page (default: 20)
 
     Returns:
         200: List of appointments
@@ -58,93 +62,109 @@ def get_appointments():
         GET /api/appointments?team_member_id=uuid&start_date=2025-01-01
     """
     try:
-        # Get user context
-        user = g.get("user")
+        from app.utils.database import get_db_session
+        from app.utils.pagination import paginate_query, create_pagination_response
+        from sqlalchemy import and_
+        from app.models.appointment_sqlalchemy import Appointment
+        from app.models.customer_sqlalchemy import Customer
+        from app.models.team_sqlalchemy import TeamMember
 
-        # Build query
-        from app.config import get_supabase_client
+        # Pagination parameters
+        page = int(request.args.get("page", 1))
+        limit = min(int(request.args.get("limit", 20)), 100)
 
-        supabase = get_supabase_client()
-        query = supabase.table("appointments").select(
-            "*, customers!inner(name, email, phone), team_members!inner(name, email)"
-        )
+        # Build query using SQLAlchemy
+        db = get_db_session()
+        query = db.query(Appointment).filter(Appointment.is_deleted == False)
 
         # Apply filters
+        filters = []
+
         customer_id = request.args.get("customer_id")
         if customer_id:
-            query = query.eq("customer_id", customer_id)
+            filters.append(Appointment.customer_id == customer_id)
 
         team_member_id = request.args.get("team_member_id")
         if team_member_id:
-            query = query.eq("team_member_id", team_member_id)
+            filters.append(Appointment.assigned_to == team_member_id)
 
         status = request.args.get("status")
         if status:
-            query = query.eq("status", status)
+            filters.append(Appointment.status == status)
 
         appointment_type = request.args.get("appointment_type")
         if appointment_type:
-            query = query.eq("appointment_type", appointment_type)
+            filters.append(Appointment.appointment_type == appointment_type)
 
         start_date = request.args.get("start_date")
         if start_date:
-            query = query.gte("scheduled_start", start_date)
+            filters.append(Appointment.scheduled_date >= start_date)
 
         end_date = request.args.get("end_date")
         if end_date:
-            query = query.lte("scheduled_start", end_date)
+            filters.append(Appointment.scheduled_date <= end_date)
 
-        # Pagination
-        page = int(request.args.get("page", 1))
-        per_page = int(request.args.get("per_page", 20))
+        if filters:
+            query = query.filter(and_(*filters))
 
         # Apply sorting
-        query = query.order("scheduled_start", desc=False)
+        query = query.order_by(Appointment.scheduled_date.asc())
 
-        # Execute query with pagination
-        start_index = (page - 1) * per_page
-        end_index = start_index + per_page - 1
-        query = query.range(start_index, end_index)
+        # Get paginated results
+        appointments, total = paginate_query(query, page=page, per_page=limit)
 
-        result = query.execute()
+        # Convert SQLAlchemy models to dicts
+        appointments_data = []
+        for appointment in appointments:
+            appointment_dict = {
+                "id": str(appointment.id),
+                "entity_type": appointment.entity_type,
+                "entity_id": str(appointment.entity_id),
+                "appointment_type": appointment.appointment_type.value if appointment.appointment_type else None,
+                "status": appointment.status.value if appointment.status else None,
+                "title": appointment.title,
+                "scheduled_date": appointment.scheduled_date.isoformat() if appointment.scheduled_date else None,
+                "duration_minutes": appointment.duration_minutes,
+                "end_time": appointment.end_time.isoformat() if appointment.end_time else None,
+                "location": appointment.location,
+                "is_virtual": appointment.is_virtual,
+                "meeting_url": appointment.meeting_url,
+                "assigned_to": str(appointment.assigned_to) if appointment.assigned_to else None,
+                "customer_id": str(appointment.customer_id) if appointment.customer_id else None,
+                "description": appointment.description,
+                "created_at": appointment.created_at.isoformat() if appointment.created_at else None,
+                "updated_at": appointment.updated_at.isoformat() if appointment.updated_at else None,
+            }
 
-        # Get total count for pagination
-        count_query = supabase.table("appointments").select("id", count="exact")
+            # Enrich with customer name if available
+            if appointment.customer_id:
+                customer = db.query(Customer).filter(Customer.id == appointment.customer_id).first()
+                if customer:
+                    appointment_dict["customer_name"] = f"{customer.first_name} {customer.last_name}"
+                    appointment_dict["customer_email"] = customer.email
+                    appointment_dict["customer_phone"] = customer.phone
 
-        if customer_id:
-            count_query = count_query.eq("customer_id", customer_id)
-        if team_member_id:
-            count_query = count_query.eq("team_member_id", team_member_id)
-        if status:
-            count_query = count_query.eq("status", status)
-        if appointment_type:
-            count_query = count_query.eq("appointment_type", appointment_type)
-        if start_date:
-            count_query = count_query.gte("scheduled_start", start_date)
-        if end_date:
-            count_query = count_query.lte("scheduled_start", end_date)
+            # Enrich with team member name if available
+            if appointment.assigned_to:
+                team_member = db.query(TeamMember).filter(TeamMember.id == appointment.assigned_to).first()
+                if team_member:
+                    appointment_dict["team_member_name"] = team_member.name
+                    appointment_dict["team_member_email"] = team_member.email
 
-        count_result = count_query.execute()
-        total_count = count_result.count if hasattr(count_result, "count") else len(result.data)
+            appointments_data.append(appointment_dict)
 
-        return (
-            jsonify(
-                {
-                    "success": True,
-                    "appointments": result.data,
-                    "pagination": {
-                        "page": page,
-                        "per_page": per_page,
-                        "total": total_count,
-                        "pages": (total_count + per_page - 1) // per_page,
-                    },
-                }
-            ),
-            200,
+        # Create pagination response
+        response = create_pagination_response(
+            items=appointments_data,
+            total=total,
+            page=page,
+            per_page=limit
         )
 
+        return jsonify(response), 200
+
     except Exception as e:
-        logger.error(f"Error fetching appointments: {str(e)}")
+        logger.error(f"Error fetching appointments: {str(e)}", exc_info=True)
         return jsonify({"error": "Failed to fetch appointments"}), 500
 
 
@@ -167,28 +187,83 @@ def get_appointment(appointment_id: str):
         GET /api/appointments/123e4567-e89b-12d3-a456-426614174000
     """
     try:
-        from app.config import get_supabase_client
+        from app.utils.database import get_db_session
+        from app.models.appointment_sqlalchemy import Appointment
+        from app.models.customer_sqlalchemy import Customer
+        from app.models.team_sqlalchemy import TeamMember
+        from app.models.project_sqlalchemy import Project
 
-        supabase = get_supabase_client()
+        db = get_db_session()
 
-        result = (
-            supabase.table("appointments")
-            .select(
-                "*, customers!inner(name, email, phone, address), "
-                "team_members!inner(name, email, phone), "
-                "projects(id, status, total_value)"
-            )
-            .eq("id", appointment_id)
-            .execute()
-        )
+        # Get appointment
+        appointment = db.query(Appointment).filter(
+            Appointment.id == appointment_id,
+            Appointment.is_deleted == False
+        ).first()
 
-        if not result.data:
+        if not appointment:
             return jsonify({"error": "Appointment not found"}), 404
 
-        return jsonify({"success": True, "appointment": result.data[0]}), 200
+        # Build appointment dict
+        appointment_dict = {
+            "id": str(appointment.id),
+            "entity_type": appointment.entity_type,
+            "entity_id": str(appointment.entity_id),
+            "appointment_type": appointment.appointment_type.value if appointment.appointment_type else None,
+            "status": appointment.status.value if appointment.status else None,
+            "title": appointment.title,
+            "scheduled_date": appointment.scheduled_date.isoformat() if appointment.scheduled_date else None,
+            "duration_minutes": appointment.duration_minutes,
+            "end_time": appointment.end_time.isoformat() if appointment.end_time else None,
+            "location": appointment.location,
+            "is_virtual": appointment.is_virtual,
+            "meeting_url": appointment.meeting_url,
+            "assigned_to": str(appointment.assigned_to) if appointment.assigned_to else None,
+            "customer_id": str(appointment.customer_id) if appointment.customer_id else None,
+            "description": appointment.description,
+            "preparation_notes": appointment.preparation_notes,
+            "outcome_notes": appointment.outcome_notes,
+            "created_at": appointment.created_at.isoformat() if appointment.created_at else None,
+            "updated_at": appointment.updated_at.isoformat() if appointment.updated_at else None,
+        }
+
+        # Enrich with customer details if available
+        if appointment.customer_id:
+            customer = db.query(Customer).filter(Customer.id == appointment.customer_id).first()
+            if customer:
+                appointment_dict["customer"] = {
+                    "id": str(customer.id),
+                    "name": f"{customer.first_name} {customer.last_name}",
+                    "email": customer.email,
+                    "phone": customer.phone,
+                    "address": customer.street_address
+                }
+
+        # Enrich with team member details if available
+        if appointment.assigned_to:
+            team_member = db.query(TeamMember).filter(TeamMember.id == appointment.assigned_to).first()
+            if team_member:
+                appointment_dict["team_member"] = {
+                    "id": str(team_member.id),
+                    "name": team_member.name,
+                    "email": team_member.email,
+                    "phone": team_member.phone
+                }
+
+        # Enrich with project details if entity is a project
+        if appointment.entity_type == "project":
+            project = db.query(Project).filter(Project.id == appointment.entity_id).first()
+            if project:
+                appointment_dict["project"] = {
+                    "id": str(project.id),
+                    "status": project.status.value if project.status else None,
+                    "total_value": float(project.estimated_value) if project.estimated_value else None
+                }
+
+        return jsonify({"success": True, "appointment": appointment_dict}), 200
 
     except Exception as e:
-        logger.error(f"Error fetching appointment: {str(e)}")
+        logger.error(f"Error fetching appointment: {str(e)}", exc_info=True)
         return jsonify({"error": "Failed to fetch appointment"}), 500
 
 
@@ -275,6 +350,13 @@ def create_appointment():
 
         if not success:
             return jsonify({"error": error}), 400
+
+        # Broadcast appointment creation event
+        try:
+            pusher_service.broadcast_appointment_created(appointment)
+            logger.debug(f"Broadcasted appointment:created event for appointment {appointment.get('id')}")
+        except Exception as pusher_error:
+            logger.warning(f"Failed to broadcast appointment creation event: {str(pusher_error)}")
 
         return (
             jsonify(
@@ -868,25 +950,31 @@ def get_appointment_stats():
         GET /api/appointments/stats?start_date=2025-01-01&end_date=2025-01-31
     """
     try:
-        from app.config import get_supabase_client
+        from app.utils.database import get_db_session
+        from sqlalchemy import func, and_
+        from app.models.appointment_sqlalchemy import Appointment, AppointmentStatus
 
-        supabase = get_supabase_client()
+        db = get_db_session()
 
         # Build base query
-        query = supabase.table("appointments").select("status", count="exact")
+        query = db.query(Appointment).filter(Appointment.is_deleted == False)
 
         # Apply filters
+        filters = []
         team_member_id = request.args.get("team_member_id")
         if team_member_id:
-            query = query.eq("team_member_id", team_member_id)
+            filters.append(Appointment.assigned_to == team_member_id)
 
         start_date = request.args.get("start_date")
         if start_date:
-            query = query.gte("scheduled_start", start_date)
+            filters.append(Appointment.scheduled_date >= start_date)
 
         end_date = request.args.get("end_date")
         if end_date:
-            query = query.lte("scheduled_start", end_date)
+            filters.append(Appointment.scheduled_date <= end_date)
+
+        if filters:
+            query = query.filter(and_(*filters))
 
         # Get counts by status
         stats = {
@@ -898,17 +986,15 @@ def get_appointment_stats():
         }
 
         for status in AppointmentStatus:
-            status_query = query.eq("status", status.value)
-            result = status_query.execute()
-            count = result.count if hasattr(result, "count") else 0
+            count = query.filter(Appointment.status == status).count()
             stats["by_status"][status.value] = count
             stats["total"] += count
 
         # Calculate rates
         if stats["total"] > 0:
-            completed = stats["by_status"].get(AppointmentStatus.COMPLETED, 0)
-            no_shows = stats["by_status"].get(AppointmentStatus.NO_SHOW, 0)
-            cancelled = stats["by_status"].get(AppointmentStatus.CANCELLED, 0)
+            completed = stats["by_status"].get(AppointmentStatus.COMPLETED.value, 0)
+            no_shows = stats["by_status"].get(AppointmentStatus.NO_SHOW.value, 0)
+            cancelled = stats["by_status"].get(AppointmentStatus.CANCELLED.value, 0)
 
             stats["completion_rate"] = round((completed / stats["total"]) * 100, 2)
             stats["no_show_rate"] = round((no_shows / stats["total"]) * 100, 2)
@@ -917,7 +1003,7 @@ def get_appointment_stats():
         return jsonify({"success": True, "stats": stats}), 200
 
     except Exception as e:
-        logger.error(f"Error getting appointment stats: {str(e)}")
+        logger.error(f"Error getting appointment stats: {str(e)}", exc_info=True)
         return jsonify({"error": "Failed to get statistics"}), 500
 
 

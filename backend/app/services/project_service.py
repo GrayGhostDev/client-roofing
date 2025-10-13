@@ -10,7 +10,7 @@ import logging
 from datetime import datetime, timedelta
 from uuid import uuid4
 
-from app.models.project import (
+from app.models.project_schemas import (
     ProjectCreate,
     ProjectStatus,
     ProjectType,

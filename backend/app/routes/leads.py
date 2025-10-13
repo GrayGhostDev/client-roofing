@@ -21,7 +21,7 @@ from app.config import get_supabase_client
 # Database session and services
 # SQLAlchemy model
 from app.models.lead_sqlalchemy import Lead
-from app.models.lead import LeadStatus
+from app.models.lead_schemas import LeadStatus
 
 # Pydantic schemas
 from app.schemas.lead import (
@@ -33,9 +33,13 @@ from app.schemas.lead import (
 from app.services.lead_scoring import lead_scoring_engine
 from app.services.lead_service import lead_service
 from app.utils.validators import validate_uuid
+from app.utils.pusher_client import get_pusher_service
 
 logger = logging.getLogger(__name__)
 bp = Blueprint("leads", __name__)
+
+# Initialize Pusher service for real-time updates
+pusher_service = get_pusher_service()
 
 
 # ============================================================================
@@ -154,11 +158,8 @@ def get_leads():
             converted=request.args.get("converted"),
         )
 
-        # Get leads from service
-        leads, total = lead_service.get_leads_with_filters(filters, page, per_page, sort)
-
-        # Convert to response format
-        lead_data = [lead.to_dict() for lead in leads]
+        # Get leads from service (already converted to dicts)
+        lead_data, total = lead_service.get_leads_with_filters(filters, page, per_page, sort)
 
         # Create paginated response
         response = LeadListResponse.create(
@@ -235,30 +236,21 @@ def create_lead():
         # Validate with Pydantic
         lead_create = LeadCreate(**data)
 
-        # Create lead using service
-        lead = lead_service.create_lead(lead_create)
+        # Create lead using service (returns dict with pre-calculated score)
+        lead_dict = lead_service.create_lead(lead_create)
 
-        logger.info(f"Lead created: {lead.id} with score {lead.lead_score}")
-
-        # Calculate score breakdown for response
-        score_breakdown = lead_scoring_engine.calculate_score(
-            lead,
-            interaction_count=0,
-            response_time_minutes=None,
-            budget_confirmed=lead_create.budget_confirmed,
-            is_decision_maker=lead_create.is_decision_maker,
-        )
+        logger.info(f"Lead created: {lead_dict['id']} with score {lead_dict['lead_score']}")
 
         # Trigger 2-minute alert for new lead
         try:
             from app.services.alert_service import trigger_lead_alert
 
             alert_success, alert_result = trigger_lead_alert(
-                lead_id=str(lead.id),
+                lead_id=str(lead_dict['id']),
                 lead_data={
-                    **lead.to_dict(),
-                    "score": lead.lead_score,
-                    "temperature": lead.temperature.value if lead.temperature else None,
+                    **lead_dict,
+                    "score": lead_dict['lead_score'],
+                    "temperature": lead_dict.get('temperature'),
                 },
             )
         except ImportError:
@@ -268,13 +260,20 @@ def create_lead():
             logger.warning("Alert service not available for new lead notification")
 
         if not alert_success:
-            logger.warning(f"Failed to trigger alert for lead {lead.id}: {alert_result}")
+            logger.warning(f"Failed to trigger alert for lead {lead_dict['id']}: {alert_result}")
+
+        # Broadcast lead creation event to connected clients
+        try:
+            pusher_service.broadcast_lead_created(lead_dict)
+            logger.debug(f"Broadcasted lead:created event for lead {lead_dict['id']}")
+        except Exception as pusher_error:
+            # Log but don't fail the request if Pusher fails
+            logger.warning(f"Failed to broadcast lead creation event: {str(pusher_error)}")
 
         return (
             jsonify(
                 {
-                    "data": lead.to_dict(),
-                    "score_breakdown": score_breakdown.model_dump(),
+                    "data": lead_dict,
                     "alert_triggered": alert_success,
                     "alert_id": alert_result if alert_success else None,
                 }
@@ -332,6 +331,17 @@ def update_lead(lead_id: str):
         )
 
         logger.info(f"Lead updated: {lead_id} with new score {updated_lead.lead_score}")
+
+        # Broadcast lead update event to connected clients
+        try:
+            update_data = lead_update.model_dump(exclude_unset=True)
+            update_data["id"] = lead_id
+            update_data["updated_at"] = updated_lead.updated_at.isoformat() if updated_lead.updated_at else None
+            pusher_service.broadcast_lead_updated(lead_id, update_data)
+            logger.debug(f"Broadcasted lead:updated event for lead {lead_id}")
+        except Exception as pusher_error:
+            # Log but don't fail the request if Pusher fails
+            logger.warning(f"Failed to broadcast lead update event: {str(pusher_error)}")
 
         return (
             jsonify(
@@ -517,6 +527,13 @@ def convert_lead_to_customer(lead_id: str):
 
         logger.info(f"Lead converted to customer: {lead_id} -> {customer_id}")
 
+        # Broadcast lead conversion event
+        try:
+            pusher_service.broadcast_lead_converted(lead_id=lead_id, customer_id=customer_id)
+            logger.debug(f"Broadcasted lead:converted event for lead {lead_id}")
+        except Exception as pusher_error:
+            logger.warning(f"Failed to broadcast lead conversion event: {str(pusher_error)}")
+
         return (
             jsonify(
                 {
@@ -660,20 +677,35 @@ def assign_lead(lead_id: str):
         if not update_result.data:
             return jsonify({"error": "Failed to assign lead"}), 500
 
-        # Send real-time notification if requested
-        if data.get("send_notification"):
-            from app.utils.pusher_client import get_pusher_client
-
-            pusher = get_pusher_client()
-            pusher.trigger(
-                f"team-{team_member_id}",
-                "lead-assigned",
-                {
-                    "lead_id": lead_id,
-                    "lead_name": f"{lead.get('first_name')} {lead.get('last_name')}",
-                    "assigned_at": update_data["assigned_at"],
-                },
+        # Broadcast lead assignment event
+        try:
+            pusher_service.broadcast_lead_assigned(
+                lead_id=lead_id,
+                assigned_to=team_member_id,
+                assigned_by=data.get("assigned_by", "system")
             )
+            logger.debug(f"Broadcasted lead:assigned event for lead {lead_id}")
+        except Exception as pusher_error:
+            logger.warning(f"Failed to broadcast lead assignment event: {str(pusher_error)}")
+
+        # Send real-time notification if requested (legacy support)
+        if data.get("send_notification"):
+            try:
+                from app.utils.pusher_client import get_pusher_client
+
+                pusher = get_pusher_client()
+                if pusher:
+                    pusher.trigger(
+                        f"team-{team_member_id}",
+                        "lead-assigned",
+                        {
+                            "lead_id": lead_id,
+                            "lead_name": f"{lead.get('first_name')} {lead.get('last_name')}",
+                            "assigned_at": update_data["assigned_at"],
+                        },
+                    )
+            except Exception as notification_error:
+                logger.warning(f"Failed to send legacy notification: {str(notification_error)}")
 
         # Log the assignment in interactions
         interaction_data = {

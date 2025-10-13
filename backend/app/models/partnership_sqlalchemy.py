@@ -10,7 +10,7 @@ from datetime import date, datetime
 from enum import Enum
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel as PydanticBaseModel, ConfigDict, EmailStr, Field, field_validator
 from sqlalchemy import (
     Boolean,
     Column,
@@ -209,7 +209,7 @@ class Partnership(BaseModel):
 
 
 # Pydantic schemas for API validation
-class PartnershipCreateSchema(BaseModel):
+class PartnershipCreateSchema(PydanticBaseModel):
     """Schema for creating a new partnership"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -265,7 +265,7 @@ class PartnershipCreateSchema(BaseModel):
         return v.upper()
 
 
-class PartnershipUpdateSchema(BaseModel):
+class PartnershipUpdateSchema(PydanticBaseModel):
     """Schema for updating a partnership"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -289,7 +289,7 @@ class PartnershipUpdateSchema(BaseModel):
     tags: str | None = None
 
 
-class PartnershipReferralSchema(BaseModel):
+class PartnershipReferralSchema(PydanticBaseModel):
     """Schema for logging a referral from partner"""
 
     partnership_id: UUID
@@ -301,7 +301,7 @@ class PartnershipReferralSchema(BaseModel):
     notes: str | None = None
 
 
-class PartnershipResponseSchema(BaseModel):
+class PartnershipResponseSchema(PydanticBaseModel):
     """Schema for partnership API response"""
 
     model_config = ConfigDict(from_attributes=True)
@@ -324,7 +324,7 @@ class PartnershipResponseSchema(BaseModel):
     updated_at: datetime
 
 
-class PartnershipListFiltersSchema(BaseModel):
+class PartnershipListFiltersSchema(PydanticBaseModel):
     """Filter parameters for partnership list endpoint"""
 
     partner_type: str | None = Field(None, description="Comma-separated types")

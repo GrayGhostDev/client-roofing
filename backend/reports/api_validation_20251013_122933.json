@@ -1,0 +1,11 @@
+{
+  "timestamp": "2025-10-13T12:29:22.447057",
+  "tests": {
+    "weather_gov": true,
+    "noaa": false,
+    "google_maps": true,
+    "zillow": false,
+    "twitter": false,
+    "facebook": false
+  }
+}

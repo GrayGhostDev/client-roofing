@@ -172,5 +172,32 @@ backend/flask_secret_key.py
 frontend-reflex/test_results.json
 frontend-reflex/ui_ux_test_report.json
 frontend-reflex/screenshots/
-reports/
-backend/reports/
+
+# Claude Code
+.claude/
+
+# Temporary documentation (keep in docs/ instead)
+*_SUMMARY.md
+*_STATUS.md
+*_REPORT.md
+*_COMPLETE.md
+*_FIX.md
+*_GUIDE.md
+
+# Deployment artifacts
+*.pid
+*.sock
+
+# Redis dumps
+dump.rdb
+
+# Backup files
+*.sql.gz
+*.db.gz
+
+# CI/CD
+.github/workflows/deploy-*.yml
+
+# Railway/Vercel
+railway.json
+vercel.json

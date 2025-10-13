@@ -1,0 +1,278 @@
+version: '3.8'
+
+# =============================================================================
+# Development Docker Compose Override
+# =============================================================================
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+# This file provides development-specific overrides for faster iteration
+# =============================================================================
+
+services:
+  # =============================================================================
+  # Backend API Service (Development Overrides)
+  # =============================================================================
+  backend:
+    build:
+      target: development  # Use development stage with dev dependencies
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=True
+      - LOG_LEVEL=DEBUG
+      - SQL_ECHO=True
+      - CORS_ORIGINS=http://localhost:8501,http://localhost:3000,http://localhost:5173
+      - TESTING=false
+      - DEBUG_TOOLBAR_ENABLED=true
+      - PROFILING_ENABLED=true
+    volumes:
+      # Mount source code for hot-reload
+      - ./app:/app/app:delegated
+      - ./tests:/app/tests:delegated
+      - ./scripts:/app/scripts:delegated
+      - ./migrations:/app/migrations:delegated
+      - ./run.py:/app/run.py:delegated
+      - ./requirements.txt:/app/requirements.txt:delegated
+      # Preserve container-specific directories
+      - /app/app/__pycache__
+      - /app/.pytest_cache
+    ports:
+      - "8000:8000"
+      - "5678:5678"  # debugpy remote debugging port
+    command: python run.py  # Development server with auto-reload
+    # Remove healthcheck in dev for faster startup
+    healthcheck:
+      disable: true
+
+  # =============================================================================
+  # Redis Cache Service (Development Overrides)
+  # =============================================================================
+  redis:
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"  # Expose for local Redis clients
+
+  # =============================================================================
+  # Frontend Dashboard Service (Development Overrides)
+  # =============================================================================
+  frontend:
+    build:
+      context: ../frontend-streamlit
+      dockerfile: Dockerfile.dev  # Use development Dockerfile if exists
+    environment:
+      - BACKEND_URL=http://backend:8000
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+      - STREAMLIT_SERVER_ENABLE_CORS=true
+      - STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false
+      - STREAMLIT_SERVER_RUN_ON_SAVE=true
+    volumes:
+      # Mount source code for hot-reload
+      - ../frontend-streamlit:/app:delegated
+      # Preserve container-specific directories
+      - /app/.streamlit
+    ports:
+      - "8501:8501"
+    command: streamlit run app.py --server.port=8501 --server.address=0.0.0.0
+    healthcheck:
+      disable: true
+
+  # =============================================================================
+  # Development Database (PostgreSQL) - Optional Local Alternative to Supabase
+  # =============================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: iswitch-crm-postgres-dev
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=iswitch_crm_dev
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=en_US.UTF-8 --lc-ctype=en_US.UTF-8
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-dev-data:/var/lib/postgresql/data
+      - ./migrations/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - iswitch-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =============================================================================
+  # Mailhog (Email Testing) - Captures all emails sent in development
+  # =============================================================================
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: iswitch-crm-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI
+    networks:
+      - iswitch-network
+
+  # =============================================================================
+  # Redis Commander (Redis GUI) - Browse Redis data in browser
+  # =============================================================================
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: iswitch-crm-redis-commander
+    restart: unless-stopped
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - iswitch-network
+
+  # =============================================================================
+  # pgAdmin (PostgreSQL GUI) - Database administration tool
+  # =============================================================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: iswitch-crm-pgadmin
+    restart: unless-stopped
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@iswitchroofs.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+      - PGADMIN_LISTEN_PORT=80
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin-dev-data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - iswitch-network
+
+  # =============================================================================
+  # Celery Flower (Task Monitoring) - Monitor Celery tasks
+  # =============================================================================
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: iswitch-crm-flower
+    restart: unless-stopped
+    command: celery -A app.celery flower --port=5555
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - celery-worker
+    networks:
+      - iswitch-network
+
+# =============================================================================
+# Development Volumes
+# =============================================================================
+volumes:
+  postgres-dev-data:
+    driver: local
+  pgadmin-dev-data:
+    driver: local
+
+# =============================================================================
+# Development Usage Instructions
+# =============================================================================
+#
+# 1. Start full development stack:
+#    docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# 2. Start only backend and dependencies:
+#    docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d backend redis
+#
+# 3. View live logs:
+#    docker-compose -f docker-compose.yml -f docker-compose.dev.yml logs -f backend
+#
+# 4. Access development tools:
+#    - Backend API: http://localhost:8000
+#    - Frontend Dashboard: http://localhost:8501
+#    - Mailhog (Email testing): http://localhost:8025
+#    - Redis Commander: http://localhost:8081
+#    - pgAdmin: http://localhost:5050 (admin@iswitchroofs.com / admin)
+#    - Celery Flower: http://localhost:5555
+#
+# 5. Run tests inside container:
+#    docker-compose exec backend pytest
+#    docker-compose exec backend pytest --cov=app --cov-report=html
+#
+# 6. Run database migrations:
+#    docker-compose exec backend flask db upgrade
+#    docker-compose exec backend flask db migrate -m "Description"
+#
+# 7. Seed development data:
+#    docker-compose exec backend python scripts/seed_data.py --clear-first
+#    docker-compose exec backend python scripts/seed_data.py --leads 50 --customers 25
+#
+# 8. Access Python shell:
+#    docker-compose exec backend python
+#    docker-compose exec backend flask shell
+#
+# 9. Run code formatter:
+#    docker-compose exec backend black app tests
+#    docker-compose exec backend isort app tests
+#
+# 10. Run linter:
+#     docker-compose exec backend flake8 app tests
+#     docker-compose exec backend pylint app
+#
+# 11. Remote debugging (VS Code):
+#     - Install debugpy: pip install debugpy
+#     - Add to run.py: import debugpy; debugpy.listen(("0.0.0.0", 5678))
+#     - Configure VS Code launch.json with port 5678
+#
+# 12. Stop development environment:
+#     docker-compose -f docker-compose.yml -f docker-compose.dev.yml down
+#
+# 13. Rebuild after dependency changes:
+#     docker-compose -f docker-compose.yml -f docker-compose.dev.yml build
+#
+# =============================================================================
+# Development Tips
+# =============================================================================
+#
+# - Code changes are auto-reloaded (no rebuild needed)
+# - Use Mailhog to test email functionality without sending real emails
+# - Use Redis Commander to inspect cache keys and values
+# - Use pgAdmin to browse database tables and run queries
+# - Use Celery Flower to monitor background tasks
+# - All emails sent go to Mailhog instead of real recipients
+# - Database is persistent across restarts (stored in volume)
+# - To reset database: docker-compose down -v && docker-compose up -d
+#
+# =============================================================================
+# Debugging Tips
+# =============================================================================
+#
+# 1. Check container status:
+#    docker-compose ps
+#
+# 2. View container logs:
+#    docker-compose logs backend
+#    docker-compose logs redis
+#
+# 3. Inspect container:
+#    docker-compose exec backend sh
+#    docker-compose exec redis redis-cli
+#
+# 4. Check environment variables:
+#    docker-compose exec backend env
+#
+# 5. Test network connectivity:
+#    docker-compose exec backend ping redis
+#    docker-compose exec backend curl http://backend:8000/health
+#
+# 6. Monitor resource usage:
+#    docker stats
+#
+# =============================================================================

@@ -51,6 +51,10 @@ def validate_email_address(email: str) -> tuple[bool, str | None]:
         return False, str(e)
 
 
+# Alias for backwards compatibility
+validate_email_format = validate_email_address
+
+
 def validate_phone_number(phone: str, region: str = "US") -> tuple[bool, str | None]:
     """
     Validate and format phone number.
@@ -75,6 +79,10 @@ def validate_phone_number(phone: str, region: str = "US") -> tuple[bool, str | N
         return True, formatted
     except phonenumbers.NumberParseException as e:
         return False, str(e)
+
+
+# Alias for backwards compatibility
+validate_phone_format = validate_phone_number
 
 
 def validate_zip_code(zip_code: str) -> tuple[bool, str | None]:

@@ -1,0 +1,14 @@
+{
+  "version": "test",
+  "classes": [
+    "call_immediate",
+    "email_nurture",
+    "schedule_appointment"
+  ],
+  "n_features": 31,
+  "n_estimators": 200,
+  "max_depth": 5,
+  "learning_rate": 0.05,
+  "trained_at": "2025-10-11T22:39:26.014837",
+  "feature_names": []
+}

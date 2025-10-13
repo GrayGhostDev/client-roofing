@@ -11,7 +11,9 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
-from app.models.base import BaseDBModel
+# NOTE: Do NOT import BaseDBModel here - it causes conflicts with SQLAlchemy models
+# The actual Lead SQLAlchemy model is in lead_sqlalchemy.py
+# This file contains ONLY enums and Pydantic schemas
 
 
 class LeadStatus(str, Enum):
@@ -64,168 +66,14 @@ class UrgencyLevel(str, Enum):
     PLANNING = "planning"
 
 
-class Lead(BaseDBModel):
-    """
-    Lead data model with comprehensive validation.
+# ============================================================================
+# NOTE: The Lead SQLAlchemy ORM model is in lead_sqlalchemy.py
+# This file contains ONLY Pydantic schemas and enums to avoid conflicts
+# ============================================================================
 
-    Represents a potential customer in the CRM system with scoring,
-    temperature classification, and full contact/property details.
-    """
-
-    # Contact Information (Required)
-    first_name: str = Field(..., min_length=1, max_length=100, description="Lead first name")
-    last_name: str = Field(..., min_length=1, max_length=100, description="Lead last name")
-    phone: str = Field(..., description="Primary phone number (10-15 digits)")
-    email: EmailStr | None = Field(None, description="Email address")
-
-    # Lead Metadata
-    source: LeadSource = Field(..., description="How the lead was acquired")
-    status: LeadStatus = Field(default=LeadStatus.NEW, description="Current lead status")
-    temperature: LeadTemperature | None = Field(
-        None, description="Lead temperature (hot/warm/cool/cold)"
-    )
-    lead_score: int = Field(default=0, ge=0, le=100, description="Lead score (0-100)")
-
-    # Address Information
-    street_address: str | None = Field(None, max_length=255, description="Street address")
-    city: str | None = Field(None, max_length=100, description="City")
-    state: str | None = Field(None, max_length=2, description="State code (e.g., MI)")
-    zip_code: str | None = Field(None, description="ZIP code (5 or 9 digits)")
-
-    # Property Details
-    property_value: int | None = Field(None, ge=0, description="Estimated property value in USD")
-    roof_age: int | None = Field(None, ge=0, le=100, description="Age of roof in years")
-    roof_type: str | None = Field(
-        None, max_length=50, description="Type of roof (asphalt, metal, etc.)"
-    )
-    roof_size_sqft: int | None = Field(None, ge=0, description="Roof size in square feet")
-    urgency: UrgencyLevel | None = Field(None, description="Project urgency level")
-
-    # Project Details
-    project_description: str | None = Field(
-        None, max_length=2000, description="Project description"
-    )
-    budget_range_min: int | None = Field(None, ge=0, description="Minimum budget")
-    budget_range_max: int | None = Field(None, ge=0, description="Maximum budget")
-    insurance_claim: bool | None = Field(False, description="Is this an insurance claim?")
-
-    # Assignment & Conversion
-    assigned_to: UUID | None = Field(None, description="ID of assigned team member")
-    converted_to_customer: bool = Field(default=False, description="Has lead been converted?")
-    customer_id: UUID | None = Field(None, description="ID of customer if converted")
-
-    # Tracking
-    last_contact_date: datetime | None = Field(None, description="Last contact timestamp")
-    next_follow_up_date: datetime | None = Field(None, description="Next scheduled follow-up")
-    response_time_minutes: int | None = Field(
-        None, ge=0, description="Initial response time in minutes"
-    )
-    interaction_count: int = Field(default=0, ge=0, description="Number of interactions")
-
-    # Notes
-    notes: str | None = Field(None, description="Internal notes about lead")
-    lost_reason: str | None = Field(None, max_length=500, description="Reason if lead was lost")
-
-    @field_validator("phone")
-    @classmethod
-    def validate_phone_format(cls, v: str) -> str:
-        """
-        Validate phone number format.
-
-        Accepts formats:
-        - (248) 555-1234
-        - 248-555-1234
-        - 2485551234
-        - +12485551234
-        """
-        if not v:
-            raise ValueError("Phone number is required")
-
-        # Remove all non-digit characters except leading +
-        cleaned = "".join(filter(str.isdigit, v.lstrip("+")))
-
-        if len(cleaned) < 10:
-            raise ValueError("Phone must have at least 10 digits")
-
-        if len(cleaned) > 15:
-            raise ValueError("Phone cannot exceed 15 digits")
-
-        return v
-
-    @field_validator("zip_code")
-    @classmethod
-    def validate_zip_code(cls, v: str | None) -> str | None:
-        """Validate ZIP code format (5 or 9 digits)"""
-        if v is None:
-            return v
-
-        # Remove any non-digit characters
-        cleaned = "".join(filter(str.isdigit, v))
-
-        if len(cleaned) not in [5, 9]:
-            raise ValueError("ZIP code must be 5 or 9 digits")
-
-        return v
-
-    @field_validator("state")
-    @classmethod
-    def validate_state(cls, v: str | None) -> str | None:
-        """Validate state code is uppercase 2 letters"""
-        if v is None:
-            return v
-
-        if len(v) != 2:
-            raise ValueError("State must be 2-letter code")
-
-        return v.upper()
-
-    @field_validator("budget_range_max")
-    @classmethod
-    def validate_budget_range(cls, v: int | None, info) -> int | None:
-        """Validate max budget is greater than min budget"""
-        if v is not None and "budget_range_min" in info.data:
-            min_budget = info.data.get("budget_range_min")
-            if min_budget and v < min_budget:
-                raise ValueError("Maximum budget must be greater than minimum budget")
-        return v
-
-    @property
-    def full_name(self) -> str:
-        """Get full name"""
-        return f"{self.first_name} {self.last_name}"
-
-    @property
-    def full_address(self) -> str | None:
-        """Get formatted full address"""
-        if not self.street_address:
-            return None
-
-        parts = [self.street_address]
-        if self.city:
-            parts.append(self.city)
-        if self.state:
-            parts.append(self.state)
-        if self.zip_code:
-            parts.append(self.zip_code)
-
-        return ", ".join(parts)
-
-    @property
-    def is_hot_lead(self) -> bool:
-        """Check if lead is hot (score >= 80)"""
-        return self.lead_score >= 80
-
-    @property
-    def is_qualified(self) -> bool:
-        """Check if lead is in qualified status or beyond"""
-        qualified_statuses = [
-            LeadStatus.QUALIFIED,
-            LeadStatus.APPOINTMENT_SCHEDULED,
-            LeadStatus.INSPECTION_COMPLETED,
-            LeadStatus.QUOTE_SENT,
-            LeadStatus.NEGOTIATION,
-        ]
-        return self.status in qualified_statuses
+# The Lead(BaseDBModel) class was removed from here to prevent conflicts
+# with the SQLAlchemy Lead model in lead_sqlalchemy.py
+# If you need the ORM model, import from: app.models.lead_sqlalchemy
 
 
 class LeadScoreBreakdown(BaseModel):
@@ -318,9 +166,57 @@ class LeadUpdate(BaseModel):
 
 
 class LeadResponse(BaseModel):
-    """Schema for lead API response"""
+    """
+    Schema for lead API response
 
-    data: Lead
+    Note: This should use the SQLAlchemy Lead model from lead_sqlalchemy
+    when converting database records to responses
+    """
+
+    model_config = {"from_attributes": True}
+
+    # These fields match the SQLAlchemy Lead model
+    id: str
+    first_name: str
+    last_name: str
+    phone: str
+    email: EmailStr | None = None
+    source: LeadSource
+    status: LeadStatus
+    temperature: LeadTemperature | None = None
+    lead_score: int = 0
+
+    street_address: str | None = None
+    city: str | None = None
+    state: str | None = None
+    zip_code: str | None = None
+
+    property_value: int | None = None
+    roof_age: int | None = None
+    roof_type: str | None = None
+    roof_size_sqft: int | None = None
+    urgency: UrgencyLevel | None = None
+
+    project_description: str | None = None
+    budget_range_min: int | None = None
+    budget_range_max: int | None = None
+    insurance_claim: bool | None = False
+
+    assigned_to: UUID | None = None
+    converted_to_customer: bool = False
+    customer_id: UUID | None = None
+
+    last_contact_date: datetime | None = None
+    next_follow_up_date: datetime | None = None
+    response_time_minutes: int | None = None
+    interaction_count: int = 0
+
+    notes: str | None = None
+    lost_reason: str | None = None
+
+    created_at: datetime
+    updated_at: datetime
+
     score_breakdown: LeadScoreBreakdown | None = None
 
 

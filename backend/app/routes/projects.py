@@ -25,9 +25,13 @@ from app.services.realtime_service import realtime_service
 from app.utils.auth import require_auth, require_role
 from app.utils.supabase_client import get_supabase_client
 from app.utils.validation import validate_request, validate_uuid
+from app.utils.pusher_client import get_pusher_service
 
 bp = Blueprint("projects", __name__)
 logger = logging.getLogger(__name__)
+
+# Initialize Pusher service for real-time updates
+pusher_service = get_pusher_service()
 
 
 @bp.route("/", methods=["GET"])
@@ -55,54 +59,61 @@ def list_projects():
         JSON response with projects list and pagination
     """
     try:
-        supabase = get_supabase_client()
+        from app.utils.database import get_db_session
+        from app.utils.pagination import paginate_query, create_pagination_response
+        from sqlalchemy import and_
+        from app.models.project_sqlalchemy import Project
 
         # Pagination
         page = int(request.args.get("page", 1))
-        per_page = min(int(request.args.get("per_page", 50)), 100)
-        offset = (page - 1) * per_page
+        limit = min(int(request.args.get("limit", 50)), 100)
+        per_page = limit  # For compatibility
 
-        # Build query
-        query = supabase.from_("projects").select("*")
+        # Build SQLAlchemy query
+        db = get_db_session()
+        query = db.query(Project).filter(Project.is_deleted == False)
 
         # Apply filters
+        filters = []
+
         if status := request.args.get("status"):
             statuses = status.split(",")
-            query = query.in_("status", statuses)
+            filters.append(Project.status.in_(statuses))
 
         if project_type := request.args.get("type"):
-            query = query.eq("project_type", project_type)
+            filters.append(Project.project_type == project_type)
 
         if customer_id := request.args.get("customer_id"):
-            query = query.eq("customer_id", customer_id)
+            filters.append(Project.customer_id == customer_id)
 
         if assigned_to := request.args.get("assigned_to"):
-            query = query.eq("assigned_to", assigned_to)
+            filters.append(Project.assigned_to == assigned_to)
 
         if priority := request.args.get("priority"):
-            query = query.eq("priority", priority)
+            filters.append(Project.priority == priority)
 
         # Date range filters
         if start_from := request.args.get("start_date_from"):
-            query = query.gte("start_date", start_from)
+            filters.append(Project.start_date >= start_from)
 
         if start_to := request.args.get("start_date_to"):
-            query = query.lte("start_date", start_to)
+            filters.append(Project.start_date <= start_to)
 
         # Value filters
         if min_value := request.args.get("min_value"):
-            query = query.gte("estimated_value", float(min_value))
+            filters.append(Project.estimated_value >= float(min_value))
 
         if max_value := request.args.get("max_value"):
-            query = query.lte("estimated_value", float(max_value))
+            filters.append(Project.estimated_value <= float(max_value))
 
         # Delayed projects filter
         if is_delayed := request.args.get("is_delayed"):
             if is_delayed.lower() == "true":
-                # Projects past end date but not completed
-                query = query.lte("end_date", datetime.utcnow().isoformat()).neq(
-                    "status", ProjectStatus.COMPLETED.value
-                )
+                filters.append(Project.end_date <= datetime.utcnow())
+                filters.append(Project.status != ProjectStatus.COMPLETED.value)
+
+        if filters:
+            query = query.filter(and_(*filters))
 
         # Sorting
         sort_field = "created_at"
@@ -112,50 +123,75 @@ def list_projects():
             sort_field = parts[0]
             sort_dir = parts[1] if len(parts) > 1 else "asc"
 
-        query = query.order(sort_field, desc=(sort_dir == "desc"))
+        if hasattr(Project, sort_field):
+            order_column = getattr(Project, sort_field)
+            if sort_dir == "desc":
+                query = query.order_by(order_column.desc())
+            else:
+                query = query.order_by(order_column.asc())
 
-        # Execute query with pagination
-        result = query.range(offset, offset + per_page - 1).execute()
-        projects = result.data
+        # Get paginated results
+        projects, total = paginate_query(query, page=page, per_page=per_page)
 
-        # Get total count
-        count_result = supabase.from_("projects").select("*", count="exact").execute()
-        total = count_result.count if hasattr(count_result, "count") else len(projects)
+        # Convert SQLAlchemy models to dicts and serialize enums
+        projects_data = []
+        for project in projects:
+            project_dict = {
+                "id": str(project.id),
+                "name": project.name,
+                "customer_id": str(project.customer_id) if project.customer_id else None,
+                "status": project.status.value if project.status else None,
+                "project_type": project.project_type.value if project.project_type else None,
+                "priority": project.priority.value if project.priority else None,
+                "assigned_to": str(project.assigned_to) if project.assigned_to else None,
+                "start_date": project.start_date.isoformat() if project.start_date else None,
+                "end_date": project.end_date.isoformat() if project.end_date else None,
+                "estimated_value": project.estimated_value,
+                "actual_cost": project.actual_cost,
+                "description": project.description,
+                "notes": project.notes,
+                "street_address": project.street_address,
+                "city": project.city,
+                "state": project.state,
+                "zip_code": project.zip_code,
+                "progress_percentage": project.progress_percentage,
+                "created_at": project.created_at.isoformat() if project.created_at else None,
+                "updated_at": project.updated_at.isoformat() if project.updated_at else None,
+            }
+            projects_data.append(project_dict)
 
         # Calculate summary statistics
         stats = {
             "total_projects": total,
             "active_projects": len(
-                [p for p in projects if p["status"] == ProjectStatus.IN_PROGRESS.value]
+                [p for p in projects_data if p["status"] == ProjectStatus.IN_PROGRESS.value]
             ),
             "completed_projects": len(
-                [p for p in projects if p["status"] == ProjectStatus.COMPLETED.value]
+                [p for p in projects_data if p["status"] == ProjectStatus.COMPLETED.value]
             ),
-            "total_value": sum(p.get("estimated_value", 0) for p in projects),
+            "total_value": sum(p.get("estimated_value", 0) or 0 for p in projects_data),
             "average_value": (
-                sum(p.get("estimated_value", 0) for p in projects) / len(projects)
-                if projects
+                sum(p.get("estimated_value", 0) or 0 for p in projects_data) / len(projects_data)
+                if projects_data
                 else 0
             ),
         }
 
-        response = {
-            "data": projects,
-            "pagination": {
-                "page": page,
-                "per_page": per_page,
-                "total": total,
-                "total_pages": (total + per_page - 1) // per_page,
-                "has_next": page * per_page < total,
-                "has_prev": page > 1,
-            },
-            "stats": stats,
-        }
+        # Create pagination response
+        response = create_pagination_response(
+            items=projects_data,
+            total=total,
+            page=page,
+            per_page=per_page
+        )
+
+        # Add stats to response
+        response["stats"] = stats
 
         return jsonify(response), 200
 
     except Exception as e:
-        logger.error(f"Error listing projects: {str(e)}")
+        logger.error(f"Error listing projects: {str(e)}", exc_info=True)
         return jsonify({"error": "Failed to list projects"}), 500
 
 
@@ -253,10 +289,17 @@ def create_project():
         success, project, error = project_service.create_project(project_data, user_id)
 
         if success:
-            # Broadcast real-time event
+            # Broadcast real-time event (legacy support)
             realtime_service.trigger_event(
                 channel="projects", event="project-created", data={"project": project}
             )
+
+            # Broadcast project creation event using PusherService
+            try:
+                pusher_service.broadcast_project_created(project)
+                logger.debug(f"Broadcasted project:created event for project {project.get('id')}")
+            except Exception as pusher_error:
+                logger.warning(f"Failed to broadcast project creation event: {str(pusher_error)}")
 
             return jsonify(project), 201
         else:
@@ -296,10 +339,32 @@ def update_project(project_id: str):
         success, project, error = project_service.update_project(project_id, update_data, user_id)
 
         if success:
-            # Broadcast real-time event
+            # Broadcast real-time event (legacy support)
             realtime_service.trigger_event(
                 channel="projects", event="project-updated", data={"project": project}
             )
+
+            # Broadcast project update event using PusherService
+            try:
+                # Check if status changed for status change event
+                if update_data.status and hasattr(project, 'status'):
+                    old_status = data.get('old_status')  # Assuming service provides this
+                    if old_status and old_status != project.get('status'):
+                        pusher_service.broadcast_project_status_changed(
+                            project_id=project_id,
+                            old_status=old_status,
+                            new_status=project.get('status')
+                        )
+
+                # Generic project update event
+                pusher_service.trigger(
+                    pusher_service.CHANNEL_PROJECTS,
+                    pusher_service.EVENT_PROJECT_UPDATED,
+                    project
+                )
+                logger.debug(f"Broadcasted project:updated event for project {project_id}")
+            except Exception as pusher_error:
+                logger.warning(f"Failed to broadcast project update event: {str(pusher_error)}")
 
             return jsonify(project), 200
         else:

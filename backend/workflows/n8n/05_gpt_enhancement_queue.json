@@ -1,0 +1,263 @@
+{
+  "name": "GPT-5 Enhancement Queue for VIP Leads",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "vip-lead-trigger",
+        "options": {},
+        "responseMode": "responseNode"
+      },
+      "name": "Webhook: VIP Lead Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "vip-enhancement-webhook"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Validate and enrich VIP lead data\nconst lead = $input.first().json;\n\n// Validate VIP criteria\nconst isVIP = lead.estimated_value >= 750000;\nconst hasBasicPrediction = lead.recommended_action && lead.confidence_score;\n\nif (!isVIP) {\n  throw new Error(`Lead ${lead.id} does not meet VIP criteria ($${lead.estimated_value} < $750,000)`);\n}\n\nif (!hasBasicPrediction) {\n  throw new Error(`Lead ${lead.id} missing basic NBA prediction. Run basic prediction first.`);\n}\n\n// Enrich with additional context\nconst enrichedLead = {\n  // Core lead data\n  lead_id: lead.id,\n  customer_name: lead.customer_name || 'Unknown',\n  property_address: `${lead.property_address || ''}, ${lead.property_zip || ''}`.trim(),\n  estimated_value: lead.estimated_value,\n  property_type: lead.property_type || 'Unknown',\n  roof_age: lead.roof_age || 'Unknown',\n  \n  // Existing prediction\n  basic_action: lead.recommended_action,\n  basic_confidence: lead.confidence_score,\n  \n  // Interaction history\n  total_interactions: lead.interaction_count || 0,\n  last_contact: lead.last_interaction_at || lead.created_at,\n  email_engagement: lead.email_open_rate || 0,\n  response_rate: lead.response_rate || 0,\n  \n  // Business context\n  lead_source: lead.source || 'Unknown',\n  created_at: lead.created_at,\n  lead_score: lead.lead_score || 50,\n  assigned_to: lead.assigned_to_name || 'Unassigned',\n  \n  // Market context\n  timestamp: new Date().toISOString(),\n  queue_priority: 'VIP',\n  enhancement_type: 'gpt5_strategic'\n};\n\nreturn [{ json: enrichedLead }];"
+      },
+      "name": "Validate & Enrich VIP Lead",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  COUNT(*) as recent_vip_count,\n  AVG(confidence_score) as avg_confidence\nFROM leads\nWHERE estimated_value >= 750000\n  AND created_at >= NOW() - INTERVAL '7 days'\n  AND recommended_action IS NOT NULL",
+        "additionalFields": {}
+      },
+      "name": "Check VIP Queue Load",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [650, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_production",
+          "name": "Supabase Production DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.recent_vip_count}}",
+              "operation": "smaller",
+              "value2": 50
+            }
+          ]
+        }
+      },
+      "name": "Queue Capacity Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/api/v1/ml/predict/nba/enhanced",
+        "jsonParameters": true,
+        "options": {
+          "timeout": 45000,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "use_gpt5",
+                "value": "true"
+              },
+              {
+                "name": "include_strategy",
+                "value": "true"
+              }
+            ]
+          }
+        },
+        "bodyParametersJson": "={{ JSON.stringify({\n  lead_id: $node['Validate & Enrich VIP Lead'].json.lead_id,\n  source: $node['Validate & Enrich VIP Lead'].json.lead_source,\n  created_at: $node['Validate & Enrich VIP Lead'].json.created_at,\n  last_interaction_at: $node['Validate & Enrich VIP Lead'].json.last_contact,\n  property_zip: $node['Validate & Enrich VIP Lead'].json.property_address.split(',').pop().trim(),\n  estimated_value: $node['Validate & Enrich VIP Lead'].json.estimated_value,\n  interaction_count: $node['Validate & Enrich VIP Lead'].json.total_interactions,\n  email_open_rate: $node['Validate & Enrich VIP Lead'].json.email_engagement,\n  response_rate: $node['Validate & Enrich VIP Lead'].json.response_rate,\n  lead_score: $node['Validate & Enrich VIP Lead'].json.lead_score\n}) }}"
+      },
+      "name": "GPT-5 Enhanced Prediction",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Process GPT-5 enhancement and create actionable strategy\nconst leadData = $node['Validate & Enrich VIP Lead'].json;\nconst enhancement = $input.first().json;\n\n// Extract strategic elements\nconst strategy = {\n  // Enhanced action\n  recommended_action: enhancement.action,\n  ml_confidence: enhancement.ml_confidence,\n  gpt_confidence: enhancement.gpt_confidence || enhancement.ml_confidence,\n  \n  // Strategic insights\n  strategic_reasoning: enhancement.reasoning || 'GPT-5 strategic analysis',\n  talking_points: enhancement.talking_points || [],\n  objection_handling: enhancement.objection_handling || [],\n  \n  // Personalization\n  personalized_approach: enhancement.personalized_approach || 'Premium VIP treatment',\n  urgency_level: enhancement.urgency_level || 'high',\n  optimal_contact_time: enhancement.optimal_contact_time || 'Next business day 9-11 AM',\n  \n  // Value proposition\n  value_highlights: enhancement.value_highlights || [],\n  pricing_strategy: enhancement.pricing_strategy || 'Premium positioning with financing options',\n  \n  // Next steps\n  immediate_actions: [\n    `${enhancement.action || 'Contact'} within next 2 hours`,\n    'Prepare personalized proposal with premium materials',\n    'Schedule in-person consultation with senior estimator',\n    'Arrange drone inspection if property > $1M'\n  ],\n  \n  // Metadata\n  enhancement_timestamp: new Date().toISOString(),\n  model_version: 'gpt-5-turbo',\n  processing_time_ms: Date.now() - new Date(leadData.timestamp).getTime()\n};\n\n// Combine with lead data\nreturn [{\n  json: {\n    lead_id: leadData.lead_id,\n    customer_name: leadData.customer_name,\n    estimated_value: leadData.estimated_value,\n    property_address: leadData.property_address,\n    assigned_to: leadData.assigned_to,\n    strategy,\n    lead_data: leadData\n  }\n}];"
+      },
+      "name": "Build Strategic Plan",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "table": "leads",
+        "updateKey": "id",
+        "columns": "recommended_action, confidence_score, priority_level, strategic_reasoning, talking_points, urgency_level, gpt_enhanced, gpt_enhanced_at",
+        "additionalFields": {}
+      },
+      "name": "Update CRM with Strategy",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [1450, 200],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_production",
+          "name": "Supabase Production DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "user",
+        "user": "={{$node['Validate & Enrich VIP Lead'].json.assigned_to}}",
+        "text": "=🌟 VIP LEAD ALERT - GPT-5 Enhanced Strategy\\n\\n👤 Lead: {{$node['Build Strategic Plan'].json.customer_name}}\\n💰 Property Value: ${{$node['Build Strategic Plan'].json.estimated_value.toLocaleString()}}\\n📍 Location: {{$node['Build Strategic Plan'].json.property_address}}\\n\\n🎯 RECOMMENDED ACTION: {{$node['Build Strategic Plan'].json.strategy.recommended_action.toUpperCase()}}\\n📊 Confidence: {{Math.round($node['Build Strategic Plan'].json.strategy.gpt_confidence * 100)}}%\\n⚡ Urgency: {{$node['Build Strategic Plan'].json.strategy.urgency_level.toUpperCase()}}\\n\\n🧠 STRATEGIC REASONING:\\n{{$node['Build Strategic Plan'].json.strategy.strategic_reasoning}}\\n\\n💬 TOP TALKING POINTS:\\n{{$node['Build Strategic Plan'].json.strategy.talking_points.slice(0, 3).map((p, i) => `${i+1}. ${p}`).join('\\\\n')}}\\n\\n🛡️ OBJECTION HANDLING:\\n{{$node['Build Strategic Plan'].json.strategy.objection_handling.slice(0, 2).map((o, i) => `${i+1}. ${o}`).join('\\\\n')}}\\n\\n⏰ OPTIMAL CONTACT TIME: {{$node['Build Strategic Plan'].json.strategy.optimal_contact_time}}\\n\\n✅ IMMEDIATE ACTIONS:\\n{{$node['Build Strategic Plan'].json.strategy.immediate_actions.map((a, i) => `${i+1}. ${a}`).join('\\\\n')}}\\n\\n🔗 View Full Details: https://crm.iswitch-roofs.com/leads/{{$node['Build Strategic Plan'].json.lead_id}}",
+        "otherOptions": {}
+      },
+      "name": "Alert Assigned Sales Rep",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [1650, 200],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "slack_oauth",
+          "name": "Slack OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "vip-leads@iswitch-roofs.com",
+        "toEmail": "={{$node['Validate & Enrich VIP Lead'].json.assigned_to}}@iswitch-roofs.com",
+        "subject": "=🌟 VIP Lead Strategy - {{$node['Build Strategic Plan'].json.customer_name}} (${{$node['Build Strategic Plan'].json.estimated_value.toLocaleString()}})",
+        "emailFormat": "html",
+        "html": "=<!DOCTYPE html>\\n<html>\\n<head>\\n  <style>\\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\\n    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; }\\n    .content { padding: 20px; }\\n    .section { margin: 20px 0; padding: 15px; background: #f4f4f4; border-left: 4px solid #667eea; }\\n    .highlight { background: #fff3cd; padding: 10px; border-radius: 5px; }\\n    .action-list { list-style: none; padding: 0; }\\n    .action-list li { padding: 8px; margin: 5px 0; background: #e7f3ff; border-radius: 3px; }\\n    .cta-button { display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }\\n  </style>\\n</head>\\n<body>\\n  <div class=\\\"header\\\">\\n    <h1>🌟 VIP Lead - GPT-5 Enhanced Strategy</h1>\\n    <p><strong>{{$node['Build Strategic Plan'].json.customer_name}}</strong> | ${{$node['Build Strategic Plan'].json.estimated_value.toLocaleString()}}</p>\\n  </div>\\n  \\n  <div class=\\\"content\\\">\\n    <div class=\\\"section\\\">\\n      <h2>🎯 Recommended Action</h2>\\n      <div class=\\\"highlight\\\">\\n        <strong>{{$node['Build Strategic Plan'].json.strategy.recommended_action.toUpperCase()}}</strong><br>\\n        Confidence: {{Math.round($node['Build Strategic Plan'].json.strategy.gpt_confidence * 100)}}% | Urgency: {{$node['Build Strategic Plan'].json.strategy.urgency_level.toUpperCase()}}\\n      </div>\\n    </div>\\n    \\n    <div class=\\\"section\\\">\\n      <h2>🧠 Strategic Reasoning</h2>\\n      <p>{{$node['Build Strategic Plan'].json.strategy.strategic_reasoning}}</p>\\n    </div>\\n    \\n    <div class=\\\"section\\\">\\n      <h2>💬 Top Talking Points</h2>\\n      <ul class=\\\"action-list\\\">\\n        {{$node['Build Strategic Plan'].json.strategy.talking_points.map(p => `<li>${p}</li>`).join('')}}\\n      </ul>\\n    </div>\\n    \\n    <div class=\\\"section\\\">\\n      <h2>🛡️ Objection Handling</h2>\\n      <ul class=\\\"action-list\\\">\\n        {{$node['Build Strategic Plan'].json.strategy.objection_handling.map(o => `<li>${o}</li>`).join('')}}\\n      </ul>\\n    </div>\\n    \\n    <div class=\\\"section\\\">\\n      <h2>✅ Immediate Actions</h2>\\n      <ul class=\\\"action-list\\\">\\n        {{$node['Build Strategic Plan'].json.strategy.immediate_actions.map(a => `<li>${a}</li>`).join('')}}\\n      </ul>\\n    </div>\\n    \\n    <div class=\\\"section\\\">\\n      <h2>📊 Lead Details</h2>\\n      <p><strong>Property:</strong> {{$node['Build Strategic Plan'].json.property_address}}</p>\\n      <p><strong>Optimal Contact Time:</strong> {{$node['Build Strategic Plan'].json.strategy.optimal_contact_time}}</p>\\n      <p><strong>Personalized Approach:</strong> {{$node['Build Strategic Plan'].json.strategy.personalized_approach}}</p>\\n    </div>\\n    \\n    <center>\\n      <a href=\\\"https://crm.iswitch-roofs.com/leads/{{$node['Build Strategic Plan'].json.lead_id}}\\\" class=\\\"cta-button\\\">\\n        View Full Lead Details →\\n      </a>\\n    </center>\\n  </div>\\n</body>\\n</html>",
+        "otherOptions": {}
+      },
+      "name": "Send Strategic Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1850, 200],
+      "credentials": {
+        "smtp": {
+          "id": "company_smtp",
+          "name": "Company SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "gpt_enhancement_logs",
+        "columns": "lead_id, timestamp, model_version, action, confidence, reasoning, processing_time_ms, assigned_to",
+        "additionalFields": {}
+      },
+      "name": "Log Enhancement",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [2050, 200],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_production",
+          "name": "Supabase Production DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  success: true,\n  lead_id: $node['Build Strategic Plan'].json.lead_id,\n  action: $node['Build Strategic Plan'].json.strategy.recommended_action,\n  confidence: $node['Build Strategic Plan'].json.strategy.gpt_confidence,\n  assigned_to: $node['Build Strategic Plan'].json.assigned_to,\n  notifications_sent: true,\n  processing_time_ms: $node['Build Strategic Plan'].json.strategy.processing_time_ms\n}) }}"
+      },
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2250, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "ml-automation@iswitch-roofs.com",
+        "toEmail": "sales-manager@iswitch-roofs.com",
+        "subject": "⚠️ VIP Enhancement Queue Full",
+        "text": "=VIP Enhancement Queue is at capacity.\\n\\nCurrent Queue Load: {{$node['Check VIP Queue Load'].json.recent_vip_count}} VIP leads in past 7 days\\nCapacity Limit: 50 concurrent VIP leads\\n\\nAction Required:\\n1. Review and close completed VIP leads\\n2. Prioritize active VIP opportunities\\n3. Consider scaling GPT-5 enhancement capacity\\n\\nLead Attempted: {{$node['Validate & Enrich VIP Lead'].json.lead_id}}\\nProperty Value: ${{$node['Validate & Enrich VIP Lead'].json.estimated_value.toLocaleString()}}\\n\\nThis lead will be queued for next available slot."
+      },
+      "name": "Queue Full Alert",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1050, 400],
+      "credentials": {
+        "smtp": {
+          "id": "company_smtp",
+          "name": "Company SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "vip_queue",
+        "columns": "lead_id, estimated_value, queued_at, status, priority",
+        "additionalFields": {}
+      },
+      "name": "Add to Queue",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [1250, 400],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_production",
+          "name": "Supabase Production DB"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook: VIP Lead Trigger": {
+      "main": [[{ "node": "Validate & Enrich VIP Lead", "type": "main", "index": 0 }]]
+    },
+    "Validate & Enrich VIP Lead": {
+      "main": [[{ "node": "Check VIP Queue Load", "type": "main", "index": 0 }]]
+    },
+    "Check VIP Queue Load": {
+      "main": [[{ "node": "Queue Capacity Check", "type": "main", "index": 0 }]]
+    },
+    "Queue Capacity Check": {
+      "main": [
+        [{ "node": "GPT-5 Enhanced Prediction", "type": "main", "index": 0 }],
+        [{ "node": "Queue Full Alert", "type": "main", "index": 0 }]
+      ]
+    },
+    "GPT-5 Enhanced Prediction": {
+      "main": [[{ "node": "Build Strategic Plan", "type": "main", "index": 0 }]]
+    },
+    "Build Strategic Plan": {
+      "main": [[{ "node": "Update CRM with Strategy", "type": "main", "index": 0 }]]
+    },
+    "Update CRM with Strategy": {
+      "main": [[{ "node": "Alert Assigned Sales Rep", "type": "main", "index": 0 }]]
+    },
+    "Alert Assigned Sales Rep": {
+      "main": [[{ "node": "Send Strategic Email", "type": "main", "index": 0 }]]
+    },
+    "Send Strategic Email": {
+      "main": [[{ "node": "Log Enhancement", "type": "main", "index": 0 }]]
+    },
+    "Log Enhancement": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "Queue Full Alert": {
+      "main": [[{ "node": "Add to Queue", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["ml", "gpt-enhancement", "vip-leads"],
+  "createdAt": "2025-10-11T18:00:00.000Z",
+  "updatedAt": "2025-10-11T18:00:00.000Z"
+}

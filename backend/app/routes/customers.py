@@ -12,7 +12,7 @@ from uuid import UUID
 
 from flask import Blueprint, Response, g, jsonify, request
 
-from app.config import get_pusher_client, get_supabase_client
+from app.config import get_supabase_client
 from app.schemas.customer import (
     CustomerCreate,
     CustomerUpdate,
@@ -21,14 +21,14 @@ from app.services.customer_service import customer_service
 from app.services.notification import notification_service
 from app.utils.auth import require_auth
 from app.utils.validation import validate_request
+from app.utils.pusher_client import get_pusher_service
 
 bp = Blueprint("customers", __name__, url_prefix="/api/customers")
 logger = logging.getLogger(__name__)
 
-
 # Initialize clients
 supabase_client = None
-pusher_client = None
+pusher_service = get_pusher_service()
 
 
 def get_supabase():
@@ -39,14 +39,6 @@ def get_supabase():
     return supabase_client
 
 
-def get_pusher():
-    """Get or initialize Pusher client."""
-    global pusher_client
-    if not pusher_client:
-        pusher_client = get_pusher_client()
-    return pusher_client
-
-
 @bp.route("/", methods=["GET"])
 @require_auth
 def list_customers():
@@ -55,7 +47,7 @@ def list_customers():
 
     Query Parameters:
         - page: Page number (default: 1)
-        - per_page: Items per page (default: 50, max: 100)
+        - limit: Items per page (default: 50, max: 100)
         - sort: Sort field:direction (e.g., 'created_at:desc')
         - status: Filter by status (comma-separated)
         - segment: Filter by segment (comma-separated)
@@ -64,48 +56,49 @@ def list_customers():
         - zip_code: Filter by ZIP code
         - city: Filter by city
         - is_referral_partner: Filter referral partners
-        - tags: Filter by tags (comma-separated)
     """
     try:
-        supabase = get_supabase()
+        from app.utils.database import get_db_session
+        from app.utils.pagination import paginate_query, create_pagination_response
+        from sqlalchemy import and_
+        from app.models.customer_sqlalchemy import Customer
 
-        # Pagination
+        # Pagination parameters
         page = int(request.args.get("page", 1))
-        per_page = min(int(request.args.get("per_page", 50)), 100)
-        offset = (page - 1) * per_page
+        limit = min(int(request.args.get("limit", 50)), 100)
 
-        # Build query
-        query = supabase.from_("customers").select("*")
+        # Build query using SQLAlchemy
+        db = get_db_session()
+        query = db.query(Customer).filter(Customer.is_deleted == False)
 
         # Apply filters
+        filters = []
+
         if status := request.args.get("status"):
             statuses = status.split(",")
-            query = query.in_("status", statuses)
+            filters.append(Customer.status.in_(statuses))
 
         if segment := request.args.get("segment"):
             segments = segment.split(",")
-            query = query.in_("segment", segments)
+            filters.append(Customer.segment.in_(segments))
 
         if assigned_to := request.args.get("assigned_to"):
-            query = query.eq("assigned_to", assigned_to)
+            filters.append(Customer.assigned_to == assigned_to)
 
         if min_ltv := request.args.get("min_lifetime_value"):
-            query = query.gte("lifetime_value", int(min_ltv))
+            filters.append(Customer.lifetime_value >= int(min_ltv))
 
         if zip_code := request.args.get("zip_code"):
-            query = query.eq("zip_code", zip_code)
+            filters.append(Customer.zip_code == zip_code)
 
         if city := request.args.get("city"):
-            query = query.eq("city", city)
+            filters.append(Customer.city == city)
 
         if is_referral := request.args.get("is_referral_partner"):
-            query = query.eq("is_referral_partner", is_referral.lower() == "true")
+            filters.append(Customer.is_referral_partner == (is_referral.lower() == "true"))
 
-        if tags := request.args.get("tags"):
-            # Filter by tags (contains any of the specified tags)
-            tag_list = tags.split(",")
-            for tag in tag_list:
-                query = query.ilike("tags", f"%{tag}%")
+        if filters:
+            query = query.filter(and_(*filters))
 
         # Sorting
         sort_field = "created_at"
@@ -115,32 +108,60 @@ def list_customers():
             sort_field = parts[0]
             sort_dir = parts[1] if len(parts) > 1 else "asc"
 
-        query = query.order(sort_field, desc=(sort_dir == "desc"))
+        # Apply sorting
+        if hasattr(Customer, sort_field):
+            order_column = getattr(Customer, sort_field)
+            if sort_dir == "desc":
+                query = query.order_by(order_column.desc())
+            else:
+                query = query.order_by(order_column.asc())
+        else:
+            # Default sort
+            query = query.order_by(Customer.created_at.desc())
 
-        # Execute query with pagination
-        result = query.range(offset, offset + per_page - 1).execute()
-        customers = result.data
+        # Get paginated results
+        customers, total = paginate_query(query, page=page, per_page=limit)
 
-        # Get total count for pagination
-        count_result = supabase.from_("customers").select("*", count="exact").execute()
-        total = count_result.count if hasattr(count_result, "count") else len(customers)
+        # Convert SQLAlchemy models to dicts
+        customers_data = []
+        for customer in customers:
+            customer_dict = {
+                "id": str(customer.id),
+                "first_name": customer.first_name,
+                "last_name": customer.last_name,
+                "email": customer.email,
+                "phone": customer.phone,
+                "status": customer.status.value if customer.status else None,
+                "segment": customer.segment.value if customer.segment else None,
+                "lifetime_value": customer.lifetime_value,
+                "project_count": customer.project_count,
+                "street_address": customer.street_address,
+                "city": customer.city,
+                "state": customer.state,
+                "zip_code": customer.zip_code,
+                "assigned_to": customer.assigned_to,
+                "is_referral_partner": customer.is_referral_partner,
+                "referral_count": customer.referral_count,
+                "nps_score": customer.nps_score,
+                "customer_since": customer.customer_since.isoformat() if customer.customer_since else None,
+                "last_interaction": customer.last_interaction.isoformat() if customer.last_interaction else None,
+                "created_at": customer.created_at.isoformat() if customer.created_at else None,
+                "updated_at": customer.updated_at.isoformat() if customer.updated_at else None,
+            }
+            customers_data.append(customer_dict)
 
-        response = {
-            "data": customers,
-            "pagination": {
-                "page": page,
-                "per_page": per_page,
-                "total": total,
-                "total_pages": (total + per_page - 1) // per_page,
-                "has_next": page * per_page < total,
-                "has_prev": page > 1,
-            },
-        }
+        # Create pagination response
+        response = create_pagination_response(
+            items=customers_data,
+            total=total,
+            page=page,
+            per_page=limit
+        )
 
         return jsonify(response), 200
 
     except Exception as e:
-        logger.error(f"Error listing customers: {str(e)}")
+        logger.error(f"Error listing customers: {str(e)}", exc_info=True)
         return jsonify({"error": "Failed to list customers"}), 500
 
 
@@ -225,7 +246,6 @@ def create_customer():
     """
     try:
         supabase = get_supabase()
-        pusher = get_pusher()
         data = request.get_json()
 
         # Check for duplicate email
@@ -267,8 +287,17 @@ def create_customer():
             },
         )
 
-        # Real-time update
-        pusher.trigger("customers", "customer-created", customer)
+        # Broadcast customer creation event using PusherService
+        try:
+            # Note: PusherService.broadcast_customer_created expects specific format
+            pusher_service.trigger(
+                pusher_service.CHANNEL_CUSTOMERS,
+                pusher_service.EVENT_CUSTOMER_CREATED,
+                customer
+            )
+            logger.debug(f"Broadcasted customer:created event for customer {customer['id']}")
+        except Exception as pusher_error:
+            logger.warning(f"Failed to broadcast customer creation event: {str(pusher_error)}")
 
         logger.info(f"Customer created: {customer['id']}")
         return jsonify({"data": customer}), 201
@@ -290,7 +319,6 @@ def update_customer(customer_id: str):
     """
     try:
         supabase = get_supabase()
-        pusher = get_pusher()
         data = request.get_json()
 
         # Validate UUID
@@ -325,8 +353,16 @@ def update_customer(customer_id: str):
                 )
                 customer["segment"] = new_segment
 
-        # Real-time update
-        pusher.trigger("customers", "customer-updated", customer)
+        # Broadcast customer update event using PusherService
+        try:
+            pusher_service.trigger(
+                pusher_service.CHANNEL_CUSTOMERS,
+                pusher_service.EVENT_CUSTOMER_UPDATED,
+                customer
+            )
+            logger.debug(f"Broadcasted customer:updated event for customer {customer_id}")
+        except Exception as pusher_error:
+            logger.warning(f"Failed to broadcast customer update event: {str(pusher_error)}")
 
         logger.info(f"Customer updated: {customer_id}")
         return jsonify({"data": customer}), 200

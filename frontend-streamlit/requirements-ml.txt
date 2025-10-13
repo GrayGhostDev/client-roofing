@@ -1,0 +1,13 @@
+# ML Dashboard Dependencies (Phase 4 - Day 4)
+# Add to existing frontend-streamlit/requirements.txt
+
+# Visualization
+plotly>=5.18.0
+pandas>=2.1.0
+numpy>=1.26.0
+
+# API Client
+requests>=2.31.0
+
+# Already in main requirements:
+# streamlit>=1.28.0

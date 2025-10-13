@@ -16,14 +16,15 @@ from flask import Blueprint, jsonify, request
 
 # Local imports
 from app.services.reviews_service import reviews_service
-from app.utils.decorators import require_auth, require_roles
-from app.utils.validators import validate_request
+from app.utils.auth import require_auth, require_roles
+# from app.utils.validators import validate_request
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 # Create blueprint
 reviews_bp = Blueprint("reviews", __name__, url_prefix="/api/reviews")
+bp = reviews_bp  # Export as 'bp' for Flask registration
 
 
 @reviews_bp.route("/platforms/gmb/auth/init", methods=["POST"])

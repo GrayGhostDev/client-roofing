@@ -1,0 +1,207 @@
+{
+  "name": "Batch Lead Prediction Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 */4 * * *"
+            }
+          ]
+        }
+      },
+      "name": "Schedule: Every 4 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  l.id as lead_id,\n  l.source,\n  l.created_at,\n  l.last_interaction_at,\n  l.property_zip,\n  l.estimated_value,\n  l.interaction_count,\n  l.email_open_rate,\n  l.response_rate,\n  l.lead_score\nFROM leads l\nLEFT JOIN ml_predictions p ON l.id = p.lead_id AND p.created_at >= NOW() - INTERVAL '24 hours'\nWHERE p.id IS NULL\n  AND l.status IN ('new', 'contacted', 'qualified')\n  AND l.created_at >= NOW() - INTERVAL '30 days'\nORDER BY \n  CASE \n    WHEN l.estimated_value >= 750000 THEN 1\n    WHEN l.estimated_value >= 500000 THEN 2\n    ELSE 3\n  END,\n  l.created_at DESC\nLIMIT 1000",
+        "additionalFields": {}
+      },
+      "name": "Fetch Unpredicted Leads",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [450, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_production",
+          "name": "Supabase Production DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Batch leads into chunks of 100 for efficient processing\nconst items = $input.all();\nconst batchSize = 100;\nconst batches = [];\n\nfor (let i = 0; i < items.length; i += batchSize) {\n  const chunk = items.slice(i, i + batchSize);\n  const leadBatch = chunk.map(item => ({\n    lead_id: item.json.lead_id,\n    source: item.json.source || 'unknown',\n    created_at: item.json.created_at,\n    last_interaction_at: item.json.last_interaction_at || item.json.created_at,\n    property_zip: item.json.property_zip || '00000',\n    estimated_value: item.json.estimated_value || 0,\n    interaction_count: item.json.interaction_count || 0,\n    email_open_rate: item.json.email_open_rate || 0.0,\n    response_rate: item.json.response_rate || 0.0,\n    lead_score: item.json.lead_score || 50\n  }));\n  \n  batches.push({\n    json: {\n      batch_id: `batch_${Math.floor(i / batchSize) + 1}`,\n      batch_number: Math.floor(i / batchSize) + 1,\n      total_batches: Math.ceil(items.length / batchSize),\n      leads: leadBatch,\n      lead_count: leadBatch.length,\n      high_value_count: leadBatch.filter(l => l.estimated_value >= 750000).length\n    }\n  });\n}\n\nreturn batches;"
+      },
+      "name": "Create Lead Batches",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/api/v1/ml/predict/nba/batch",
+        "jsonParameters": true,
+        "options": {
+          "timeout": 30000
+        },
+        "bodyParametersJson": "={{ JSON.stringify({ leads: $json.leads }) }}"
+      },
+      "name": "Batch Prediction API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Process batch prediction results and prepare for CRM update\nconst batchResults = $input.first().json;\nconst predictions = batchResults.predictions || [];\nconst timestamp = new Date().toISOString();\n\n// Categorize predictions by priority\nconst highPriority = [];\nconst mediumPriority = [];\nconst lowPriority = [];\n\npredictions.forEach(pred => {\n  const actionPriority = {\n    'call_immediate': 'high',\n    'send_proposal': 'high',\n    'schedule_appointment': 'medium',\n    'follow_up_call': 'medium',\n    'email_nurture': 'low',\n    'no_action': 'low'\n  }[pred.action] || 'medium';\n  \n  const predictionData = {\n    lead_id: pred.lead_id,\n    action: pred.action,\n    confidence: pred.confidence,\n    priority: actionPriority,\n    timestamp\n  };\n  \n  if (actionPriority === 'high') {\n    highPriority.push(predictionData);\n  } else if (actionPriority === 'medium') {\n    mediumPriority.push(predictionData);\n  } else {\n    lowPriority.push(predictionData);\n  }\n});\n\nreturn [{\n  json: {\n    batch_id: batchResults.batch_id || 'unknown',\n    total_predictions: predictions.length,\n    high_priority_count: highPriority.length,\n    medium_priority_count: mediumPriority.length,\n    low_priority_count: lowPriority.length,\n    all_predictions: predictions,\n    high_priority,\n    medium_priority,\n    low_priority,\n    timestamp,\n    avg_confidence: predictions.reduce((sum, p) => sum + p.confidence, 0) / predictions.length\n  }\n}];"
+      },
+      "name": "Categorize Results",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/api/v1/leads/bulk-update",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={{ JSON.stringify({ \n  updates: $json.all_predictions.map(p => ({\n    lead_id: p.lead_id,\n    recommended_action: p.action,\n    confidence_score: p.confidence,\n    priority_level: $json.high_priority.find(h => h.lead_id === p.lead_id) ? 'high' : \n                     $json.medium_priority.find(m => m.lead_id === p.lead_id) ? 'medium' : 'low',\n    last_scored_at: $json.timestamp\n  }))\n}) }}"
+      },
+      "name": "Bulk Update CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.high_priority_count}}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "name": "High Priority Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": "C05SALES001",
+        "text": "=🚨 High Priority Leads Alert - Batch Processing\\n\\n📊 Batch Summary:\\n• Total Predictions: {{$node['Categorize Results'].json.total_predictions}}\\n• 🔴 High Priority: {{$node['Categorize Results'].json.high_priority_count}}\\n• 🟡 Medium Priority: {{$node['Categorize Results'].json.medium_priority_count}}\\n• 🟢 Low Priority: {{$node['Categorize Results'].json.low_priority_count}}\\n\\n⚡ Immediate Actions Required:\\n{{$node['Categorize Results'].json.high_priority.slice(0, 10).map((p, i) => `${i+1}. Lead ${p.lead_id}: ${p.action.toUpperCase()} (${Math.round(p.confidence * 100)}% confidence)`).join('\\\\n')}}\\n\\n📈 Avg Confidence: {{Math.round($node['Categorize Results'].json.avg_confidence * 100)}}%\\n⏰ Processed: {{$node['Categorize Results'].json.timestamp}}\\n\\n🔗 View All: https://crm.iswitch-roofs.com/leads?filter=high_priority",
+        "otherOptions": {}
+      },
+      "name": "Alert Sales Team",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [1650, 200],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "slack_oauth",
+          "name": "Slack OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "batch_processing_logs",
+        "columns": "batch_id, timestamp, total_predictions, high_priority_count, medium_priority_count, low_priority_count, avg_confidence, processing_time_ms",
+        "additionalFields": {}
+      },
+      "name": "Log Batch Results",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [1850, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_production",
+          "name": "Supabase Production DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Check if more batches need processing\nconst currentBatch = $node['Create Lead Batches'].json.batch_number;\nconst totalBatches = $node['Create Lead Batches'].json.total_batches;\n\nif (currentBatch < totalBatches) {\n  // More batches to process - trigger next batch\n  return [{\n    json: {\n      continue_processing: true,\n      next_batch: currentBatch + 1,\n      total_batches: totalBatches,\n      message: `Processing batch ${currentBatch + 1} of ${totalBatches}`\n    }\n  }];\n} else {\n  // All batches complete\n  return [{\n    json: {\n      continue_processing: false,\n      message: 'All batches processed successfully',\n      total_batches: totalBatches,\n      total_leads: totalBatches * 100 // approximate\n    }\n  }];\n}"
+      },
+      "name": "Check Batch Progress",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [2050, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "ml-automation@iswitch-roofs.com",
+        "toEmail": "sales-team@iswitch-roofs.com",
+        "subject": "✅ Batch Lead Scoring Complete",
+        "text": "=Batch lead prediction pipeline completed successfully!\\n\\n📊 Final Summary:\\n- Total Leads Scored: {{$node['Check Batch Progress'].json.total_leads || 'N/A'}}\\n- Total Batches: {{$node['Check Batch Progress'].json.total_batches}}\\n- High Priority Leads: {{$node['Categorize Results'].json.high_priority_count}}\\n- Average Confidence: {{Math.round($node['Categorize Results'].json.avg_confidence * 100)}}%\\n\\n⚡ Next Steps:\\n1. Review high-priority leads in CRM\\n2. Execute recommended actions within 2 hours\\n3. Monitor conversion rates\\n\\nTimestamp: {{$now.format('YYYY-MM-DD HH:mm:ss')}}"
+      },
+      "name": "Completion Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [2250, 300],
+      "credentials": {
+        "smtp": {
+          "id": "company_smtp",
+          "name": "Company SMTP"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule: Every 4 Hours": {
+      "main": [[{ "node": "Fetch Unpredicted Leads", "type": "main", "index": 0 }]]
+    },
+    "Fetch Unpredicted Leads": {
+      "main": [[{ "node": "Create Lead Batches", "type": "main", "index": 0 }]]
+    },
+    "Create Lead Batches": {
+      "main": [[{ "node": "Batch Prediction API", "type": "main", "index": 0 }]]
+    },
+    "Batch Prediction API": {
+      "main": [[{ "node": "Categorize Results", "type": "main", "index": 0 }]]
+    },
+    "Categorize Results": {
+      "main": [[{ "node": "Bulk Update CRM", "type": "main", "index": 0 }]]
+    },
+    "Bulk Update CRM": {
+      "main": [[{ "node": "High Priority Check", "type": "main", "index": 0 }]]
+    },
+    "High Priority Check": {
+      "main": [
+        [{ "node": "Alert Sales Team", "type": "main", "index": 0 }],
+        [{ "node": "Log Batch Results", "type": "main", "index": 0 }]
+      ]
+    },
+    "Alert Sales Team": {
+      "main": [[{ "node": "Log Batch Results", "type": "main", "index": 0 }]]
+    },
+    "Log Batch Results": {
+      "main": [[{ "node": "Check Batch Progress", "type": "main", "index": 0 }]]
+    },
+    "Check Batch Progress": {
+      "main": [[{ "node": "Completion Email", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["ml", "batch-processing", "automation"],
+  "createdAt": "2025-10-11T18:00:00.000Z",
+  "updatedAt": "2025-10-11T18:00:00.000Z"
+}

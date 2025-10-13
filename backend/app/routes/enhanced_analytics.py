@@ -543,80 +543,30 @@ def get_marketing_roi_analysis():
 
         leads = leads_result.data if leads_result.data else []
 
-        # Get revenue from converted leads
-        converted_leads = [l for l in leads if l.get("status") == "won"]
+        # REMOVED: Mock marketing spend data
+        # This endpoint requires real marketing spend data from integrated platforms
+        # (Google Ads, Facebook Ads, etc.) and cannot function without it.
+        #
+        # TO IMPLEMENT:
+        # 1. Create MarketingSpend table in database
+        # 2. Integrate with marketing platforms (Google Ads API, Facebook Ads API)
+        # 3. Store actual spend data in database
+        # 4. Query real spend data here instead of using mock values
+        #
+        # NO SAMPLE DATA POLICY: Returning error instead of fake data
 
-        # Calculate ROI by source/channel
-        channel_performance = {}
-
-        # Mock marketing spend data (would come from marketing platform integrations)
-        mock_spend = {
-            "google_ads": 5000,
-            "facebook_ads": 3000,
-            "seo": 2000,
-            "referral": 500,
-            "direct": 0,
-        }
-
-        for source in set(l.get("source", "unknown") for l in leads):
-            source_leads = [l for l in leads if l.get("source") == source]
-            source_converted = [l for l in source_leads if l.get("status") == "won"]
-
-            # Mock revenue calculation (would join with projects table)
-            estimated_revenue_per_conversion = 25000  # Average project value
-            source_revenue = len(source_converted) * estimated_revenue_per_conversion
-
-            spend = mock_spend.get(source, 1000)  # Default spend if not found
-
-            roi = ((source_revenue - spend) / max(spend, 1)) * 100 if spend > 0 else 0
-            cost_per_lead = spend / max(len(source_leads), 1)
-            cost_per_acquisition = spend / max(len(source_converted), 1) if source_converted else 0
-
-            channel_performance[source] = {
-                "leads_generated": len(source_leads),
-                "conversions": len(source_converted),
-                "conversion_rate": round(
-                    (len(source_converted) / max(len(source_leads), 1)) * 100, 2
-                ),
-                "revenue_generated": source_revenue,
-                "marketing_spend": spend,
-                "roi_percentage": round(roi, 2),
-                "cost_per_lead": round(cost_per_lead, 2),
-                "cost_per_acquisition": round(cost_per_acquisition, 2),
-            }
-
-        # Calculate overall ROI
-        total_spend = sum(perf["marketing_spend"] for perf in channel_performance.values())
-        total_revenue = sum(perf["revenue_generated"] for perf in channel_performance.values())
-        overall_roi = (
-            ((total_revenue - total_spend) / max(total_spend, 1)) * 100 if total_spend > 0 else 0
-        )
-
-        # Rank channels by ROI
-        channel_rankings = sorted(
-            channel_performance.items(), key=lambda x: x[1]["roi_percentage"], reverse=True
-        )
-
-        return (
-            jsonify(
-                {
-                    "success": True,
-                    "timeframe": timeframe_str,
-                    "attribution_model": attribution_model,
-                    "channel_performance": channel_performance,
-                    "overall_metrics": {
-                        "total_spend": total_spend,
-                        "total_revenue": total_revenue,
-                        "overall_roi": round(overall_roi, 2),
-                        "total_leads": len(leads),
-                        "total_conversions": len(converted_leads),
-                    },
-                    "channel_rankings": [{"channel": ch[0], **ch[1]} for ch in channel_rankings],
-                    "generated_at": datetime.utcnow().isoformat(),
-                }
-            ),
-            200,
-        )
+        return jsonify({
+            "error": "Marketing ROI feature requires real data integration",
+            "message": "This endpoint needs actual marketing spend data from integrated ad platforms. " +
+                       "Mock data has been removed per NO SAMPLE DATA policy.",
+            "required_integrations": [
+                "Google Ads API (spend tracking)",
+                "Facebook Ads API (spend tracking)",
+                "MarketingSpend database table",
+                "Project revenue data (real conversions)"
+            ],
+            "status": "not_implemented"
+        }), 501  # 501 Not Implemented
 
     except Exception as e:
         logger.error(f"Error fetching marketing ROI: {str(e)}")
@@ -891,32 +841,22 @@ def manage_dashboard_config():
     """
     try:
         if request.method == "GET":
-            # Get user's dashboard configurations (would query database)
+            # REMOVED: Mock dashboard configurations
+            # This endpoint requires a DashboardConfiguration table in the database
+            #
+            # NO SAMPLE DATA POLICY: Returning empty array instead of fake dashboards
             user_id = g.get("user", {}).get("user_id")
 
-            # Mock dashboard configurations
-            mock_configs = [
-                {
-                    "id": 1,
-                    "name": "Executive Dashboard",
-                    "type": "executive",
-                    "widgets": ["business_health", "revenue_summary", "lead_trends"],
-                    "is_default": True,
-                },
-                {
-                    "id": 2,
-                    "name": "Sales Dashboard",
-                    "type": "sales",
-                    "widgets": ["conversion_funnel", "team_performance", "pipeline"],
-                    "is_default": False,
-                },
-            ]
+            # TODO: Query real dashboard configurations from database
+            # SELECT * FROM dashboard_configurations WHERE user_id = ? OR is_default = TRUE
 
             return (
                 jsonify(
                     {
                         "success": True,
-                        "dashboards": mock_configs,
+                        "dashboards": [],  # Empty until database table is created
+                        "message": "No dashboard configurations found. Create one using POST request.",
+                        "note": "Mock data removed per NO SAMPLE DATA policy"
                     }
                 ),
                 200,
@@ -995,15 +935,23 @@ def subscribe_to_realtime_updates():
         if not pusher_service.is_available():
             return jsonify({"error": "Real-time service not available"}), 503
 
+        # REMOVED: Mock Pusher key fallback
+        # If Pusher is not properly configured, return error instead of fake key
+        if not hasattr(pusher_service, "app_key") or not pusher_service.app_key:
+            return jsonify({
+                "error": "Pusher not configured",
+                "message": "Real-time updates require valid Pusher configuration. " +
+                           "Mock key removed per NO SAMPLE DATA policy.",
+                "required_config": ["PUSHER_APP_KEY", "PUSHER_APP_ID", "PUSHER_SECRET", "PUSHER_CLUSTER"]
+            }), 503  # 503 Service Unavailable
+
         # Create subscription (would save to database for user preferences)
         subscription = {
             "user_id": user_id,
             "channel": channel,
             "events": events,
             "subscribed_at": datetime.utcnow().isoformat(),
-            "pusher_app_key": (
-                pusher_service.app_key if hasattr(pusher_service, "app_key") else "mock_key"
-            ),
+            "pusher_app_key": pusher_service.app_key,  # Real key only
         }
 
         return (
@@ -1035,20 +983,23 @@ def enhanced_health_check():
         # Check service dependencies
         pusher_available = get_pusher_service().is_available()
 
-        # Mock Redis and database checks
-        redis_available = True  # Would check Redis connection
-        database_available = True  # Would check Supabase connection
+        # REMOVED: Mock Redis and database checks
+        # TODO: Implement real health checks
+        # For now, features indicate availability status
 
         features = {
-            "roofing_kpis": True,
-            "enhanced_forecasting": True,
-            "weather_correlation": True,
-            "real_time_updates": pusher_available,
-            "data_export": True,
-            "business_intelligence": True,
+            "roofing_kpis": True,  # Uses database, assumed healthy
+            "enhanced_forecasting": True,  # Statistical calculations, no external deps
+            "weather_correlation": True,  # Uses weather API
+            "real_time_updates": pusher_available,  # Actual Pusher availability
+            "data_export": True,  # File generation, no external deps
+            "business_intelligence": True,  # Database queries, assumed healthy
+            "marketing_roi": False,  # DISABLED: Requires real marketing spend data
+            "dashboard_configs": False,  # DISABLED: Requires database table
         }
 
-        overall_health = all([redis_available, database_available])
+        # Overall health based on critical services only
+        overall_health = True  # Service operational, even if some features disabled
 
         return (
             jsonify(
@@ -1058,9 +1009,12 @@ def enhanced_health_check():
                     "status": "healthy" if overall_health else "degraded",
                     "features": features,
                     "dependencies": {
-                        "redis": redis_available,
-                        "database": database_available,
-                        "pusher": pusher_available,
+                        "pusher": pusher_available,  # Only checking what we can verify
+                    },
+                    "notes": {
+                        "sample_data_removed": "All mock/sample data removed per NO SAMPLE DATA policy",
+                        "disabled_features": ["marketing_roi", "dashboard_configs"],
+                        "reason": "Require real data integration"
                     },
                     "timestamp": datetime.utcnow().isoformat(),
                     "version": "2.0.0",

@@ -11,7 +11,14 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
-from app.models.customer import Customer, CustomerSegment, CustomerStatus
+# Import SQLAlchemy ORM model
+from app.models.customer_sqlalchemy import Customer
+
+# Import Pydantic enums
+from app.models.customer_schemas import CustomerSegment, CustomerStatus
+
+# Import caching decorator
+from app.utils.cache import cache_result
 
 logger = logging.getLogger(__name__)
 
@@ -360,11 +367,13 @@ class CustomerService:
 
         return min(score, 100)
 
+    @cache_result(ttl=3600, key_prefix="customers")
     def get_customer_insights(
         self, customer: Customer, interactions: list[dict], projects: list[dict]
     ) -> dict[str, Any]:
         """
         Generate insights about a customer.
+        Cached for 1hr (historical analytics).
 
         Args:
             customer: Customer object

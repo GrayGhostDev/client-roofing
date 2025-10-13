@@ -22,10 +22,20 @@ def require_auth(f):
     Decorator to require authentication for an endpoint.
 
     Checks for Bearer token in Authorization header and validates it.
+    Can be bypassed with SKIP_AUTH=true environment variable.
     """
 
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # Check if authentication should be skipped
+        if os.getenv("SKIP_AUTH", "false").lower() == "true":
+            # Set dummy user info for skipped auth
+            g.user = {"user_id": "dev_user", "email": "dev@localhost", "role": "admin"}
+            g.user_id = "dev_user"
+            g.user_email = "dev@localhost"
+            g.user_role = "admin"
+            return f(*args, **kwargs)
+
         # Get token from Authorization header
         auth_header = request.headers.get("Authorization")
 
@@ -89,6 +99,45 @@ def require_role(role):
         return decorated_function
 
     return decorator
+
+
+def require_roles(roles):
+    """
+    Decorator to require one of multiple roles for an endpoint.
+
+    Args:
+        roles: List of allowed roles (e.g., ["admin", "manager"])
+    """
+
+    def decorator(f):
+        @wraps(f)
+        @require_auth
+        def decorated_function(*args, **kwargs):
+            user_role = g.get("user_role", "user")
+
+            # Check if user has one of the allowed roles
+            if user_role not in roles:
+                return jsonify({"error": "Insufficient permissions"}), 403
+
+            return f(*args, **kwargs)
+
+        return decorated_function
+
+    return decorator
+
+
+def get_current_user():
+    """
+    Get the current authenticated user from the request context.
+
+    Returns:
+        dict: User information with normalized 'id' field, or None if not authenticated
+    """
+    user = g.get("user")
+    if user and "user_id" in user and "id" not in user:
+        # Normalize user_id to id for consistency
+        user["id"] = user["user_id"]
+    return user
 
 
 def generate_token(user_id: str, email: str, role: str = "user", expires_in: int = 3600) -> str:

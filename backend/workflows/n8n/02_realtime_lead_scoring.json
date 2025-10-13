@@ -1,0 +1,195 @@
+{
+  "name": "Real-time Lead Scoring",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "lead-created",
+        "options": {},
+        "responseMode": "responseNode"
+      },
+      "name": "Webhook: New Lead Created",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "lead-scoring-webhook"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Extract and transform lead features\nconst lead = $input.first().json;\n\nconst leadFeatures = {\n  lead_id: lead.id,\n  source: lead.source || 'unknown',\n  created_at: lead.created_at,\n  last_interaction_at: lead.last_interaction_at || lead.created_at,\n  property_zip: lead.property_zip || '00000',\n  estimated_value: lead.estimated_value || 0,\n  interaction_count: lead.interaction_count || 0,\n  email_open_rate: lead.email_open_rate || 0.0,\n  response_rate: lead.response_rate || 0.0,\n  lead_score: lead.lead_score || 50\n};\n\nreturn [{\n  json: {\n    leadFeatures,\n    isHighValue: (lead.estimated_value || 0) >= 750000,\n    originalLead: lead\n  }\n}];"
+      },
+      "name": "Extract Lead Features",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/api/v1/ml/predict/nba",
+        "jsonParameters": true,
+        "options": {
+          "timeout": 5000
+        },
+        "bodyParametersJson": "={{ JSON.stringify($json.leadFeatures) }}"
+      },
+      "name": "Get NBA Prediction",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$node['Extract Lead Features'].json.isHighValue}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "High Value Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/api/v1/ml/predict/nba/enhanced",
+        "jsonParameters": true,
+        "options": {
+          "timeout": 10000,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "use_gpt5",
+                "value": "true"
+              }
+            ]
+          }
+        },
+        "bodyParametersJson": "={{ JSON.stringify($node['Extract Lead Features'].json.leadFeatures) }}"
+      },
+      "name": "GPT-5 Enhanced Prediction",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "table": "leads",
+        "updateKey": "id",
+        "columns": "recommended_action, confidence_score, priority_level, talking_points, strategic_reasoning, urgency_level",
+        "additionalFields": {}
+      },
+      "name": "Update Lead (Enhanced)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [1250, 200],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_production",
+          "name": "Supabase Production DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "table": "leads",
+        "updateKey": "id",
+        "columns": "recommended_action, confidence_score, priority_level",
+        "additionalFields": {}
+      },
+      "name": "Update Lead (Basic)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [1050, 400],
+      "credentials": {
+        "postgres": {
+          "id": "supabase_production",
+          "name": "Supabase Production DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": "C05SALES001",
+        "text": "=🎯 High-Value Lead Alert!\n\n💰 Property Value: ${{$node['Extract Lead Features'].json.originalLead.estimated_value.toLocaleString()}}\n📍 Location: {{$node['Extract Lead Features'].json.originalLead.property_zip}}\n🎬 Recommended Action: {{$node['GPT-5 Enhanced Prediction'].json.action}}\n📊 Confidence: {{Math.round($node['GPT-5 Enhanced Prediction'].json.ml_confidence * 100)}}%\n⚡ Urgency: {{$node['GPT-5 Enhanced Prediction'].json.urgency_level.toUpperCase()}}\n\n🧠 Strategic Reasoning:\n{{$node['GPT-5 Enhanced Prediction'].json.reasoning}}\n\n💬 Top Talking Points:\n{{$node['GPT-5 Enhanced Prediction'].json.talking_points.slice(0, 3).map((p, i) => `${i+1}. ${p}`).join('\\n')}}\n\n🔗 View Lead: https://crm.iswitch-roofs.com/leads/{{$node['Extract Lead Features'].json.leadFeatures.lead_id}}",
+        "otherOptions": {}
+      },
+      "name": "Notify Sales Manager",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [1450, 200],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "slack_oauth",
+          "name": "Slack OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Combine results from both paths\nconst basicPrediction = $node['Get NBA Prediction'].json;\nconst enhancedPrediction = $node['GPT-5 Enhanced Prediction']?.json;\nconst originalLead = $node['Extract Lead Features'].json.originalLead;\n\nconst result = enhancedPrediction || basicPrediction;\n\nreturn [{\n  json: {\n    lead_id: originalLead.id,\n    action: result.action,\n    confidence: result.confidence || result.ml_confidence,\n    priority: result.urgency_level || (result.confidence > 0.7 ? 'high' : 'medium'),\n    enhanced: !!enhancedPrediction,\n    timestamp: new Date().toISOString(),\n    processing_time_ms: Date.now() - new Date(originalLead.created_at).getTime()\n  }\n}];"
+      },
+      "name": "Merge Results",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}"
+      },
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1650, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: New Lead Created": {
+      "main": [[{ "node": "Extract Lead Features", "type": "main", "index": 0 }]]
+    },
+    "Extract Lead Features": {
+      "main": [[{ "node": "Get NBA Prediction", "type": "main", "index": 0 }]]
+    },
+    "Get NBA Prediction": {
+      "main": [[{ "node": "High Value Check", "type": "main", "index": 0 }]]
+    },
+    "High Value Check": {
+      "main": [
+        [{ "node": "GPT-5 Enhanced Prediction", "type": "main", "index": 0 }],
+        [{ "node": "Update Lead (Basic)", "type": "main", "index": 0 }]
+      ]
+    },
+    "GPT-5 Enhanced Prediction": {
+      "main": [[{ "node": "Update Lead (Enhanced)", "type": "main", "index": 0 }]]
+    },
+    "Update Lead (Enhanced)": {
+      "main": [[{ "node": "Notify Sales Manager", "type": "main", "index": 0 }]]
+    },
+    "Notify Sales Manager": {
+      "main": [[{ "node": "Merge Results", "type": "main", "index": 0 }]]
+    },
+    "Update Lead (Basic)": {
+      "main": [[{ "node": "Merge Results", "type": "main", "index": 0 }]]
+    },
+    "Merge Results": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["ml", "realtime", "lead-scoring"],
+  "createdAt": "2025-10-11T18:00:00.000Z",
+  "updatedAt": "2025-10-11T18:00:00.000Z"
+}

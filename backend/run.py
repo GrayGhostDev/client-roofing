@@ -10,6 +10,10 @@ Usage: python run.py
 
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Add the app directory to Python path
 app_dir = Path(__file__).parent

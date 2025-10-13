@@ -1,0 +1,268 @@
+# =============================================================================
+# iSwitch Roofs CRM - Systemd Service Unit
+# =============================================================================
+# This service file enables the CRM backend to run as a systemd service
+# on Linux servers (VPS deployment without Docker)
+#
+# Installation:
+#   1. Copy to /etc/systemd/system/iswitch-crm.service
+#   2. Run: sudo systemctl daemon-reload
+#   3. Run: sudo systemctl enable iswitch-crm
+#   4. Run: sudo systemctl start iswitch-crm
+#
+# =============================================================================
+
+[Unit]
+Description=iSwitch Roofs CRM Backend API
+Documentation=https://github.com/your-org/iswitch-crm/docs
+After=network.target postgresql.service redis.service
+Wants=redis.service
+
+[Service]
+Type=notify
+User=iswitch
+Group=iswitch
+WorkingDirectory=/opt/iswitch-crm/backend
+
+# Environment
+Environment="FLASK_ENV=production"
+Environment="FLASK_DEBUG=False"
+Environment="PATH=/opt/iswitch-crm/venv/bin:/usr/local/bin:/usr/bin:/bin"
+EnvironmentFile=/opt/iswitch-crm/backend/.env
+
+# Gunicorn command with optimized workers
+ExecStart=/opt/iswitch-crm/venv/bin/gunicorn \
+    --workers 4 \
+    --worker-class uvicorn.workers.UvicornWorker \
+    --bind 0.0.0.0:8000 \
+    --timeout 60 \
+    --keepalive 5 \
+    --max-requests 1000 \
+    --max-requests-jitter 50 \
+    --access-logfile /var/log/iswitch-crm/access.log \
+    --error-logfile /var/log/iswitch-crm/error.log \
+    --log-level warning \
+    --pid /var/run/iswitch-crm/gunicorn.pid \
+    run:app
+
+# Pre-start checks
+ExecStartPre=/bin/mkdir -p /var/run/iswitch-crm
+ExecStartPre=/bin/mkdir -p /var/log/iswitch-crm
+ExecStartPre=/bin/chown -R iswitch:iswitch /var/log/iswitch-crm
+ExecStartPre=/bin/chown -R iswitch:iswitch /var/run/iswitch-crm
+
+# Reload configuration without downtime
+ExecReload=/bin/kill -s HUP $MAINPID
+
+# Cleanup
+ExecStopPost=/bin/rm -f /var/run/iswitch-crm/gunicorn.pid
+
+# Process management
+Restart=always
+RestartSec=10s
+StartLimitInterval=60s
+StartLimitBurst=5
+
+# Graceful shutdown
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30s
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/iswitch-crm/backend/uploads
+ReadWritePaths=/opt/iswitch-crm/backend/logs
+ReadWritePaths=/var/log/iswitch-crm
+ReadWritePaths=/var/run/iswitch-crm
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+MemoryLimit=2G
+CPUQuota=200%
+
+# Standard I/O
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=iswitch-crm
+
+[Install]
+WantedBy=multi-user.target
+
+# =============================================================================
+# Companion Service: Celery Worker
+# =============================================================================
+# Save as: /etc/systemd/system/iswitch-crm-celery.service
+#
+# [Unit]
+# Description=iSwitch Roofs CRM Celery Worker
+# After=network.target redis.service
+# Wants=redis.service
+#
+# [Service]
+# Type=forking
+# User=iswitch
+# Group=iswitch
+# WorkingDirectory=/opt/iswitch-crm/backend
+# EnvironmentFile=/opt/iswitch-crm/backend/.env
+#
+# ExecStart=/opt/iswitch-crm/venv/bin/celery -A app.celery worker \
+#     --loglevel=info \
+#     --concurrency=4 \
+#     --logfile=/var/log/iswitch-crm/celery-worker.log \
+#     --pidfile=/var/run/iswitch-crm/celery-worker.pid
+#
+# ExecStop=/bin/kill -s TERM $MAINPID
+# Restart=always
+# RestartSec=10s
+#
+# [Install]
+# WantedBy=multi-user.target
+#
+# =============================================================================
+# Companion Service: Celery Beat
+# =============================================================================
+# Save as: /etc/systemd/system/iswitch-crm-celery-beat.service
+#
+# [Unit]
+# Description=iSwitch Roofs CRM Celery Beat Scheduler
+# After=network.target redis.service iswitch-crm-celery.service
+# Wants=redis.service
+#
+# [Service]
+# Type=simple
+# User=iswitch
+# Group=iswitch
+# WorkingDirectory=/opt/iswitch-crm/backend
+# EnvironmentFile=/opt/iswitch-crm/backend/.env
+#
+# ExecStart=/opt/iswitch-crm/venv/bin/celery -A app.celery beat \
+#     --loglevel=info \
+#     --logfile=/var/log/iswitch-crm/celery-beat.log \
+#     --pidfile=/var/run/iswitch-crm/celery-beat.pid
+#
+# Restart=always
+# RestartSec=10s
+#
+# [Install]
+# WantedBy=multi-user.target
+#
+# =============================================================================
+# Installation & Usage Instructions
+# =============================================================================
+#
+# 1. Create system user:
+#    sudo useradd -r -s /bin/false iswitch
+#
+# 2. Create directories:
+#    sudo mkdir -p /opt/iswitch-crm/backend
+#    sudo mkdir -p /var/log/iswitch-crm
+#    sudo mkdir -p /var/run/iswitch-crm
+#    sudo chown -R iswitch:iswitch /opt/iswitch-crm
+#    sudo chown -R iswitch:iswitch /var/log/iswitch-crm
+#    sudo chown -R iswitch:iswitch /var/run/iswitch-crm
+#
+# 3. Install application:
+#    sudo -u iswitch python3 -m venv /opt/iswitch-crm/venv
+#    sudo -u iswitch /opt/iswitch-crm/venv/bin/pip install -r requirements.txt
+#    sudo cp -r backend/* /opt/iswitch-crm/backend/
+#
+# 4. Create .env file:
+#    sudo cp .env.production /opt/iswitch-crm/backend/.env
+#    sudo nano /opt/iswitch-crm/backend/.env  # Update secrets
+#    sudo chown iswitch:iswitch /opt/iswitch-crm/backend/.env
+#    sudo chmod 600 /opt/iswitch-crm/backend/.env
+#
+# 5. Install service files:
+#    sudo cp systemd/iswitch-crm.service /etc/systemd/system/
+#    sudo systemctl daemon-reload
+#
+# 6. Enable and start service:
+#    sudo systemctl enable iswitch-crm
+#    sudo systemctl start iswitch-crm
+#
+# 7. Check status:
+#    sudo systemctl status iswitch-crm
+#
+# 8. View logs:
+#    sudo journalctl -u iswitch-crm -f
+#    sudo tail -f /var/log/iswitch-crm/error.log
+#
+# 9. Restart service:
+#    sudo systemctl restart iswitch-crm
+#
+# 10. Stop service:
+#     sudo systemctl stop iswitch-crm
+#
+# =============================================================================
+# Monitoring & Management
+# =============================================================================
+#
+# Check service health:
+#   curl http://localhost:8000/health
+#
+# Monitor logs in real-time:
+#   sudo journalctl -u iswitch-crm -f
+#
+# Check resource usage:
+#   systemctl status iswitch-crm
+#
+# View recent service events:
+#   journalctl -u iswitch-crm --since "1 hour ago"
+#
+# Check if service is enabled:
+#   systemctl is-enabled iswitch-crm
+#
+# Check if service is active:
+#   systemctl is-active iswitch-crm
+#
+# Reload configuration without downtime:
+#   sudo systemctl reload iswitch-crm
+#
+# =============================================================================
+# Troubleshooting
+# =============================================================================
+#
+# Service fails to start:
+#   1. Check logs: journalctl -u iswitch-crm -n 50
+#   2. Verify .env file exists and has correct permissions
+#   3. Check Python virtual environment is activated
+#   4. Verify Redis and PostgreSQL are running
+#
+# Permission denied errors:
+#   1. Verify ownership: ls -la /opt/iswitch-crm/backend
+#   2. Fix permissions: sudo chown -R iswitch:iswitch /opt/iswitch-crm
+#
+# Service keeps restarting:
+#   1. Check error logs: tail -f /var/log/iswitch-crm/error.log
+#   2. Verify database connection string
+#   3. Check Redis connection
+#
+# Port already in use:
+#   1. Find process: sudo lsof -i :8000
+#   2. Kill process: sudo kill -9 <PID>
+#   3. Restart service: sudo systemctl restart iswitch-crm
+#
+# =============================================================================
+# Log Rotation Configuration
+# =============================================================================
+# Save as: /etc/logrotate.d/iswitch-crm
+#
+# /var/log/iswitch-crm/*.log {
+#     daily
+#     rotate 14
+#     compress
+#     delaycompress
+#     missingok
+#     notifempty
+#     create 0640 iswitch iswitch
+#     sharedscripts
+#     postrotate
+#         systemctl reload iswitch-crm > /dev/null 2>&1 || true
+#     endscript
+# }
+#
+# =============================================================================
