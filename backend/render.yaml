@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: iswitch-roofs-api
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: gunicorn -w 2 -k gevent --bind 0.0.0.0:$PORT --timeout 120 --access-logfile - --error-logfile - 'app:create_app()'
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: FLASK_APP
+        value: app
+      - key: FLASK_ENV
+        value: production
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: false
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: PUSHER_APP_ID
+        sync: false
+      - key: PUSHER_KEY
+        sync: false
+      - key: PUSHER_SECRET
+        sync: false
+      - key: PUSHER_CLUSTER
+        value: us2
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PORT
+        value: 6379
+      - key: BACKEND_CORS_ORIGINS
+        value: '["https://iswitchroofs.streamlit.app","http://localhost:8501"]'
