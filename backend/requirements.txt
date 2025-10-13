@@ -38,6 +38,7 @@ frozenlist==1.8.0
 fsspec==2025.9.0
 gevent==25.5.1
 geventhttpclient==2.3.4
+gunicorn==23.0.0
 google-pasta==0.2.0
 googlemaps==4.10.0
 graphene==3.4.3
