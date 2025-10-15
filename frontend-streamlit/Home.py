@@ -330,30 +330,122 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # Quick Stats
+    # Quick Stats - Real-time Data
     st.subheader("📊 Quick Stats")
     try:
-        response = api_client.get("/stats/summary")
-        if response.status_code == 200:
-            stats = response.json()
-            st.metric("Total Leads", f"{stats.get('total_leads', 0):,}")
-            st.metric("Active Projects", f"{stats.get('active_projects', 0):,}")
-            st.metric("Conversion Rate", f"{stats.get('conversion_rate', 0):.1f}%")
+        # Fetch real-time snapshot from business metrics
+        snapshot = api_client.get_realtime_snapshot()
+
+        if snapshot:
+            # Lead response time with pulse animation
+            response_data = snapshot.get('lead_response', {})
+            avg_response = response_data.get('avg_response_time_seconds', 0)
+            target = response_data.get('target_seconds', 120)
+
+            # Color based on performance
+            if avg_response <= target:
+                response_color = "#28a745"  # Green
+                status_emoji = "🟢"
+            else:
+                response_color = "#dc3545"  # Red
+                status_emoji = "🔴"
+
+            st.markdown(f"""
+                <div style="padding: 10px; background: {response_color}15; border-left: 3px solid {response_color}; border-radius: 4px; margin-bottom: 10px;">
+                    <div style="font-size: 12px; color: #666;">Lead Response Time</div>
+                    <div style="font-size: 24px; font-weight: bold; color: {response_color};">
+                        {status_emoji} {int(avg_response)}s
+                    </div>
+                    <div style="font-size: 11px; color: #888;">Target: {target}s</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+            # Revenue progress
+            revenue_data = snapshot.get('revenue', {})
+            current_revenue = revenue_data.get('revenue', 0)
+            target_revenue = revenue_data.get('target', 500000)
+            progress = revenue_data.get('progress_percent', 0)
+
+            st.metric(
+                "Month Revenue",
+                f"${current_revenue:,.0f}",
+                f"{progress:.0f}% of target"
+            )
+
+            # Conversion rate
+            conversion_data = snapshot.get('conversion', {})
+            conversion_rate = conversion_data.get('conversion_rate', 0)
+            target_rate = conversion_data.get('target_rate', 25)
+
+            st.metric(
+                "Conversion Rate",
+                f"{conversion_rate:.1f}%",
+                f"{(conversion_rate - target_rate):+.1f}% vs target"
+            )
+
         else:
-            st.info("Stats loading...")
-    except:
-        st.info("Backend starting...")
+            st.info("📊 Loading real-time stats...")
+    except Exception as e:
+        st.warning("⚠️ Backend starting...")
+        st.caption(f"Retrying... ({str(e)[:30]}...)")
 
     st.markdown("---")
 
-    # Real-time Updates
+    # Real-time Updates with pulse animation
     st.subheader("🔄 Real-time Updates")
-    if st.toggle("Auto-refresh", value=True, key="global_auto_refresh"):
-        st.success("✅ Live updates enabled")
-        st.caption("Dashboard refreshes every 30s")
+
+    # Add pulsing animation CSS
+    st.markdown("""
+        <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .pulse-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: pulse 2s infinite;
+        }
+        .pulse-green {
+            background-color: #28a745;
+        }
+        .pulse-red {
+            background-color: #dc3545;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    auto_refresh_enabled = st.toggle("Auto-refresh", value=True, key="global_auto_refresh")
+
+    if auto_refresh_enabled:
+        # Trigger auto-refresh every 30 seconds
+        auto_refresh(interval_ms=30000, key="sidebar_refresh")
+
+        st.markdown("""
+            <div style="display: flex; align-items: center; padding: 8px; background: #d4edda; border-radius: 6px;">
+                <span class="pulse-dot pulse-green"></span>
+                <div style="font-size: 13px;">
+                    <strong style="color: #155724;">Live Updates Active</strong><br>
+                    <span style="color: #155724; font-size: 11px;">Refreshing every 30s</span>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # Show last update time
+        display_last_updated(key="sidebar_last_updated")
     else:
-        st.info("🔴 Live updates paused")
-        st.caption("Enable for real-time data")
+        st.markdown("""
+            <div style="display: flex; align-items: center; padding: 8px; background: #f8d7da; border-radius: 6px;">
+                <span class="pulse-dot pulse-red"></span>
+                <div style="font-size: 13px;">
+                    <strong style="color: #721c24;">Updates Paused</strong><br>
+                    <span style="color: #721c24; font-size: 11px;">Enable for live data</span>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
 
     st.markdown("---")
 
