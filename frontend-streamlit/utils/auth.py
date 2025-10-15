@@ -1,66 +1,70 @@
 """
 Authentication utilities for Streamlit dashboard
+Wrapper around Supabase authentication for backward compatibility
 """
 
 import streamlit as st
-from typing import Optional
+from typing import Optional, Dict, Any
+from .supabase_auth import get_auth_client, require_auth as supabase_require_auth
 
 
 def require_auth() -> bool:
     """
     Require authentication for page access.
-
-    For now, this is a placeholder that allows access.
-    In production, integrate with your backend authentication system.
+    Redirects to login page if not authenticated.
 
     Returns:
         bool: True if authenticated, redirects if not
     """
-    # Check if user is logged in
-    if 'authenticated' not in st.session_state:
-        st.session_state.authenticated = True  # Auto-authenticate for development
-
-    if not st.session_state.authenticated:
-        st.error("⛔ Authentication required")
-        st.info("Please log in to access this page")
-        st.stop()
-
+    supabase_require_auth()
     return True
 
 
-def login(username: str, password: str) -> bool:
+def login(email: str, password: str) -> bool:
     """
-    Authenticate user credentials.
+    Authenticate user credentials using Supabase.
 
     Args:
-        username: User's username
+        email: User's email address
         password: User's password
 
     Returns:
         bool: True if authenticated successfully
     """
-    # TODO: Integrate with backend /api/auth/login endpoint
-    # For now, accept any credentials in development
-    st.session_state.authenticated = True
-    st.session_state.username = username
-    return True
+    auth = get_auth_client()
+    result = auth.sign_in(email, password)
+
+    # Handle case where result might be a string (error) instead of dict
+    if isinstance(result, dict):
+        return result.get('success', False)
+    else:
+        # If result is not a dict, authentication failed
+        return False
 
 
 def logout():
     """Log out the current user."""
-    st.session_state.authenticated = False
-    if 'username' in st.session_state:
-        del st.session_state.username
+    auth = get_auth_client()
+    auth.sign_out()
 
 
-def get_current_user() -> Optional[str]:
+def get_current_user() -> Optional[Dict[str, Any]]:
     """
     Get the currently authenticated user.
 
     Returns:
-        Optional[str]: Username if authenticated, None otherwise
+        Optional[Dict]: User object if authenticated, None otherwise
     """
-    return st.session_state.get('username', None)
+    try:
+        auth = get_auth_client()
+        user = auth.get_current_user()
+
+        # Ensure we return None if not a valid user object
+        if user and isinstance(user, dict):
+            return user
+        return None
+    except Exception:
+        return None
 
 
 def is_authenticated() -> bool:
@@ -70,4 +74,35 @@ def is_authenticated() -> bool:
     Returns:
         bool: True if authenticated
     """
-    return st.session_state.get('authenticated', False)
+    auth = get_auth_client()
+    return auth.is_authenticated()
+
+
+def get_user_email() -> Optional[str]:
+    """
+    Get the email of the currently authenticated user.
+
+    Returns:
+        Optional[str]: User email if authenticated, None otherwise
+    """
+    return st.session_state.get('user_email', None)
+
+
+def get_user_metadata() -> Dict[str, Any]:
+    """
+    Get metadata for the currently authenticated user.
+
+    Returns:
+        Dict: User metadata (empty dict if not available)
+    """
+    try:
+        auth = get_auth_client()
+        metadata = auth.get_user_metadata()
+
+        # Ensure we always return a dict
+        if isinstance(metadata, dict):
+            return metadata
+        else:
+            return {}
+    except Exception:
+        return {}

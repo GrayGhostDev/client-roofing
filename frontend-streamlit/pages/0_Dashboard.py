@@ -4,6 +4,7 @@ Real-time KPIs and Activity Feed with AI Assistant
 """
 import streamlit as st
 from utils.api_client import get_api_client
+from utils.auth import require_auth, get_user_metadata
 from utils.realtime import (
     auto_refresh,
     display_last_updated
@@ -16,6 +17,13 @@ from utils.charts import (
 from utils.pusher_script import inject_pusher_script, pusher_status_indicator
 from utils.crm_chatbot import render_compact_chatbot
 
+# Require authentication
+require_auth()
+
+# Get user info for personalization
+user_metadata = get_user_metadata()
+user_name = user_metadata.get('full_name', 'User')
+
 # Initialize API client
 api_client = get_api_client()
 
@@ -26,8 +34,8 @@ auto_refresh(interval_ms=30000, key="home_refresh")
 inject_pusher_script(channels=['analytics', 'leads', 'customers', 'projects', 'appointments'], debug=False)
 
 # Welcome Section
-st.markdown("""
-### 👋 Welcome to iSwitch Roofs CRM
+st.markdown(f"""
+### 👋 Welcome back, {user_name}!
 
 **All 18 services are now enabled and accessible from the sidebar navigation!**
 
@@ -171,7 +179,7 @@ try:
         st.subheader("🔔 Recent Activity")
 
         # Fetch recent leads
-        leads_response = api_client.get("/api/leads?limit=5&sort_by=created_at&order=desc")
+        leads_response = api_client.get("/leads", params={'limit': 5, 'sort_by': 'created_at', 'order': 'desc'})
         if leads_response.status_code == 200:
             recent_leads = leads_response.json()
 

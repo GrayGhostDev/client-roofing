@@ -1,6 +1,7 @@
 """
 API Client for iSwitch Roofs CRM Backend
-Handles all API communication
+Handles all API communication with retry logic and robust error handling
+Version: 2.0 - Production Ready
 """
 
 import os
@@ -9,19 +10,58 @@ import streamlit as st
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 import logging
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+# Import configuration utilities
+from .config import (
+    get_api_base_url,
+    get_health_check_url,
+    APIConfig
+)
+from .data_normalizer import (
+    normalize_customer_list,
+    normalize_lead_list,
+    normalize_project_list,
+    normalize_appointment_list,
+    extract_api_data
+)
 
 logger = logging.getLogger(__name__)
 
 
-def get_api_base_url() -> str:
-    """Get API base URL from environment or secrets"""
-    api_url = os.getenv('BACKEND_API_URL', os.getenv('ML_API_BASE_URL'))
-    if not api_url:
-        try:
-            api_url = st.secrets.get('ml_api_base_url', st.secrets.get('backend_api_url'))
-        except:
-            pass
-    return api_url.rstrip('/') if api_url else 'http://localhost:8001'
+def create_session_with_retries() -> requests.Session:
+    """
+    Create requests session with automatic retry logic
+
+    Retries on:
+    - Connection errors
+    - Timeout errors
+    - 429 (Too Many Requests)
+    - 500, 502, 503, 504 (Server errors)
+
+    Returns:
+        requests.Session: Configured session with retry adapter
+    """
+    session = requests.Session()
+
+    retry_strategy = Retry(
+        total=APIConfig.MAX_RETRIES,
+        backoff_factor=APIConfig.BACKOFF_FACTOR,
+        status_forcelist=APIConfig.RETRY_STATUS_CODES,
+        allowed_methods=["HEAD", "GET", "OPTIONS", "POST", "PUT", "DELETE"]
+    )
+
+    adapter = HTTPAdapter(
+        max_retries=retry_strategy,
+        pool_connections=10,
+        pool_maxsize=20
+    )
+
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+
+    return session
 
 
 def make_api_request(endpoint: str, method: str = 'GET', params=None, json_data=None, timeout=30):

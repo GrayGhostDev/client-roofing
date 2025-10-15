@@ -4,6 +4,11 @@ Main Entry Point with All Services Enabled
 Version: 3.0.0 - Streamlit 2025 Modern Navigation
 Date: 2025-10-13
 """
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 import streamlit as st
 from utils.api_client import get_api_client
 from utils.realtime import (
@@ -19,6 +24,8 @@ from utils.charts import (
 )
 from utils.pusher_script import inject_pusher_script, pusher_status_indicator
 from utils.notifications import notification_preferences_sidebar
+from utils.supabase_auth import get_auth_client, check_session_validity
+from utils.rbac import get_user_role
 
 # ============================================================================
 # PAGE CONFIGURATION (MUST BE FIRST)
@@ -31,10 +38,51 @@ st.set_page_config(
 )
 
 # ============================================================================
+# AUTHENTICATION CHECK
+# ============================================================================
+import os
+
+# Development mode bypass - set BYPASS_AUTH=true in .env to skip authentication
+BYPASS_AUTH = os.getenv("BYPASS_AUTH", "false").lower() == "true"
+
+if not BYPASS_AUTH:
+    # Check if session is still valid (auto-logout if expired)
+    check_session_validity()
+
+    # Get auth client
+    auth = get_auth_client()
+
+    # Check if user is authenticated
+    if not auth.is_authenticated():
+        st.warning("⛔ Please log in to access the dashboard")
+        st.info("👉 Click below to go to the login page")
+        if st.button("🔐 Go to Login", type="primary"):
+            st.switch_page("pages/0_🔐_Login.py")
+        st.stop()
+else:
+    st.info("🔧 Development Mode: Authentication Bypassed")
+    # Create a mock auth object for development
+    class MockAuth:
+        def is_authenticated(self):
+            return True
+        def get_user(self):
+            return {"email": "dev@localhost", "role": "admin"}
+        def get_current_user(self):
+            return {"email": "dev@localhost", "id": "dev-user-id", "role": "admin"}
+        def get_user_metadata(self):
+            return {"full_name": "Development User", "role": "admin"}
+        def sign_out(self):
+            pass  # No-op for development mode
+    auth = MockAuth()
+
+# ============================================================================
 # MODERN NAVIGATION SYSTEM (Streamlit 2025)
 # All 18 services organized into logical sections
 # ============================================================================
 pages = {
+    "🔐 Account": [
+        st.Page("pages/0_🔐_Login.py", title="Login / Logout", icon="🔐"),
+    ],
     "🏠 Dashboard": [
         st.Page("pages/0_Dashboard.py", title="Dashboard", icon="🏠", default=True),
     ],
@@ -64,6 +112,9 @@ pages = {
     ],
     "👥 Team Management": [
         st.Page("pages/11_Team_Productivity.py", title="Team Productivity", icon="👥"),
+    ],
+    "🔷 Data Warehouse": [
+        st.Page("pages/17_🔷_Snowflake_Analytics.py", title="Snowflake Analytics", icon="🔷"),
     ],
 }
 
@@ -183,6 +234,44 @@ with st.sidebar:
 
     st.markdown("---")
 
+    # User Profile Section
+    st.subheader("👤 User Profile")
+    user = auth.get_current_user()
+    if user:
+        user_email = st.session_state.get('user_email', 'user@example.com')
+        user_metadata = auth.get_user_metadata()
+        user_name = user_metadata.get('full_name', user_email.split('@')[0])
+        user_role = get_user_role()
+
+        # Role color mapping
+        role_colors = {
+            "Admin": "#dc3545",
+            "Manager": "#fd7e14",
+            "Sales Representative": "#28a745",
+            "Other": "#6c757d"
+        }
+        role_color = role_colors.get(user_role, "#6c757d")
+
+        st.markdown(f"""
+            <div style="padding: 10px; background: #f0f2f6; border-radius: 8px;">
+                <strong>👋 Welcome!</strong><br>
+                <span style="font-size: 14px;">{user_name}</span>
+                <span style="display: inline-block; background: {role_color}; color: white;
+                      padding: 2px 8px; border-radius: 10px; font-size: 10px;
+                      font-weight: bold; margin-left: 4px;">{user_role}</span><br>
+                <span style="font-size: 12px; color: #666;">{user_email}</span>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # Logout button
+        if st.button("🚪 Logout", use_container_width=True):
+            result = auth.sign_out()
+            if result['success']:
+                st.success("✅ Logged out successfully")
+                st.rerun()
+
+    st.markdown("---")
+
     # Global Time Filter
     st.subheader("⏰ Time Period")
     date_filter = st.selectbox(
@@ -244,7 +333,7 @@ with st.sidebar:
     # Quick Stats
     st.subheader("📊 Quick Stats")
     try:
-        response = api_client.get("/api/stats/summary")
+        response = api_client.get("/stats/summary")
         if response.status_code == 200:
             stats = response.json()
             st.metric("Total Leads", f"{stats.get('total_leads', 0):,}")
