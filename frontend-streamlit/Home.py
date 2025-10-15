@@ -394,58 +394,22 @@ with st.sidebar:
     # Real-time Updates with pulse animation
     st.subheader("🔄 Real-time Updates")
 
-    # Add pulsing animation CSS
-    st.markdown("""
-        <style>
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        .pulse-dot {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 6px;
-            animation: pulse 2s infinite;
-        }
-        .pulse-green {
-            background-color: #28a745;
-        }
-        .pulse-red {
-            background-color: #dc3545;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
     auto_refresh_enabled = st.toggle("Auto-refresh", value=True, key="global_auto_refresh")
 
     if auto_refresh_enabled:
         # Trigger auto-refresh every 30 seconds
         auto_refresh(interval_ms=30000, key="sidebar_refresh")
 
-        st.markdown("""
-            <div style="display: flex; align-items: center; padding: 8px; background: #d4edda; border-radius: 6px;">
-                <span class="pulse-dot pulse-green"></span>
-                <div style="font-size: 13px;">
-                    <strong style="color: #155724;">Live Updates Active</strong><br>
-                    <span style="color: #155724; font-size: 11px;">Refreshing every 30s</span>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+        # Use streamlit native success with emoji - simpler approach
+        st.success("🟢 Live Updates Active")
+        st.caption("Refreshing every 30s")
 
         # Show last update time
         display_last_updated(key="sidebar_last_updated")
     else:
-        st.markdown("""
-            <div style="display: flex; align-items: center; padding: 8px; background: #f8d7da; border-radius: 6px;">
-                <span class="pulse-dot pulse-red"></span>
-                <div style="font-size: 13px;">
-                    <strong style="color: #721c24;">Updates Paused</strong><br>
-                    <span style="color: #721c24; font-size: 11px;">Enable for live data</span>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+        # Use streamlit native info with emoji
+        st.info("🔴 Updates Paused")
+        st.caption("Enable for live data")
 
     st.markdown("---")
 
