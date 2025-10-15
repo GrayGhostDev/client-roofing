@@ -6,6 +6,7 @@ Date: 2025-10-09
 """
 
 import streamlit as st
+import requests
 import pandas as pd
 from datetime import datetime, timedelta
 from email.utils import parsedate_to_datetime
@@ -575,10 +576,78 @@ try:
         if st.button("➕ Add New Lead", type="primary"):
             st.session_state['show_new_lead_form'] = True
 
+except requests.exceptions.HTTPError as e:
+    display_data_source_badge("demo")
+
+    # Handle 404 errors specifically
+    if e.response.status_code == 404:
+        st.error("❌ Backend API `/api/leads` endpoint not found (404 Error)")
+
+        with st.expander("🔍 Troubleshooting - API 404 Error"):
+            st.markdown("""
+            ### The backend is returning 404 for `/api/leads` endpoint
+
+            **This means:**
+            - The route exists in code but isn't being registered
+            - Backend may be starting up (Render free tier takes 30-60 seconds)
+            - Database connection might have failed during startup
+            - Import errors in route files
+
+            **Immediate Actions:**
+
+            1. **Check Render Logs** (Priority 1):
+               - Go to [Render Dashboard](https://dashboard.render.com/)
+               - Find service: `srv-d3mlmmur433s73abuar0`
+               - Click "Logs" tab
+               - Look for:
+                 - `Failed to register leads routes: <error>`
+                 - `Database connection failed`
+                 - `ModuleNotFoundError` or `ImportError`
+
+            2. **Wait and Retry**:
+               - Backend may be waking up from sleep
+               - Wait 60 seconds
+               - Refresh this page
+               - Check if error persists
+
+            3. **Verify Environment Variables**:
+               - Check Render settings for:
+                 - `DATABASE_URL` - PostgreSQL connection
+                 - `SUPABASE_URL` - Supabase project URL
+                 - `SUPABASE_KEY` - Supabase anon key
+
+            4. **Manual Backend Restart**:
+               - Render Dashboard → Your service
+               - Click "Manual Deploy"
+               - Select "Clear build cache & deploy"
+               - Wait 5-10 minutes for full rebuild
+
+            **Technical Details:**
+            - Endpoint: `https://srv-d3mlmmur433s73abuar0.onrender.com/api/leads`
+            - Expected: 200 OK with leads list
+            - Actual: 404 Not Found
+            - Route defined: `backend/app/routes/leads.py` line 117
+            - Blueprint registered: `backend/app/__init__.py` line 195
+            """)
+
+        st.info("📊 **Using demo mode** - Add a lead to test backend connection")
+
+    else:
+        # Other HTTP errors
+        st.error(f"❌ API Error: {e.response.status_code}")
+        st.caption(f"Endpoint: {e.request.url}")
+        st.info("Check backend logs for details")
+
+except requests.exceptions.ConnectionError:
+    display_data_source_badge("demo")
+    st.error("❌ Cannot connect to backend server")
+    st.warning("Backend at `https://srv-d3mlmmur433s73abuar0.onrender.com` is not responding")
+    st.info("Check Render service status and ensure backend is deployed")
+
 except Exception as e:
     display_data_source_badge("demo")
     st.error(f"❌ Error loading leads: {str(e)}")
-    st.info("💡 Make sure backend is running on http://localhost:8001")
+    st.caption("Unexpected error occurred. Check backend logs for details.")
 
 # New Lead Form
 if st.session_state.get('show_new_lead_form', False):

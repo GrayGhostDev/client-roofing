@@ -1,0 +1,96 @@
+# Snowflake Configuration for iSwitch Roofs CRM
+# Used for deployment to Snowflake
+# Version: 1.0.0
+
+# Snowflake connection settings
+database: ISWITCH_CRM
+schema: PUBLIC
+warehouse: COMPUTE_WH
+role: SYSADMIN
+
+# Streamlit app configuration
+streamlit:
+  name: iswitch_roofs_crm
+  main_file: Home.py
+  pages_dir: pages
+  query_warehouse: COMPUTE_WH
+  title: "iSwitch Roofs CRM"
+
+  # Environment configuration
+  env:
+    STREAMLIT_ENV: production
+
+  # Warehouse settings
+  warehouse_config:
+    warehouse_name: COMPUTE_WH
+    warehouse_size: SMALL
+    auto_suspend: 60
+    auto_resume: true
+    min_cluster_count: 1
+    max_cluster_count: 2
+
+# Package dependencies
+# Note: Snowflake will automatically install packages from requirements.txt
+# This section documents key dependencies
+packages:
+  - streamlit>=1.40.0
+  - pandas>=2.2.0
+  - plotly>=5.24.0
+  - snowflake-snowpark-python>=1.22.0
+
+# Database objects required
+# These should be created before deployment
+required_objects:
+  tables:
+    - leads
+    - customers
+    - projects
+    - appointments
+  views: []
+  procedures: []
+  functions: []
+
+# Security settings
+security:
+  # Network policy (optional - set if IP whitelisting needed)
+  network_policy: null
+
+  # Masking policies for PII
+  masking_policies:
+    - email_mask
+    - phone_mask
+
+# Monitoring and alerts
+monitoring:
+  # Enable query profiling
+  enable_query_profiling: true
+
+  # Warehouse monitoring
+  warehouse_alerts:
+    credit_threshold: 100
+    query_timeout: 600
+
+# Deployment notes
+notes: |
+  iSwitch Roofs CRM - Premium Lead Generation & Customer Management Platform
+
+  Features:
+  - 18+ integrated services
+  - Real-time analytics
+  - AI-powered insights
+  - Business metrics tracking
+  - Snowflake data warehouse integration
+
+  Target Market:
+  - Southeast Michigan roofing market
+  - Premium segment focus (Ultra-Premium & Professional tiers)
+  - $6M → $30M revenue growth strategy
+
+  Deployment Instructions:
+  1. Ensure all required tables are created (see SNOWFLAKE_DEPLOYMENT_GUIDE.md)
+  2. Configure warehouse and database permissions
+  3. Run: snow streamlit deploy --config snowflake.yml
+  4. Verify deployment and test connection
+
+  For detailed deployment instructions, see:
+  docs/SNOWFLAKE_DEPLOYMENT_GUIDE.md

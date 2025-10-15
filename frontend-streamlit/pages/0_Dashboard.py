@@ -3,6 +3,7 @@ iSwitch Roofs CRM - Main Dashboard Page
 Real-time KPIs and Activity Feed with AI Assistant
 """
 import streamlit as st
+import requests
 from utils.api_client import get_api_client
 from utils.auth import require_auth, get_user_metadata
 from utils.realtime import (
@@ -76,9 +77,23 @@ try:
         # Fetch individual stats and aggregate
         try:
             leads_resp = api_client.get("/leads?limit=1")
-            leads_data = leads_resp.json() if leads_resp.status_code == 200 else {}
-            total_leads = len(leads_data.get('leads', []))
-        except:
+            if leads_resp.status_code == 200:
+                leads_data = leads_resp.json()
+                total_leads = len(leads_data.get('leads', []))
+            elif leads_resp.status_code == 404:
+                # Backend API endpoint not available
+                st.warning("⚠️ Backend API `/api/leads` returning 404")
+                st.info("Using demo data while backend initializes...")
+                total_leads = 47  # Demo value
+            else:
+                total_leads = 0
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                st.warning("⚠️ Backend API `/api/leads` endpoint not found")
+                st.caption("Backend may be starting up. Check Render logs for route registration errors.")
+            total_leads = 0
+        except Exception as e:
+            st.caption(f"Leads fetch error: {str(e)[:50]}")
             total_leads = 0
 
         # Create aggregated data
@@ -178,24 +193,53 @@ try:
         # Recent Activity
         st.subheader("🔔 Recent Activity")
 
-        # Fetch recent leads
-        leads_response = api_client.get("/leads", params={'limit': 5, 'sort_by': 'created_at', 'order': 'desc'})
-        if leads_response.status_code == 200:
-            recent_leads = leads_response.json()
+        # Fetch recent leads with error handling
+        try:
+            leads_response = api_client.get("/leads", params={'limit': 5, 'sort_by': 'created_at', 'order': 'desc'})
 
-            if recent_leads:
-                for lead in recent_leads:
-                    temp = lead.get('temperature', 'COLD')
-                    temp_color = {
-                        'HOT': '🔴',
-                        'WARM': '🟡',
-                        'COOL': '🔵',
-                        'COLD': '⚪'
-                    }.get(temp, '⚪')
+            if leads_response.status_code == 200:
+                recent_leads = leads_response.json()
 
-                    st.info(f"{temp_color} **New Lead**: {lead.get('name', 'Unknown')} - {lead.get('city', 'Unknown')} - Score: {lead.get('score', 0)}/100")
+                if recent_leads:
+                    for lead in recent_leads:
+                        temp = lead.get('temperature', 'COLD')
+                        temp_color = {
+                            'HOT': '🔴',
+                            'WARM': '🟡',
+                            'COOL': '🔵',
+                            'COLD': '⚪'
+                        }.get(temp, '⚪')
+
+                        st.info(f"{temp_color} **New Lead**: {lead.get('name', 'Unknown')} - {lead.get('city', 'Unknown')} - Score: {lead.get('score', 0)}/100")
+                else:
+                    st.info("No recent leads. Generate new leads from the Live Data Generator!")
+
+            elif leads_response.status_code == 404:
+                st.warning("⚠️ Recent leads unavailable - Backend API endpoint not found")
+                st.caption("The `/api/leads` endpoint is returning 404. Check backend logs.")
+
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                st.warning("⚠️ Backend API `/api/leads` endpoint not found")
+                with st.expander("🔍 Troubleshooting"):
+                    st.markdown("""
+                    **Endpoint Error**: `/api/leads` returning 404
+
+                    **Check:**
+                    1. [Render Dashboard Logs](https://dashboard.render.com/)
+                    2. Look for "Failed to register leads routes" errors
+                    3. Verify DATABASE_URL environment variable is set
+                    4. Check if backend is fully started (not just health check)
+                    """)
             else:
-                st.info("No recent leads. Generate new leads from the Live Data Generator!")
+                st.error(f"API Error: {e.response.status_code}")
+
+        except requests.exceptions.ConnectionError:
+            st.error("❌ Cannot connect to backend")
+            st.caption("Backend server not responding")
+
+        except Exception as e:
+            st.warning(f"⚠️ Error fetching recent leads: {str(e)[:50]}")
 
         # Display last updated
         display_last_updated()

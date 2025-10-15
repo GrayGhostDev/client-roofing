@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import streamlit as st
+import requests
 from utils.api_client import get_api_client
 from utils.realtime import (
     auto_refresh,
@@ -385,9 +386,57 @@ with st.sidebar:
 
         else:
             st.info("📊 Loading real-time stats...")
+
+    except requests.exceptions.HTTPError as e:
+        # Handle 404 errors specifically
+        if e.response.status_code == 404:
+            st.warning("⚠️ Backend API endpoint not available")
+            with st.expander("🔍 Troubleshooting Information"):
+                st.markdown("""
+                **The backend API is returning 404 errors.**
+
+                **Possible causes:**
+                - 🌐 Backend is starting up (Render free tier takes 30-60 seconds)
+                - 🗄️ Database connection not established
+                - 🔧 Route registration failed during startup
+                - 🔑 Missing environment variables
+
+                **Next steps:**
+                1. Wait 60 seconds and refresh the page
+                2. Check [Render Dashboard](https://dashboard.render.com/) logs
+                3. Look for "Failed to register" error messages
+                4. Verify DATABASE_URL and SUPABASE credentials are set
+
+                **Current endpoint errors:**
+                - `/api/business-metrics/realtime/snapshot`
+                - `/api/leads`
+                """)
+
+            # Show demo data as fallback
+            st.info("📊 **Displaying demo data** (backend unavailable)")
+            st.metric("Lead Response Time", "89s", "🟢 Meeting target")
+            st.metric("Month Revenue", "$425,000", "85% of target")
+            st.metric("Conversion Rate", "28.5%", "+3.5% vs target")
+        else:
+            # Other HTTP errors
+            st.error(f"❌ API Error: {e.response.status_code}")
+            st.caption(f"Endpoint: {e.request.url}")
+
+    except requests.exceptions.ConnectionError:
+        st.error("❌ Cannot connect to backend")
+        st.caption("Backend server is not responding. Check Render service status.")
+
+        # Show demo data
+        st.info("📊 **Displaying demo data** (connection failed)")
+        st.metric("Lead Response Time", "89s", "Demo")
+        st.metric("Month Revenue", "$425,000", "Demo")
+        st.metric("Conversion Rate", "28.5%", "Demo")
+
     except Exception as e:
+        # Generic error handling
         st.warning("⚠️ Backend starting...")
-        st.caption(f"Retrying... ({str(e)[:30]}...)")
+        st.caption(f"Error: {str(e)[:50]}...")
+        st.caption("The backend may be waking up. Please wait 60 seconds and refresh.")
 
     st.markdown("---")
 
