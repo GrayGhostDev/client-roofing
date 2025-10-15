@@ -17,15 +17,36 @@ class SupabaseAuth:
     """Supabase authentication manager for Streamlit"""
 
     def __init__(self):
-        """Initialize Supabase client with credentials from environment"""
+        """Initialize Supabase client with credentials from environment or Streamlit secrets"""
+        # Try environment variables first
         self.supabase_url = os.getenv("SUPABASE_URL")
         self.supabase_key = os.getenv("SUPABASE_KEY")
 
+        # If not in env, try Streamlit secrets
         if not self.supabase_url or not self.supabase_key:
-            raise ValueError(
-                "Missing Supabase credentials. "
-                "Please set SUPABASE_URL and SUPABASE_KEY in .env file"
-            )
+            try:
+                self.supabase_url = st.secrets.get("SUPABASE_URL") or st.secrets.get("supabase_url")
+                self.supabase_key = st.secrets.get("SUPABASE_KEY") or st.secrets.get("supabase_key")
+            except Exception:
+                pass
+
+        # If still missing, provide helpful error with instructions
+        if not self.supabase_url or not self.supabase_key:
+            error_msg = """
+            ⚠️ Missing Supabase credentials!
+
+            For local development, add to frontend-streamlit/.env:
+            SUPABASE_URL=https://your-project.supabase.co
+            SUPABASE_KEY=your-anon-key
+
+            For Streamlit Cloud, add to your app secrets:
+            1. Go to https://share.streamlit.io/
+            2. Click your app → Settings → Secrets
+            3. Add:
+               SUPABASE_URL = "https://tdwpzktihdeuzapxoovk.supabase.co"
+               SUPABASE_KEY = "your-anon-key"
+            """
+            raise ValueError(error_msg)
 
         self.client: Client = create_client(self.supabase_url, self.supabase_key)
 
