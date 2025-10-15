@@ -568,8 +568,25 @@ class APIClient:
 
 @st.cache_resource
 def get_api_client() -> APIClient:
-    """Get cached API client instance"""
+    """
+    Get cached API client instance
+
+    Uses config.py to get API URL from:
+    1. Environment variables (BACKEND_API_URL, ML_API_BASE_URL)
+    2. Streamlit secrets (api_base_url, ml_api_base_url)
+    3. Development fallback (localhost only if STREAMLIT_ENV=development)
+
+    Returns:
+        APIClient: Configured API client instance
+    """
+    # Use config.py function to get API URL from secrets/env
+    base_url = get_api_base_url()
+
+    # Ensure it has /api suffix
+    if not base_url.endswith('/api'):
+        base_url = f"{base_url}/api"
+
     return APIClient(
-        base_url=st.session_state.get('api_base_url', 'http://localhost:8001/api'),
+        base_url=base_url,
         auth_token=st.session_state.get('auth_token')
     )
