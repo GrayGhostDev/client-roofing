@@ -31,8 +31,9 @@ class SnowflakeClient:
             self.session = get_active_session()
             logger.info("Successfully connected to Snowflake")
         except Exception as e:
-            logger.error(f"Failed to connect to Snowflake: {str(e)}")
-            st.warning("⚠️ Running in local mode - Snowflake not available")
+            # Silently fail - Snowflake is optional, show info instead of error
+            logger.info("Snowflake not available - using fallback mode")
+            # Note: No st.warning here to avoid cluttering UI when Snowflake isn't configured
             self.session = None
 
     def is_connected(self) -> bool:
