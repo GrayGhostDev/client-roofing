@@ -159,7 +159,7 @@ with tab1:
 
     with col_z:
         if st.button("📊 View All Leads", use_container_width=True):
-            st.switch_page("1_Leads_Management.py")
+            st.switch_page("pages/1_Leads_Management.py")
 
 # Tab 2: Statistics
 with tab2:
