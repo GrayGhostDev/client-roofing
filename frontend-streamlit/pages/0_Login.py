@@ -89,7 +89,7 @@ if auth.is_authenticated():
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Go to Dashboard", use_container_width=True):
-            st.switch_page("pages/0_Dashboard.py")
+            st.switch_page("0_Dashboard.py")
     with col2:
         if st.button("Logout", use_container_width=True):
             auth.sign_out()
@@ -147,7 +147,7 @@ with tab1:
                         # Wait a moment to show success message
                         import time
                         time.sleep(1)
-                        st.switch_page("pages/0_Dashboard.py")
+                        st.switch_page("0_Dashboard.py")
                     else:
                         st.error("❌ " + result['error'])
 

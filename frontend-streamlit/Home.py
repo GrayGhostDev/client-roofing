@@ -58,7 +58,7 @@ if not BYPASS_AUTH:
         st.warning("⛔ Please log in to access the dashboard")
         st.info("👉 Click below to go to the login page")
         if st.button("🔐 Go to Login", type="primary"):
-            st.switch_page("pages/0_Login.py")
+            st.switch_page("0_Login.py")
         st.stop()
 else:
     st.info("🔧 Development Mode: Authentication Bypassed")
