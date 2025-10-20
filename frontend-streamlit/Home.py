@@ -82,7 +82,7 @@ else:
 # ============================================================================
 pages = {
     "🔐 Account": [
-        st.Page("pages/0_🔐_Login.py", title="Login / Logout", icon="🔐"),
+        st.Page("pages/0_Login.py", title="Login / Logout", icon="🔐"),
     ],
     "🏠 Dashboard": [
         st.Page("pages/0_Dashboard.py", title="Dashboard", icon="🏠", default=True),
