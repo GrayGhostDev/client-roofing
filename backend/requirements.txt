@@ -112,7 +112,7 @@ pyzmq==27.1.0
 redis==6.4.0
 referencing==0.36.2
 regex==2025.9.18
-requests==2.32.5
+requests==2.32.4
 rich==14.2.0
 rpds-py==0.27.1
 s3transfer==0.14.0
@@ -146,7 +146,7 @@ threadpoolctl==3.6.0
 tokenizers==0.21.4
 torch==2.8.0
 tqdm==4.67.1
-transformers==4.48.3
+transformers==4.53.0
 twilio==9.8.3
 typing-inspection==0.4.2
 typing_extensions==4.15.0
