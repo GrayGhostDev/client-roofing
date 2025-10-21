@@ -1,0 +1,41 @@
+# ============================================================================
+# COPY AND PASTE THESE ENVIRONMENT VARIABLES INTO RENDER DASHBOARD
+# ============================================================================
+# Go to: https://dashboard.render.com/ → Your service → Environment tab
+# ============================================================================
+
+# 🔴 CRITICAL - Database Configuration (REQUIRED)
+DATABASE_URL=postgresql://postgres:1vJvs55RSiJ3JhWO@db.tdwpzktihdeuzapxoovk.supabase.co:5432/postgres
+
+# 🟡 IMPORTANT - Supabase Configuration
+SUPABASE_URL=https://tdwpzktihdeuzapxoovk.supabase.co
+SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkd3B6a3RpaGRldXphcHhvb3ZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2MDQyODgsImV4cCI6MjA3NTE4MDI4OH0.RHDETB-JCeRq4Asmh2bt2yG2wKTcryHgSzw03-kK9NY
+
+# 🟢 IMPORTANT - Pusher Real-Time Configuration
+PUSHER_APP_ID=1890740
+PUSHER_KEY=fe32b6bb02f0c1a41bb4
+PUSHER_SECRET=e2b7e61a1b6c1aca04b0
+PUSHER_CLUSTER=us2
+PUSHER_SSL=true
+
+# 🟢 IMPORTANT - CORS Configuration
+BACKEND_CORS_ORIGINS=https://iswitchroofs.streamlit.app,http://localhost:8501
+CORS_SUPPORTS_CREDENTIALS=true
+
+# 🟢 Standard Flask Configuration
+FLASK_ENV=production
+FLASK_DEBUG=0
+DEBUG=false
+SKIP_AUTH=true
+ENABLE_LEAD_SCORING=true
+JWT_ALGORITHM=HS256
+JWT_ACCESS_TOKEN_EXPIRES=3600
+
+# ============================================================================
+# INSTRUCTIONS:
+# 1. Copy the above variables (without the comments starting with #)
+# 2. Paste into Render Environment tab
+# 3. Click "Save Changes"
+# 4. Wait for automatic redeploy
+# 5. Monitor logs for "Database connection established successfully"
+# ============================================================================

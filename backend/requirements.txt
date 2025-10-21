@@ -76,7 +76,7 @@ multidict==6.7.0
 multiprocess==0.70.18
 networkx==3.5
 nltk==3.9.1
-numpy==2.2.1
+numpy==1.26.4
 omegaconf==2.3.0
 openai==1.59.8
 packaging==24.2
