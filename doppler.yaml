@@ -1,0 +1,32 @@
+setup:
+  project: iswitch-roofs
+  config: dev
+
+# This file configures the Doppler CLI for the iSwitch Roofs CRM
+# Run `doppler login` to authenticate, then `doppler setup` to configure
+
+# Available environments:
+#   - dev: Local development
+#   - stg: Staging
+#   - prd: Production
+
+# Secrets to configure in Doppler dashboard:
+# - SUPABASE_URL
+# - SUPABASE_KEY
+# - SUPABASE_DB_URL
+# - JWT_SECRET_KEY
+# - GOOGLE_CLIENT_ID
+# - GOOGLE_CLIENT_SECRET
+# - SENDGRID_API_KEY
+# - TWILIO_ACCOUNT_SID
+# - TWILIO_AUTH_TOKEN
+# - TWILIO_PHONE_NUMBER
+# - BIRDEYE_API_KEY
+# - BIRDEYE_BUSINESS_ID
+# - YELP_API_KEY
+# - FACEBOOK_ACCESS_TOKEN
+# - FACEBOOK_PAGE_ID
+# - PUSHER_APP_ID
+# - PUSHER_KEY
+# - PUSHER_SECRET
+# - PUSHER_CLUSTER
