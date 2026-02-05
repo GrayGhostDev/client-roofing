@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Big Fat Shawarma - Marketing Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #e67e22 0%, #d35400 50%, #c0392b 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+            color: white;
+            padding: 30px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left h1 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        .header-left p {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+
+        .header-right {
+            text-align: right;
+        }
+
+        .last-updated {
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        .status-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            display: inline-block;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+            overflow-x: auto;
+        }
+
+        .nav-tab {
+            padding: 15px 25px;
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            font-size: 1rem;
+            color: #555;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .nav-tab.active {
+            background: white;
+            color: #e67e22;
+            border-bottom: 3px solid #e67e22;
+            font-weight: 600;
+        }
+
+        .nav-tab:hover {
+            background: white;
+            color: #d35400;
+        }
+
+        .content-area {
+            padding: 30px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+            padding: 20px;
+            border-radius: 15px;
+            color: white;
+            transition: transform 0.3s ease;
+            box-shadow: 0 5px 15px rgba(230, 126, 34, 0.3);
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .metric-card.green {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.3);
+        }
+
+        .metric-card.blue {
+            background: linear-gradient(135deg, #2980b9 0%, #3498db 100%);
+            box-shadow: 0 5px 15px rgba(41, 128, 185, 0.3);
+        }
+
+        .metric-card.purple {
+            background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);
+            box-shadow: 0 5px 15px rgba(142, 68, 173, 0.3);
+        }
+
+        .metric-value {
+            font-size: 2.2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .metric-label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .metric-change {
+            font-size: 0.8rem;
+            margin-top: 8px;
+            padding: 4px 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            display: inline-block;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+        }
+
+        .chart-title {
+            font-size: 1.2rem;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
+        }
+
+        .checklist-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .checklist-item:last-child {
+            border-bottom: none;
+        }
+
+        .checklist-checkbox {
+            width: 22px;
+            height: 22px;
+            margin-right: 15px;
+            cursor: pointer;
+        }
+
+        .checklist-text {
+            flex: 1;
+        }
+
+        .checklist-status {
+            font-size: 0.85rem;
+            padding: 4px 12px;
+            border-radius: 12px;
+        }
+
+        .status-pending {
+            background: #fef3cd;
+            color: #856404;
+        }
+
+        .status-complete {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-overdue {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        tr:hover {
+            background: #fef9f3;
+        }
+
+        .progress-bar-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+        }
+
+        .progress-item {
+            margin-bottom: 20px;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .progress-bar {
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: width 1s ease-out;
+        }
+
+        .alert-box {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+        }
+
+        .alert-box.warning {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+        }
+
+        .alert-icon {
+            font-size: 1.8rem;
+            margin-right: 15px;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .action-btn {
+            padding: 15px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .action-btn.primary {
+            background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+            color: white;
+        }
+
+        .action-btn.secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 2px solid #e0e0e0;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .header {
+                flex-direction: column;
+                text-align: center;
+            }
+            .header-right {
+                text-align: center;
+                margin-top: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <div class="header-left">
+                <h1>My Big Fat Shawarma</h1>
+                <p>Marketing Performance Dashboard</p>
+            </div>
+            <div class="header-right">
+                <div class="last-updated">Last Updated: <span id="lastUpdated"></span></div>
+                <div class="status-badge">Phase 3: Execution</div>
+            </div>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('overview')">Overview</button>
+            <button class="nav-tab" onclick="showTab('reviews')">Reviews</button>
+            <button class="nav-tab" onclick="showTab('social')">Social Media</button>
+            <button class="nav-tab" onclick="showTab('partnerships')">Partnerships</button>
+            <button class="nav-tab" onclick="showTab('content')">Content Calendar</button>
+            <button class="nav-tab" onclick="showTab('actions')">Action Items</button>
+        </div>
+
+        <div class="content-area">
+            <!-- Overview Tab -->
+            <div id="overview" class="tab-content active">
+                <div class="alert-box">
+                    <div class="alert-icon">&#127881;</div>
+                    <div>
+                        <strong>Strong Foundation:</strong> 11.1K Instagram followers is a significant competitive advantage. Focus on converting followers to customers and collecting reviews.
+                    </div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Google Rating</div>
+                        <div class="metric-value" id="googleRating">4.5</div>
+                        <div class="metric-change">Target: 4.7+</div>
+                    </div>
+                    <div class="metric-card green">
+                        <div class="metric-label">Instagram Followers</div>
+                        <div class="metric-value" id="instagramFollowers">11.1K</div>
+                        <div class="metric-change">Strong base</div>
+                    </div>
+                    <div class="metric-card blue">
+                        <div class="metric-label">Facebook Followers</div>
+                        <div class="metric-value" id="facebookFollowers">1.8K</div>
+                        <div class="metric-change">Growing</div>
+                    </div>
+                    <div class="metric-card purple">
+                        <div class="metric-label">Partnership Pipeline</div>
+                        <div class="metric-value" id="partnershipCount">8</div>
+                        <div class="metric-change">Leads identified</div>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="chart-container">
+                        <h3 class="chart-title">30-Day Progress</h3>
+                        <canvas id="progressChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3 class="chart-title">Review Distribution</h3>
+                        <canvas id="reviewDistChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="progress-bar-container">
+                    <h3 class="chart-title">Implementation Progress</h3>
+                    <div class="progress-item">
+                        <div class="progress-label">
+                            <span>GBP Optimization</span>
+                            <span>75%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 75%;">75%</div>
+                        </div>
+                    </div>
+                    <div class="progress-item">
+                        <div class="progress-label">
+                            <span>Social Media Setup</span>
+                            <span>90%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 90%; background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);">90%</div>
+                        </div>
+                    </div>
+                    <div class="progress-item">
+                        <div class="progress-label">
+                            <span>Review Generation</span>
+                            <span>25%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 25%; background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);">25%</div>
+                        </div>
+                    </div>
+                    <div class="progress-item">
+                        <div class="progress-label">
+                            <span>Partnership Outreach</span>
+                            <span>10%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 10%; background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">10%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reviews Tab -->
+            <div id="reviews" class="tab-content">
+                <div class="alert-box warning">
+                    <div class="alert-icon">&#9888;</div>
+                    <div>
+                        <strong>Priority:</strong> Review generation is critical. Aim for 15+ new reviews in the next 30 days.
+                    </div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Google Reviews</div>
+                        <div class="metric-value" id="googleReviews">--</div>
+                        <div class="metric-change">Enter baseline</div>
+                    </div>
+                    <div class="metric-card blue">
+                        <div class="metric-label">Yelp Reviews</div>
+                        <div class="metric-value" id="yelpReviews">--</div>
+                        <div class="metric-change">Enter baseline</div>
+                    </div>
+                    <div class="metric-card green">
+                        <div class="metric-label">Facebook Reviews</div>
+                        <div class="metric-value" id="fbReviews">--</div>
+                        <div class="metric-change">Enter baseline</div>
+                    </div>
+                    <div class="metric-card purple">
+                        <div class="metric-label">Monthly Target</div>
+                        <div class="metric-value">15+</div>
+                        <div class="metric-change">New reviews</div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Platform</th>
+                                <th>Current Rating</th>
+                                <th>Review Count</th>
+                                <th>30-Day Goal</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Google</td>
+                                <td>4.5</td>
+                                <td>--</td>
+                                <td>+10 reviews</td>
+                                <td><span class="checklist-status status-pending">Track</span></td>
+                            </tr>
+                            <tr>
+                                <td>Yelp</td>
+                                <td>4.5</td>
+                                <td>--</td>
+                                <td>+3 reviews</td>
+                                <td><span class="checklist-status status-pending">Track</span></td>
+                            </tr>
+                            <tr>
+                                <td>Facebook</td>
+                                <td>4.5</td>
+                                <td>--</td>
+                                <td>+2 reviews</td>
+                                <td><span class="checklist-status status-pending">Track</span></td>
+                            </tr>
+                            <tr>
+                                <td>DoorDash</td>
+                                <td>4.5</td>
+                                <td>--</td>
+                                <td>Maintain 4.5+</td>
+                                <td><span class="checklist-status status-pending">Track</span></td>
+                            </tr>
+                            <tr>
+                                <td>Uber Eats</td>
+                                <td>4.5</td>
+                                <td>--</td>
+                                <td>Maintain 4.5+</td>
+                                <td><span class="checklist-status status-pending">Track</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="chart-container">
+                    <h3 class="chart-title">Review Growth Target</h3>
+                    <canvas id="reviewGrowthChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Social Media Tab -->
+            <div id="social" class="tab-content">
+                <div class="metrics-grid">
+                    <div class="metric-card green">
+                        <div class="metric-label">Instagram</div>
+                        <div class="metric-value">11.1K</div>
+                        <div class="metric-change">@mybigfatshawarma</div>
+                    </div>
+                    <div class="metric-card blue">
+                        <div class="metric-label">Facebook</div>
+                        <div class="metric-value">1.8K</div>
+                        <div class="metric-change">@hititwthefatsauce</div>
+                    </div>
+                    <div class="metric-card purple">
+                        <div class="metric-label">TikTok</div>
+                        <div class="metric-value">TBD</div>
+                        <div class="metric-change">@mybigfatshawarma</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Weekly Posts</div>
+                        <div class="metric-value">7+</div>
+                        <div class="metric-change">Target cadence</div>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="chart-container">
+                        <h3 class="chart-title">Content Mix Target</h3>
+                        <canvas id="contentMixChart"></canvas>
+                    </div>
+                    <div class="checklist-container">
+                        <h3 class="chart-title">Weekly Social Checklist</h3>
+                        <div class="checklist-item">
+                            <input type="checkbox" class="checklist-checkbox" id="task1">
+                            <div class="checklist-text">Post GBP update (Tuesday)</div>
+                            <span class="checklist-status status-pending">Pending</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox" class="checklist-checkbox" id="task2">
+                            <div class="checklist-text">Post GBP update (Friday)</div>
+                            <span class="checklist-status status-pending">Pending</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox" class="checklist-checkbox" id="task3">
+                            <div class="checklist-text">Instagram feed posts (3-4)</div>
+                            <span class="checklist-status status-pending">Pending</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox" class="checklist-checkbox" id="task4">
+                            <div class="checklist-text">Instagram Reels (2-3)</div>
+                            <span class="checklist-status status-pending">Pending</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox" class="checklist-checkbox" id="task5">
+                            <div class="checklist-text">Daily Stories</div>
+                            <span class="checklist-status status-pending">Pending</span>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox" class="checklist-checkbox" id="task6">
+                            <div class="checklist-text">Respond to all comments</div>
+                            <span class="checklist-status status-pending">Pending</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Partnerships Tab -->
+            <div id="partnerships" class="tab-content">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Total Prospects</div>
+                        <div class="metric-value">29</div>
+                        <div class="metric-change">Identified</div>
+                    </div>
+                    <div class="metric-card blue">
+                        <div class="metric-label">To Contact</div>
+                        <div class="metric-value">8</div>
+                        <div class="metric-change">Priority leads</div>
+                    </div>
+                    <div class="metric-card green">
+                        <div class="metric-label">Active Partners</div>
+                        <div class="metric-value">0</div>
+                        <div class="metric-change">Building</div>
+                    </div>
+                    <div class="metric-card purple">
+                        <div class="metric-label">Monthly Target</div>
+                        <div class="metric-value">5</div>
+                        <div class="metric-change">Partnerships</div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Partner Name</th>
+                                <th>Type</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Planet Fitness West Bloomfield</td>
+                                <td>Fitness</td>
+                                <td>High</td>
+                                <td><span class="checklist-status status-pending">To Contact</span></td>
+                                <td>Same road as MBFS</td>
+                            </tr>
+                            <tr>
+                                <td>Powerhouse Gym</td>
+                                <td>Fitness</td>
+                                <td>High</td>
+                                <td><span class="checklist-status status-pending">To Contact</span></td>
+                                <td>24/7, serious crowd</td>
+                            </tr>
+                            <tr>
+                                <td>Muslim Unity Center</td>
+                                <td>Mosque</td>
+                                <td>High</td>
+                                <td><span class="checklist-status status-pending">To Contact</span></td>
+                                <td>Ramadan/Eid catering</td>
+                            </tr>
+                            <tr>
+                                <td>Sports Club of WB</td>
+                                <td>Fitness</td>
+                                <td>High</td>
+                                <td><span class="checklist-status status-pending">To Contact</span></td>
+                                <td>Family programs</td>
+                            </tr>
+                            <tr>
+                                <td>WB Corporate Center</td>
+                                <td>Corporate</td>
+                                <td>High</td>
+                                <td><span class="checklist-status status-pending">To Contact</span></td>
+                                <td>200+ employees</td>
+                            </tr>
+                            <tr>
+                                <td>HOTWORX</td>
+                                <td>Fitness</td>
+                                <td>Medium</td>
+                                <td><span class="checklist-status status-pending">To Contact</span></td>
+                                <td>Health-conscious</td>
+                            </tr>
+                            <tr>
+                                <td>The Event Planner Inc.</td>
+                                <td>Events</td>
+                                <td>Medium</td>
+                                <td><span class="checklist-status status-pending">To Contact</span></td>
+                                <td>Wedding catering</td>
+                            </tr>
+                            <tr>
+                                <td>Everlasting Engagements</td>
+                                <td>Events</td>
+                                <td>Medium</td>
+                                <td><span class="checklist-status status-pending">To Contact</span></td>
+                                <td>Halal weddings</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="chart-container">
+                    <h3 class="chart-title">Partnership Pipeline by Category</h3>
+                    <canvas id="partnershipChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Content Calendar Tab -->
+            <div id="content" class="tab-content">
+                <div class="alert-box">
+                    <div class="alert-icon">&#128197;</div>
+                    <div>
+                        <strong>4 Weeks Planned:</strong> GBP posts are scheduled. See GBP_Posts_Queue.md for full content.
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Platform</th>
+                                <th>Content</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Feb 11, 2026</td>
+                                <td>GBP</td>
+                                <td>Signature Dish Feature</td>
+                                <td><span class="checklist-status status-pending">Scheduled</span></td>
+                            </tr>
+                            <tr>
+                                <td>Feb 14, 2026</td>
+                                <td>GBP</td>
+                                <td>Halal Highlight</td>
+                                <td><span class="checklist-status status-pending">Scheduled</span></td>
+                            </tr>
+                            <tr>
+                                <td>Feb 18, 2026</td>
+                                <td>GBP</td>
+                                <td>Build Your Own Feature</td>
+                                <td><span class="checklist-status status-pending">Scheduled</span></td>
+                            </tr>
+                            <tr>
+                                <td>Feb 21, 2026</td>
+                                <td>GBP</td>
+                                <td>Weekday Lunch Appeal</td>
+                                <td><span class="checklist-status status-pending">Scheduled</span></td>
+                            </tr>
+                            <tr>
+                                <td>Feb 25, 2026</td>
+                                <td>GBP</td>
+                                <td>Family Meal Feature</td>
+                                <td><span class="checklist-status status-pending">Scheduled</span></td>
+                            </tr>
+                            <tr>
+                                <td>Feb 28, 2026</td>
+                                <td>GBP</td>
+                                <td>Fresh Ingredients Story</td>
+                                <td><span class="checklist-status status-pending">Scheduled</span></td>
+                            </tr>
+                            <tr>
+                                <td>Mar 4, 2026</td>
+                                <td>GBP</td>
+                                <td>Customer Favorite</td>
+                                <td><span class="checklist-status status-pending">Scheduled</span></td>
+                            </tr>
+                            <tr>
+                                <td>Mar 7, 2026</td>
+                                <td>GBP</td>
+                                <td>Location Convenience</td>
+                                <td><span class="checklist-status status-pending">Scheduled</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Action Items Tab -->
+            <div id="actions" class="tab-content">
+                <div class="quick-actions">
+                    <button class="action-btn primary">Add New Review</button>
+                    <button class="action-btn primary">Log Partnership Contact</button>
+                    <button class="action-btn secondary">Export Report</button>
+                    <button class="action-btn secondary">View Full Checklist</button>
+                </div>
+
+                <div class="checklist-container">
+                    <h3 class="chart-title">This Week's Priority Actions</h3>
+                    <div class="checklist-item">
+                        <input type="checkbox" class="checklist-checkbox">
+                        <div class="checklist-text"><strong>GBP:</strong> Verify all business info is accurate</div>
+                        <span class="checklist-status status-pending">Day 1-2</span>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" class="checklist-checkbox">
+                        <div class="checklist-text"><strong>Photos:</strong> Upload 10+ high-quality food photos to GBP</div>
+                        <span class="checklist-status status-pending">Day 3-4</span>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" class="checklist-checkbox">
+                        <div class="checklist-text"><strong>Reviews:</strong> Set up QR code for review requests</div>
+                        <span class="checklist-status status-pending">Day 5</span>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" class="checklist-checkbox">
+                        <div class="checklist-text"><strong>Staff:</strong> Train on review request script</div>
+                        <span class="checklist-status status-pending">Day 6-7</span>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" class="checklist-checkbox">
+                        <div class="checklist-text"><strong>Social:</strong> Post first GBP update</div>
+                        <span class="checklist-status status-pending">Day 7</span>
+                    </div>
+                </div>
+
+                <div class="checklist-container">
+                    <h3 class="chart-title">Partnership Outreach (Week 1)</h3>
+                    <div class="checklist-item">
+                        <input type="checkbox" class="checklist-checkbox">
+                        <div class="checklist-text">Contact Planet Fitness West Bloomfield</div>
+                        <span class="checklist-status status-pending">High Priority</span>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" class="checklist-checkbox">
+                        <div class="checklist-text">Contact Powerhouse Gym</div>
+                        <span class="checklist-status status-pending">High Priority</span>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" class="checklist-checkbox">
+                        <div class="checklist-text">Contact Sports Club of West Bloomfield</div>
+                        <span class="checklist-status status-pending">High Priority</span>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" class="checklist-checkbox">
+                        <div class="checklist-text">Contact HOTWORX</div>
+                        <span class="checklist-status status-pending">Medium</span>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" class="checklist-checkbox">
+                        <div class="checklist-text">Contact Fit Body Boot Camp</div>
+                        <span class="checklist-status status-pending">Medium</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set last updated date
+        document.getElementById('lastUpdated').textContent = new Date().toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        // Tab switching
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Initialize charts
+        window.addEventListener('load', function() {
+            // Progress Chart
+            new Chart(document.getElementById('progressChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['GBP Setup', 'Photos', 'Reviews', 'Social', 'Partnerships', 'Content'],
+                    datasets: [{
+                        label: 'Progress %',
+                        data: [75, 50, 25, 90, 10, 60],
+                        backgroundColor: [
+                            'rgba(230, 126, 34, 0.8)',
+                            'rgba(39, 174, 96, 0.8)',
+                            'rgba(241, 196, 15, 0.8)',
+                            'rgba(41, 128, 185, 0.8)',
+                            'rgba(231, 76, 60, 0.8)',
+                            'rgba(142, 68, 173, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, max: 100 } }
+                }
+            });
+
+            // Review Distribution
+            new Chart(document.getElementById('reviewDistChart').getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Google', 'Yelp', 'Facebook', 'DoorDash', 'Uber Eats'],
+                    datasets: [{
+                        data: [40, 15, 10, 20, 15],
+                        backgroundColor: [
+                            'rgba(66, 133, 244, 0.8)',
+                            'rgba(211, 84, 0, 0.8)',
+                            'rgba(59, 89, 152, 0.8)',
+                            'rgba(255, 51, 0, 0.8)',
+                            'rgba(6, 196, 132, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'right' },
+                        title: { display: true, text: 'Target Review Distribution' }
+                    }
+                }
+            });
+
+            // Review Growth
+            new Chart(document.getElementById('reviewGrowthChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Month 2', 'Month 3'],
+                    datasets: [{
+                        label: 'Target Reviews (Cumulative)',
+                        data: [5, 10, 15, 20, 35, 50],
+                        borderColor: 'rgba(230, 126, 34, 1)',
+                        backgroundColor: 'rgba(230, 126, 34, 0.2)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+
+            // Content Mix
+            new Chart(document.getElementById('contentMixChart').getContext('2d'), {
+                type: 'pie',
+                data: {
+                    labels: ['Food Photos', 'Videos/Reels', 'Community/UGC', 'Behind Scenes', 'Promotional'],
+                    datasets: [{
+                        data: [40, 25, 15, 10, 10],
+                        backgroundColor: [
+                            'rgba(230, 126, 34, 0.8)',
+                            'rgba(39, 174, 96, 0.8)',
+                            'rgba(41, 128, 185, 0.8)',
+                            'rgba(142, 68, 173, 0.8)',
+                            'rgba(241, 196, 15, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'right' } }
+                }
+            });
+
+            // Partnership Pipeline
+            new Chart(document.getElementById('partnershipChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Fitness', 'Mosques', 'Corporate', 'Event Planners'],
+                    datasets: [{
+                        label: 'Prospects',
+                        data: [10, 5, 8, 6],
+                        backgroundColor: 'rgba(230, 126, 34, 0.8)'
+                    }, {
+                        label: 'Contacted',
+                        data: [0, 0, 0, 0],
+                        backgroundColor: 'rgba(41, 128, 185, 0.8)'
+                    }, {
+                        label: 'Active',
+                        data: [0, 0, 0, 0],
+                        backgroundColor: 'rgba(39, 174, 96, 0.8)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        });
+
+        // Checkbox functionality
+        document.querySelectorAll('.checklist-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const statusSpan = this.closest('.checklist-item').querySelector('.checklist-status');
+                if (this.checked) {
+                    statusSpan.className = 'checklist-status status-complete';
+                    statusSpan.textContent = 'Done';
+                } else {
+                    statusSpan.className = 'checklist-status status-pending';
+                    statusSpan.textContent = 'Pending';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
