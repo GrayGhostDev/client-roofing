@@ -410,5 +410,73 @@ Love your meal? Leave us a review! [QR Code]
 
 ---
 
+## Competitor Delivery Platform Audit
+
+*Researched: 2026-02-05*
+
+### Direct Competitor Delivery Presence
+
+| Competitor | DoorDash | Uber Eats | Grubhub | Key Observations |
+|------------|----------|-----------|---------|------------------|
+| **My Big Fat Shawarma** | ✅ Active | ✅ Active | ✅ 4.9 (41 reviews) | Strong Grubhub rating, multi-platform |
+| The Great Greek | ✅ Active | ✅ Active | ✅ Active | National chain, consistent branding |
+| Al Oumara | ✅ Active | ✅ Active | ✅ Active | 711 Google reviews, established |
+| Levantine Grill | ✅ Active | ✅ Active | ✅ Active | 5mi away, less direct competition |
+| CAVA | ✅ Active | ✅ Active | ✅ Active | National chain, premium positioning |
+
+### Competitive Differentiation Opportunities
+
+#### What MBFS Does Better
+1. **Halal Certification** - Prominently display on ALL platforms
+2. **Build-Your-Own Customization** - Highlight flexibility in descriptions
+3. **Local Authenticity** - Use in taglines vs. chains
+4. **Strong Grubhub Rating** - 4.9/5 is a competitive advantage
+
+#### Areas to Improve vs. Competitors
+
+| Area | Current Gap | Action Required |
+|------|-------------|-----------------|
+| **Photo Quality** | Unknown | Audit and upgrade all menu photos |
+| **Menu Descriptions** | Unknown | Add compelling, keyword-rich descriptions |
+| **Review Volume** | Lower than Al Oumara | Encourage delivery reviews specifically |
+| **Promotions** | Unknown | Launch strategic promotions |
+
+### Recommended Competitive Actions by Platform
+
+#### DoorDash Priority Actions
+1. [ ] Update all menu photos to professional quality
+2. [ ] Ensure "Halal" is in category tags and description
+3. [ ] Add "100% Halal" to restaurant name if allowed
+4. [ ] Launch new customer promotion (15% off first order)
+5. [ ] Enable DashPass if not already
+
+#### Uber Eats Priority Actions
+1. [ ] Verify cuisine type includes "Halal" and "Mediterranean"
+2. [ ] Update hero image (best food shot)
+3. [ ] Enable Uber One eligibility
+4. [ ] Test "Spend $30, Get $5 Off" promotion
+
+#### Grubhub Priority Actions
+1. [ ] PROTECT the 4.9 rating - respond to all reviews
+2. [ ] Use Grubhub in marketing (highlight 4.9 rating)
+3. [ ] Consider featured placement ($) for visibility
+4. [ ] Request reviews from Grubhub customers
+
+### Competitive Monitoring Schedule
+
+| Task | Frequency | Method |
+|------|-----------|--------|
+| Check competitor ratings | Weekly | Manual check |
+| Review new competitor promotions | Weekly | Order as customer |
+| Photo quality comparison | Monthly | Screenshot audit |
+| Menu/pricing comparison | Monthly | Manual review |
+| New competitor check | Monthly | Platform searches |
+
+### Key Competitive Insight
+
+> **MBFS has the highest Grubhub rating (4.9) among tracked competitors.** This should be prominently featured in marketing materials and on Google Business Profile. "Rated 4.9 on Grubhub" is a powerful trust signal.
+
+---
+
 *Last Updated: 2026-02-05*
 *Review Cycle: Weekly performance, monthly strategy*

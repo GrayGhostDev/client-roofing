@@ -41,40 +41,57 @@
 | Referral | | | |
 | Paid Ads | | | |
 
-### Google Business Profile
+### Google Business Profile (West Bloomfield Location)
 
 | Metric | Baseline | Week 1 | Week 2 | Week 3 | Week 4 | Trend |
 |--------|----------|--------|--------|--------|--------|-------|
-| Search Views | | | | | | |
-| Maps Views | | | | | | |
-| Total Views | | | | | | |
-| Direction Requests | | | | | | |
-| Phone Calls | | | | | | |
-| Website Clicks | | | | | | |
+| Search Views | TBD (needs GBP access) | | | | | |
+| Maps Views | TBD | | | | | |
+| Total Views | TBD | | | | | |
+| Direction Requests | TBD | | | | | |
+| Phone Calls | (248) 977-4778 | | | | | |
+| Website Clicks | TBD | | | | | |
+
+**GBP Status (2026-02-05):**
+- Rating: **4.6/5** with **192 reviews**
+- Price Range: $10-20 (reported by 47 people)
+- Category: Middle Eastern restaurant
+- Hours: Open, Closes 10 PM
+- Location: Crosswinds Mall
+- Posts: Very active (most recent 4 days ago - Super Bowl promo)
 
 ---
 
 ## Engagement Metrics
 
-### Instagram
+### Instagram (@mybigfatshawarma)
 
 | Metric | Baseline | Week 1 | Week 2 | Week 3 | Week 4 | Trend |
 |--------|----------|--------|--------|--------|--------|-------|
-| Followers | | | | | | |
-| Engagement Rate | | | | | | |
-| Post Reach (avg) | | | | | | |
-| Story Views (avg) | | | | | | |
-| Profile Visits | | | | | | |
-| Link Clicks | | | | | | |
+| Followers | **11,100+** | | | | | |
+| Engagement Rate | TBD | | | | | |
+| Post Reach (avg) | TBD | | | | | |
+| Story Views (avg) | TBD | | | | | |
+| Profile Visits | TBD | | | | | |
+| Link Clicks | TBD | | | | | |
 
-### Facebook
+**Instagram Bio:** "BYO #Shawarma BOWLS + WRAPS #Halal #Organic Fresh Eats - ONE SIZE: BIG! Warren | West Bloomfield | Midtown Detroit ORDER ON THE APP"
+
+### Facebook (@hititwthefatsauce)
 
 | Metric | Baseline | Week 1 | Week 2 | Week 3 | Week 4 | Trend |
 |--------|----------|--------|--------|--------|--------|-------|
-| Page Likes | | | | | | |
-| Post Reach (avg) | | | | | | |
-| Engagement (avg) | | | | | | |
-| Messages Received | | | | | | |
+| Page Followers | **1,800+** | | | | | |
+| Post Reach (avg) | TBD | | | | | |
+| Engagement (avg) | TBD | | | | | |
+| Messages Received | TBD | | | | | |
+
+### TikTok (@mybigfatshawarma)
+
+| Metric | Baseline | Week 1 | Week 2 | Week 3 | Week 4 | Trend |
+|--------|----------|--------|--------|--------|--------|-------|
+| Followers | TBD | | | | | |
+| Video Views (avg) | TBD | | | | | |
 
 ### Content Performance
 
@@ -155,15 +172,16 @@
 
 ## Reputation Metrics
 
-### Reviews Overview
+### Reviews Overview (Baseline: 2026-02-05)
 
 | Platform | Rating | Total Reviews | This Month | Response Rate |
 |----------|--------|---------------|------------|---------------|
-| Google | | | | |
-| Yelp | | | | |
-| Facebook | | | | |
-| DoorDash | | | | |
-| Uber Eats | | | | |
+| Google | **4.6/5** | **192** | TBD | TBD |
+| Yelp | Listed | 105 photos | TBD | TBD |
+| Facebook | Active | 1.8K followers | TBD | TBD |
+| DoorDash | Active | - | TBD | TBD |
+| Uber Eats | Active | - | TBD | TBD |
+| Grubhub | **4.9/5** | **41** | TBD | TBD |
 
 ### Review Tracking
 
@@ -218,25 +236,33 @@
 
 ## Goal Tracking
 
-### 30-Day Goals
+### 30-Day Goals (Starting 2026-02-05)
 
 | Goal | Target | Current | Status | % Complete |
 |------|--------|---------|--------|------------|
-| New Google Reviews | 15 | | | |
-| GBP Views Increase | +30% | | | |
-| Instagram Followers | +200 | | | |
-| Order Volume | +15% | | | |
+| New Google Reviews | 15 | 192 (baseline) | 🟡 In Progress | 0% |
+| GBP Views Increase | +30% | Baseline needed | 🟡 In Progress | 0% |
+| Instagram Followers | +200 | 11,100 (baseline) | 🟡 In Progress | 0% |
+| Order Volume | +15% | Baseline needed | 🟡 In Progress | 0% |
 
-### 90-Day Goals
+**Targets for 30-Day Mark (2026-03-05):**
+- Google Reviews: 207+
+- Instagram Followers: 11,300+
+
+### 90-Day Goals (Ending 2026-05-05)
 
 | Goal | Target | Current | Status | % Complete |
 |------|--------|---------|--------|------------|
-| New Google Reviews | 50 | | | |
-| GBP Views Increase | +100% | | | |
-| Instagram Followers | +750 | | | |
-| Order Volume | +40% | | | |
-| Partnerships | 10 | | | |
-| Catering Accounts | 5 | | | |
+| New Google Reviews | 50 | 192 (baseline) | 🟡 In Progress | 0% |
+| GBP Views Increase | +100% | Baseline needed | 🟡 In Progress | 0% |
+| Instagram Followers | +750 | 11,100 (baseline) | 🟡 In Progress | 0% |
+| Order Volume | +40% | Baseline needed | 🟡 In Progress | 0% |
+| Local Partnerships | 10 | 0 | 🟡 In Progress | 0% |
+| Catering Accounts | 5 | Existing (ezCater) | 🟡 In Progress | 20% |
+
+**Targets for 90-Day Mark:**
+- Google Reviews: 242+
+- Instagram Followers: 11,850+
 
 ---
 

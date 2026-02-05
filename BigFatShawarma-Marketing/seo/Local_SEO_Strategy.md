@@ -126,16 +126,77 @@ Proactively add common Q&As:
 | Zomato | [ ] | Claim if available |
 | OpenTable | [ ] | Evaluate if needed |
 
-### Tier 3: Local Directories
+### Tier 3: Local & General Directories
 
-| Platform | Status | Action Required |
-|----------|--------|-----------------|
-| Yellow Pages | [ ] | Add/verify listing |
-| BBB | [ ] | Consider membership |
-| Local Chamber of Commerce | [ ] | Join for citation |
-| Foursquare | [ ] | Verify listing |
-| HalalTrip | [ ] | Add listing |
-| Zabihah.com | [ ] | Add listing |
+| Platform | URL | Status | Priority | Notes |
+|----------|-----|--------|----------|-------|
+| Yellow Pages | yellowpages.com | [ ] | Medium | General visibility |
+| BBB | bbb.org | [ ] | Low | Trust signal |
+| Foursquare | foursquare.com | [ ] | Medium | Powers many apps |
+| Factual | factual.com | [ ] | Medium | Data aggregator |
+| Hotfrog | hotfrog.com | [ ] | Low | General directory |
+| Manta | manta.com | [ ] | Low | Business directory |
+| Citysearch | citysearch.com | [ ] | Low | Local discovery |
+| Superpages | superpages.com | [ ] | Low | General directory |
+| Local.com | local.com | [ ] | Low | General discovery |
+| Brownbook | brownbook.net | [ ] | Low | Free listing |
+
+### Tier 4: Halal-Specific Directories (HIGH PRIORITY)
+
+| Platform | URL | Status | Priority | Notes |
+|----------|-----|--------|----------|-------|
+| **Zabihah** | zabihah.com | [ ] | **Critical** | #1 halal food guide since 1998 |
+| **HalalTrip** | halaltrip.com | [ ] | **Critical** | Global halal travel/food guide |
+| **Halal Map** | halal-map.com | [ ] | High | US/Canada halal directory |
+| **Halal Navi** | App-based | [ ] | High | GPS-based halal finder |
+| **Crave Halal** | cravehalal.com | [ ] | Medium | Halal restaurant app |
+| **Muslim Guide** | muslimguide.com | [ ] | Medium | Muslim business directory |
+| **Shariah Board Certified** | shariahboard.org | [ ] | Medium | If certified, get listed |
+
+### Tier 5: Michigan Local Directories
+
+| Platform | URL | Status | Priority | Notes |
+|----------|-----|--------|----------|-------|
+| West Bloomfield Chamber | westbloomfieldchamber.com | [ ] | High | Local business credibility |
+| Oakland County Chamber | oaklandcountychamber.com | [ ] | Medium | Regional visibility |
+| Discover Oakland | discoveroakland.com | [ ] | Low | Tourism/visitor guide |
+| Michigan Restaurant Assoc. | michiganrestaurant.org | [ ] | Medium | Industry association |
+| Pure Michigan | michigan.org | [ ] | Low | State tourism |
+| MLive/Detroit Free Press | mlive.com | [ ] | Low | Local news listings |
+
+### Tier 6: Food Aggregator Citations
+
+| Platform | URL | Status | Priority | Notes |
+|----------|-----|--------|----------|-------|
+| MenuPages | menupages.com | [ ] | Low | Menu aggregator |
+| SinglePlatform | singleplatform.com | [ ] | Medium | Menu/info syndication |
+| Allmenus | allmenus.com | [ ] | Low | Menu aggregator |
+| Chefs Feed | chefsfeed.com | [ ] | Low | Chef recommendations |
+
+### Citation Submission Priority Order
+
+**Week 1 (Critical):**
+1. [ ] Zabihah.com - Submit listing
+2. [ ] HalalTrip - Submit listing
+3. [ ] Apple Maps - Verify via Maps Connect
+4. [ ] Bing Places - Claim listing
+
+**Week 2 (High Priority):**
+5. [ ] Halal Map - Submit listing
+6. [ ] Foursquare - Verify listing
+7. [ ] West Bloomfield Chamber - Join/list
+8. [ ] Yellow Pages - Verify listing
+
+**Week 3 (Medium Priority):**
+9. [ ] Muslim Guide - Submit listing
+10. [ ] Hotfrog - Submit listing
+11. [ ] Manta - Submit listing
+12. [ ] Factual - Submit data
+
+**Week 4+ (Ongoing):**
+- Complete remaining directories
+- Monitor for new opportunities
+- Correct any NAP inconsistencies
 
 ### NAP Consistency
 

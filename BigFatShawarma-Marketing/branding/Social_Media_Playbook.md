@@ -6,14 +6,16 @@
 
 ## Social Media Overview
 
-### Current Presence
+### Current Presence (Audited: 2026-02-05)
 
-| Platform | Handle | Status | Priority |
-|----------|--------|--------|----------|
-| Instagram | @mybigfatshawarma | Active | High |
-| Facebook | [To verify] | [Check] | High |
-| TikTok | [To create?] | [Check] | Medium |
-| Twitter/X | [Not active] | Low | Low |
+| Platform | Handle | Status | Followers | Priority |
+|----------|--------|--------|-----------|----------|
+| Instagram | **@mybigfatshawarma** | ✅ Active | **11,100+** | High |
+| Facebook | **@hititwthefatsauce** | ✅ Active | **1,800+** | High |
+| TikTok | **@mybigfatshawarma** | ✅ Active (linked in GBP) | TBD | Medium |
+| Twitter/X | Not active | ❌ | - | Low |
+
+**Key Finding:** Social presence is STRONG compared to local competitors. Instagram following (11.1K) is higher than local competitors like The Great Greek (5.8K FB). This is a significant competitive advantage.
 
 ### Goals
 
@@ -320,11 +322,40 @@ What's your go-to order? Tell us below.
 
 ### Target Influencers
 
-- Local food bloggers
-- Detroit/Michigan foodies
-- Halal food reviewers
-- Health/fitness influencers
-- Mom/family bloggers
+#### Macro Influencers (100K+ followers) - High Priority
+
+| Handle | Platform | Followers | Focus | Contact Priority |
+|--------|----------|-----------|-------|------------------|
+| **@chowdowndetroit** | Instagram | 197K | Detroit food, all cuisines | High - Reach |
+| **@detroithalaleats** | Instagram | 113K | Halal food guide, Metro Detroit | **Critical** - Perfect fit |
+| **@halalfoodjunkie** | Instagram | 114K | Halal food, Detroit + Canada | **Critical** - Perfect fit |
+| **@detroitdar_** | Instagram | 149K | Detroit exploration, food | High - Local reach |
+
+#### Micro Influencers (10K-50K followers) - Recommended
+
+| Handle | Platform | Followers | Focus | Contact Priority |
+|--------|----------|-----------|-------|------------------|
+| **@crowded_kitchen** | Instagram | 2.2M | Recipes, Detroit-based | Medium - Recipe collab |
+| **@detroiteatsntreats** | Instagram | 22K | Best eats in Detroit | High - Discovery focus |
+| **@eatthisdetroit** | Instagram | 19K | Halal, Kosher, Vegan | High - Halal angle |
+| **@foodiesnapper** | Instagram | 16K | Food + coffee, Pakistani-American | High - Community fit |
+| **@a.bite.of.life** | Instagram | 11K | Food, travel, homecooking | Medium - Authentic |
+| **@fsareini** | Instagram | 24K | Dearborn-Detroit food guide | High - Halal focus |
+
+#### Nano Influencers (1K-10K followers) - Low Cost/High Engagement
+
+| Handle | Platform | Followers | Focus | Contact Priority |
+|--------|----------|-----------|-------|------------------|
+| **@dinnerclubdiaries** | Instagram | 6K | Food photography, Detroit | Medium |
+| **@hangry_detroiter** | Instagram | 4K | Detroit food explorer | Medium |
+| **@hangrygirlsdetroit** | Instagram | 4K | Metro Detroit food | Medium |
+
+#### Priority Outreach Order
+1. **@detroithalaleats** - Perfect audience alignment (halal + local)
+2. **@halalfoodjunkie** - Large halal-focused audience
+3. **@chowdowndetroit** - Massive reach, established credibility
+4. **@eatthisdetroit** - Halal/dietary focus
+5. **@fsareini** - Dearborn-Detroit halal guide
 
 ### Outreach Template
 
@@ -414,15 +445,17 @@ feedback and want to fix this.
 
 ## Metrics and Reporting
 
-### Weekly Tracking
+### Weekly Tracking (Baseline: 2026-02-05)
 
 | Metric | Instagram | Facebook | TikTok |
 |--------|-----------|----------|--------|
-| Followers | | | |
-| Engagement Rate | | | |
-| Reach | | | |
-| Profile Visits | | | |
-| Link Clicks | | | |
+| Followers | **11,100+** | **1,800+** | TBD |
+| Engagement Rate | TBD | TBD | TBD |
+| Reach | TBD | TBD | TBD |
+| Profile Visits | TBD | TBD | TBD |
+| Link Clicks | TBD | TBD | TBD |
+
+**Note:** Access to Meta Business Suite required for detailed analytics. Contact owner for credentials.
 
 ### Monthly Goals
 
