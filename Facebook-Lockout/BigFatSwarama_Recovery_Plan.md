@@ -1,26 +1,63 @@
 # Facebook Business Account Recovery Plan
 
-**Business:** Big Fat Swarama
-**Location:** West Bloomfield, MI
+**Business:** My Big Fat Shawarma
+**Location:** 4301 Orchard Lake Rd, Ste 110, West Bloomfield Township, MI 48323
+**Phone:** (248) 977-4778
 **Created:** 2026-02-05
-**Status:** Recovery Planning
+**Status:** Recovery In Progress - HAVE RECOVERY CODE
 
 ---
 
-## Account Information (To Be Completed)
+## IMMEDIATE ACTION: Use Recovery Code
+
+**You have a recovery code - use it now:**
+
+### Step 1: Go to Facebook Login
+1. Navigate to: https://www.facebook.com/login
+2. Enter the email/phone associated with the account
+3. Click "Forgot password?" or attempt to log in
+
+### Step 2: Enter Recovery Code
+1. When prompted for verification, look for "Use a recovery code" or "Try another way"
+2. Enter the recovery code you have
+3. Complete the verification process
+
+### Step 3: Immediately After Access
+Once logged in, do these **immediately**:
+
+- [ ] **Change password** to a new, strong password
+- [ ] **Enable 2FA** with authenticator app (Settings > Security > Two-Factor Authentication)
+- [ ] **Save new backup codes** in a secure location
+- [ ] **Review active sessions** and log out unknown devices
+- [ ] **Verify email/phone** are current
+- [ ] **Add a second admin** to the Page/Business Manager
+
+### If Recovery Code Doesn't Work
+- Codes may be single-use or time-limited
+- Try: https://www.facebook.com/recover/code
+- Or: https://www.facebook.com/login/identify
+- Reference Meta Account ID: `358336074294704`
+
+---
+
+## Account Information
 
 | Field | Value | Notes |
 |-------|-------|-------|
-| Business Name | Big Fat Swarama | |
-| Business Address | West Bloomfield, MI | Need full address |
-| Facebook Page URL | | e.g., facebook.com/bigfatswarama |
+| Business Name | My Big Fat Shawarma | Correct spelling |
+| Business Address | 4301 Orchard Lake Rd, Ste 110, West Bloomfield, MI 48323 | Verified |
+| Meta Account ID | 358336074294704 | Use for recovery reference |
+| Facebook Page URL | https://facebook.com/358336074294704 | Direct ID link |
+| Website | https://www.mybigfatshawarma.com/ | Official site |
+| Instagram | @mybigfatshawarma | Active social presence |
 | Business Manager ID | | Found in Business Suite URL |
 | Ad Account ID | | If applicable |
 | Page Admin Email | | Email used to create/manage page |
-| Phone on Account | | Phone number linked to account |
-| Account Created (approx) | | Helps verify ownership |
+| Phone on Account | (248) 977-4778 | Business phone |
+| Account Created (approx) | 2022 | Restaurant founded 2022 |
 | Last Successful Login | | Date and device if known |
 | Lockout Date | | When access was lost |
+| **Recovery Code** | **OBTAINED** | Ready to use |
 
 ---
 
@@ -218,8 +255,10 @@ Once access is restored for Big Fat Swarama:
 
 | Date | Action Taken | Outcome | Next Step | Who |
 |------|--------------|---------|-----------|-----|
-| 2026-02-05 | Created recovery plan | Complete | Determine lockout type | |
-| | | | | |
+| 2026-02-05 | Created recovery plan | Complete | Determine lockout type | GrayGhostData |
+| 2026-02-05 | Verified business info | My Big Fat Shawarma confirmed | Document Meta ID | GrayGhostData |
+| 2026-02-05 | Obtained Meta Account ID | 358336074294704 | Use recovery code | Client |
+| 2026-02-05 | Recovery code obtained | Ready to use | Execute recovery | Client |
 | | | | | |
 
 ---
