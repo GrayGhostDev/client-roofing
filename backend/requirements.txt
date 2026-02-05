@@ -1,5 +1,5 @@
 aiohappyeyeballs==2.6.1
-aiohttp==3.13.0
+aiohttp>=3.13.1  # Security fix: zip bomb, DoS vulnerabilities
 aiohttp-retry==2.9.1
 aiosignal==1.4.0
 amqp==5.3.1
@@ -13,7 +13,7 @@ billiard==4.2.2
 blinker==1.9.0
 boto3==1.40.50
 botocore==1.40.50
-Brotli==1.1.0
+Brotli>=1.2.0  # Security fix: DoS via decompression flaw
 celery==5.5.3
 certifi==2025.10.5
 cffi==2.0.0
@@ -30,7 +30,7 @@ dill==0.4.0
 distro==1.9.0
 docker==7.1.0
 fastapi==0.118.3
-filelock==3.20.0
+filelock>=3.21.0  # Security fix: TOCTOU symlink vulnerability
 Flask==3.1.2
 flask-cors==6.0.1
 Flask-Compress==1.15
@@ -89,7 +89,7 @@ pox==0.3.6
 ppft==1.7.7
 prompt_toolkit==3.0.52
 propcache==0.4.1
-protobuf==6.31.1
+protobuf>=6.32.0  # Security fix: JSON recursion depth bypass
 psutil==7.1.0
 psycopg2-binary==2.9.10
 pycparser==2.23
@@ -112,13 +112,13 @@ pyzmq==27.1.0
 redis==6.4.0
 referencing==0.36.2
 regex==2025.9.18
-requests==2.32.5
+requests>=2.32.6  # Security fix: .netrc credentials leak
 rich==14.2.0
 rpds-py==0.27.1
 s3transfer==0.14.0
 safetensors==0.6.2
-sagemaker==2.253.0
-sagemaker-core==1.0.59
+# sagemaker==2.253.0  # DISABLED: High severity vulnerabilities (HMAC exposure, insecure TLS) - remove if not needed
+# sagemaker-core==1.0.59  # DISABLED: Dependency of sagemaker
 schema==0.7.7
 scikit-learn==1.7.2
 scipy==1.16.2
@@ -138,7 +138,7 @@ email-validator==2.2.0
 phonenumbers==8.13.47
 smdebug-rulesconfig==1.0.1
 sniffio==1.3.1
-starlette==0.48.0
+starlette>=0.49.0  # Security fix: O(n^2) DoS via Range header
 stripe==13.0.1
 sympy==1.14.0
 tblib==3.1.0
@@ -146,18 +146,18 @@ threadpoolctl==3.6.0
 tokenizers==0.21.4
 torch==2.8.0
 tqdm==4.67.1
-transformers==4.48.3
+transformers>=4.49.0  # Security fix: ReDoS vulnerabilities
 twilio==9.8.3
 typing-inspection==0.4.2
 typing_extensions==4.15.0
 tzdata==2025.2
-urllib3==2.5.0
+urllib3>=2.5.1  # Security fix: decompression-bomb bypass
 uvicorn==0.37.0
 vine==5.1.0
 wcwidth==0.2.14
 websocket-client==1.9.0
-Werkzeug==3.1.3
-wheel==0.45.1
+Werkzeug>=3.2.0  # Security fix: Windows device names bypass
+wheel>=0.46.0  # Security fix: path traversal in unpack
 wsproto==1.2.0
 yarl==1.22.0
 zipp==3.23.0
