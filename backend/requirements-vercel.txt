@@ -12,7 +12,7 @@ supabase==2.10.0
 
 # Authentication & Security
 PyJWT==2.10.1
-cryptography==46.0.2
+cryptography==46.0.7
 
 # HTTP Client
 requests>=2.32.6  # Security fix: .netrc credentials leak
