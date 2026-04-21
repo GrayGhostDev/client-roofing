@@ -12,7 +12,7 @@ supabase==2.10.0
 
 # Authentication & Security
 PyJWT==2.10.1
-cryptography==46.0.2
+cryptography==46.0.7
 
 # HTTP Client
 requests>=2.32.6  # Security fix: .netrc credentials leak
@@ -20,7 +20,7 @@ httpx==0.28.1
 
 # Data Processing (lightweight)
 pydantic==2.10.3
-python-dotenv==1.0.1
+python-dotenv==1.2.2
 
 # Date/Time
 python-dateutil==2.9.0.post0
