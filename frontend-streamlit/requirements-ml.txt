@@ -7,7 +7,7 @@ pandas>=2.1.0
 numpy>=1.26.0
 
 # API Client
-requests>=2.31.0
+requests>=2.34.2
 
 # Already in main requirements:
 # streamlit>=1.28.0

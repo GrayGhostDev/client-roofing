@@ -1,2 +1,2 @@
 
-reflex>=0.8.14  # Security fix: open redirect vulnerability
+reflex>=0.9.2.post1  # Security fix: open redirect vulnerability
